@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- App-scoped external Pictures directory -->
+    <external-files-path name="images" path="Pictures/" />
+    <!-- App-scoped external Music/Audio directory -->
+    <external-files-path name="audio" path="Music/" />
+</paths>
+
