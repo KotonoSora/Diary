@@ -44,7 +44,9 @@ class TodoViewModel @Inject constructor(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun setSearchQuery(query: String) { _searchQuery.value = query }
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     fun addTodo(todo: TodoItem) = viewModelScope.launch {
         useCases.addTodo(todo)
