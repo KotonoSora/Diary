@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -331,5 +332,18 @@ private fun MediaFileItem(
                 )
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Media Item Preview")
+@Composable
+fun MediaFileItemPreview() {
+    MaterialTheme {
+        MediaFileItem(
+            name = "Photo - Mar 1, 2026",
+            subtitle = "_assets/IMG_20260301_120000.jpg",
+            filePath = null,
+            onDelete = {}
+        )
     }
 }

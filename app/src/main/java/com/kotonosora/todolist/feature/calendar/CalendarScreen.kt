@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -329,5 +330,20 @@ private fun CalendarTodoItem(todo: TodoItem) {
                 )
             )
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Calendar Grid Preview")
+@Composable
+fun CalendarGridPreview() {
+    MaterialTheme {
+        CalendarGrid(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = System.currentTimeMillis(),
+            allTodos = emptyList(),
+            locale = Locale.US,
+            onDateSelected = {}
+        )
     }
 }

@@ -3,13 +3,19 @@ package com.kotonosora.todolist.di
 import android.content.Context
 import androidx.work.WorkManager
 import com.kotonosora.todolist.data.database.AppDatabase
+import com.kotonosora.todolist.data.database.LinkDao
 import com.kotonosora.todolist.data.database.MediaDao
+import com.kotonosora.todolist.data.database.NoteDao
+import com.kotonosora.todolist.data.database.TagDao
 import com.kotonosora.todolist.data.database.TodoDao
 import com.kotonosora.todolist.data.file.FileSyncManager
 import com.kotonosora.todolist.data.file.TodoFileManager
+import com.kotonosora.todolist.data.file.VaultManager
 import com.kotonosora.todolist.data.repository.TodoRepositoryImpl
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
+import com.kotonosora.todolist.data.repository.VaultRepositoryImpl
 import com.kotonosora.todolist.domain.repository.TodoRepository
+import com.kotonosora.todolist.domain.repository.VaultRepository
 import com.kotonosora.todolist.domain.usecase.AddTodoUseCase
 import com.kotonosora.todolist.domain.usecase.DeleteTodoUseCase
 import com.kotonosora.todolist.domain.usecase.GetTodosByDateUseCase
@@ -42,6 +48,36 @@ object AppModule {
     @Provides
     @Singleton
     fun provideMediaDao(db: AppDatabase): MediaDao = db.mediaDao()
+
+    @Provides
+    @Singleton
+    fun provideNoteDao(db: AppDatabase): NoteDao = db.noteDao()
+
+    @Provides
+    @Singleton
+    fun provideLinkDao(db: AppDatabase): LinkDao = db.linkDao()
+
+    @Provides
+    @Singleton
+    fun provideTagDao(db: AppDatabase): TagDao = db.tagDao()
+
+    @Provides
+    @Singleton
+    fun provideVaultManager(
+        @ApplicationContext context: Context,
+        userPreferencesRepository: UserPreferencesRepository
+    ): VaultManager {
+        return VaultManager(context, userPreferencesRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideVaultRepository(
+        vaultManager: VaultManager,
+        noteDao: NoteDao,
+        linkDao: LinkDao,
+        tagDao: TagDao
+    ): VaultRepository = VaultRepositoryImpl(vaultManager, noteDao, linkDao, tagDao)
 
     @Provides
     @Singleton

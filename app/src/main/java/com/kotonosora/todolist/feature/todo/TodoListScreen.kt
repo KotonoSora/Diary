@@ -43,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -226,5 +227,27 @@ fun TodoListItem(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Todo Item Preview")
+@Composable
+fun TodoListItemPreview() {
+    val sampleTodo = TodoItem(
+        id = "1",
+        title = "Buy groceries",
+        description = "Milk, Eggs, Bread",
+        dueDate = System.currentTimeMillis() + 86400000L,
+        filePath = null,
+        isCompleted = false
+    )
+
+    MaterialTheme {
+        TodoListItem(
+            todo = sampleTodo,
+            onToggle = {},
+            onDelete = {},
+            onClick = {}
+        )
     }
 }
