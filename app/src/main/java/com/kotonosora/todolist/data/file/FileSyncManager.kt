@@ -6,17 +6,23 @@ import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
 import com.kotonosora.todolist.data.database.TodoDao
 import com.kotonosora.todolist.data.database.TodoEntity
+import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.TodoItem
+import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Bidirectional sync between .md and .txt files in Documents (or custom folder) and the SQLite database.
  */
-class FileSyncManager(
+@Singleton
+class FileSyncManager @Inject constructor(
     private val context: Context,
-    private val todoDao: TodoDao
+    private val todoDao: TodoDao,
+    private val userPreferencesRepository: UserPreferencesRepository? = null
 ) {
 
     private fun getStorageDir(): File {
@@ -24,14 +30,25 @@ class FileSyncManager(
             ?: context.filesDir).also { it.mkdirs() }
     }
 
+    private suspend fun resolveCustomFolderUri(overrideUri: Uri?): Uri? {
+        if (overrideUri != null) return overrideUri
+        val savedUriStr = try {
+            userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
+        return if (!savedUriStr.isNullOrBlank()) Uri.parse(savedUriStr) else null
+    }
+
     /**
      * Reads all .md and .txt files from storage directory (or custom folder) and upserts any
      * IDs not currently in the database.
      */
     suspend fun syncFilesToDb(customFolderUri: Uri? = null) {
-        if (customFolderUri != null) {
+        val resolvedUri = resolveCustomFolderUri(customFolderUri)
+        if (resolvedUri != null) {
             try {
-                val treeFile = DocumentFile.fromTreeUri(context, customFolderUri)
+                val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
                 if (treeFile != null && treeFile.canRead()) {
                     treeFile.listFiles().forEach { doc ->
                         val name = doc.name ?: ""
@@ -76,11 +93,12 @@ class FileSyncManager(
      * Writes a file (.md or .txt) for every DB entity whose backing file is missing.
      */
     suspend fun syncDbToFiles(fileManager: TodoFileManager, customFolderUri: Uri? = null) {
+        val resolvedUri = resolveCustomFolderUri(customFolderUri)
         val existingFiles = mutableSetOf<String>()
 
-        if (customFolderUri != null) {
+        if (resolvedUri != null) {
             try {
-                val treeFile = DocumentFile.fromTreeUri(context, customFolderUri)
+                val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
                 treeFile?.listFiles()?.mapNotNullTo(existingFiles) { it.name }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -105,7 +123,7 @@ class FileSyncManager(
                     reminderTime = entity.reminderTime,
                     fileFormat = entity.fileFormat
                 )
-                fileManager.saveTodoToFile(domainItem, customFolderUri)
+                fileManager.saveTodoToFile(domainItem, resolvedUri)
             }
         }
     }

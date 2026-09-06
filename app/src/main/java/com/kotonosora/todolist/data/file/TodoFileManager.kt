@@ -4,21 +4,43 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
+import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.TodoItem
+import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class TodoFileManager(private val context: Context) {
+@Singleton
+class TodoFileManager @Inject constructor(
+    private val context: Context,
+    private val userPreferencesRepository: UserPreferencesRepository? = null
+) {
 
     fun getStorageDir(): File {
         return (context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
             ?: context.filesDir).also { it.mkdirs() }
     }
 
+    private fun resolveCustomFolderUri(overrideUri: Uri?): Uri? {
+        if (overrideUri != null) return overrideUri
+        val savedUriStr = runBlocking {
+            try {
+                userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
+            } catch (e: Exception) {
+                null
+            }
+        }
+        return if (!savedUriStr.isNullOrBlank()) Uri.parse(savedUriStr) else null
+    }
+
     fun saveTodoToFile(todo: TodoItem, customFolderUri: Uri? = null): String? {
+        val resolvedUri = resolveCustomFolderUri(customFolderUri)
         val extension = if (todo.fileFormat.equals("txt", ignoreCase = true)) "txt" else "md"
         val oppositeExtension = if (extension == "txt") "md" else "txt"
         val fileName = "${todo.id}.$extension"
@@ -67,9 +89,9 @@ class TodoFileManager(private val context: Context) {
             }
         }
 
-        if (customFolderUri != null) {
+        if (resolvedUri != null) {
             try {
-                val treeFile = DocumentFile.fromTreeUri(context, customFolderUri)
+                val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
                 if (treeFile != null && treeFile.canWrite()) {
                     // Delete opposite file if exists
                     treeFile.findFile(oppositeFileName)?.delete()
@@ -110,10 +132,11 @@ class TodoFileManager(private val context: Context) {
     }
 
     fun deleteTodoFile(todoId: String, customFolderUri: Uri? = null): Boolean {
+        val resolvedUri = resolveCustomFolderUri(customFolderUri)
         var success = true
-        if (customFolderUri != null) {
+        if (resolvedUri != null) {
             try {
-                val treeFile = DocumentFile.fromTreeUri(context, customFolderUri)
+                val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
                 if (treeFile != null) {
                     treeFile.findFile("$todoId.md")?.delete()
                     treeFile.findFile("$todoId.txt")?.delete()
