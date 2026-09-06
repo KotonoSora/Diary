@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,13 +33,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -56,6 +53,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.kotonosora.todolist.domain.model.NoteItem
+import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.search.SearchScreen
 import com.kotonosora.todolist.feature.tags.TagExplorerScreen
@@ -88,8 +86,8 @@ fun VaultWorkspaceScreen(
         onNoteSelect = onNoteSelect,
         onOpenGraph = onOpenGraph,
         onSelectCustomVaultFolder = { folderPickerLauncher.launch(null) },
-        onCreateNote = { folderPath, title, onCreated ->
-            viewModel.createNoteInFolder(folderPath, title, onCreated)
+        onCreateZettelNote = { folderPath, title, noteType, author, url, onCreated ->
+            viewModel.createZettelNoteInFolder(folderPath, title, noteType, author, url, onCreated)
         }
     )
 }
@@ -101,12 +99,11 @@ fun VaultWorkspaceContent(
     onNoteSelect: (String) -> Unit,
     onOpenGraph: () -> Unit = {},
     onSelectCustomVaultFolder: () -> Unit = {},
-    onCreateNote: (String, String, (String) -> Unit) -> Unit = { _, _, _ -> }
+    onCreateZettelNote: (String, String, NoteType, String?, String?, (String) -> Unit) -> Unit = { _, _, _, _, _, _ -> }
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    var showCreateDialog by remember { mutableStateOf(false) }
+    var showQuickCapture by remember { mutableStateOf(false) }
     var targetFolderPath by remember { mutableStateOf("") }
-    var newNoteTitle by remember { mutableStateOf("") }
 
     Scaffold(
         topBar = {
@@ -131,7 +128,6 @@ fun VaultWorkspaceContent(
                     }
                 )
 
-                // Sleek Top Tab Row for internal workspace views
                 PrimaryTabRow(selectedTabIndex = selectedTab) {
                     Tab(
                         selected = selectedTab == 0,
@@ -158,10 +154,9 @@ fun VaultWorkspaceContent(
             if (selectedTab == 0) {
                 FloatingActionButton(onClick = {
                     targetFolderPath = ""
-                    newNoteTitle = ""
-                    showCreateDialog = true
+                    showQuickCapture = true
                 }) {
-                    Icon(Icons.Default.Add, contentDescription = "Create Note")
+                    Icon(Icons.Default.Add, contentDescription = "Quick Capture Note")
                 }
             }
         }
@@ -179,7 +174,6 @@ fun VaultWorkspaceContent(
                             .verticalScroll(rememberScrollState())
                             .padding(16.dp)
                     ) {
-                        // Quick Stats Header
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -198,7 +192,6 @@ fun VaultWorkspaceContent(
 
                         Spacer(Modifier.height(8.dp))
 
-                        // Recent Notes Horizontal Scroll Row
                         if (uiState.notes.isNotEmpty()) {
                             Row(
                                 modifier = Modifier
@@ -246,19 +239,16 @@ fun VaultWorkspaceContent(
                             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                         }
 
-                        // Folder Tree Explorer Section
                         FolderTreeExplorer(
                             rootNode = uiState.rootNode,
                             onNoteSelect = onNoteSelect,
                             onCreateNote = { folderPath ->
                                 targetFolderPath = folderPath
-                                newNoteTitle = ""
-                                showCreateDialog = true
+                                showQuickCapture = true
                             },
                             onCreateFolder = { folderPath ->
                                 targetFolderPath = folderPath
-                                newNoteTitle = ""
-                                showCreateDialog = true
+                                showQuickCapture = true
                             }
                         )
                     }
@@ -274,42 +264,13 @@ fun VaultWorkspaceContent(
             }
         }
 
-        if (showCreateDialog) {
-            AlertDialog(
-                onDismissRequest = { showCreateDialog = false },
-                title = { Text("Create New Note") },
-                text = {
-                    Column {
-                        Text(
-                            text = if (targetFolderPath.isBlank()) "Root Vault" else "Folder: $targetFolderPath",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                        OutlinedTextField(
-                            value = newNoteTitle,
-                            onValueChange = { newNoteTitle = it },
-                            label = { Text("Note Title") },
-                            singleLine = true,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        if (newNoteTitle.isNotBlank()) {
-                            onCreateNote(targetFolderPath, newNoteTitle) { noteId ->
-                                showCreateDialog = false
-                                onNoteSelect(noteId)
-                            }
-                        }
-                    }) {
-                        Text("Create")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showCreateDialog = false }) {
-                        Text("Cancel")
+        if (showQuickCapture) {
+            QuickCaptureDialog(
+                onDismiss = { showQuickCapture = false },
+                onConfirm = { title, noteType, author, url ->
+                    onCreateZettelNote(targetFolderPath, title, noteType, author, url) { createdNoteId ->
+                        showQuickCapture = false
+                        onNoteSelect(createdNoteId)
                     }
                 }
             )

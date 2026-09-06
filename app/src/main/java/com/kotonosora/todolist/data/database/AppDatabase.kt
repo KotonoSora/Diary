@@ -12,9 +12,10 @@ import androidx.room.RoomDatabase
         NoteEntity::class,
         LinkEntity::class,
         TagEntity::class,
-        NoteFtsEntity::class
+        NoteFtsEntity::class,
+        ZettelMetadataEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -24,6 +25,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun noteDao(): NoteDao
     abstract fun linkDao(): LinkDao
     abstract fun tagDao(): TagDao
+    abstract fun zettelMetadataDao(): ZettelMetadataDao
 
     companion object {
         @Volatile

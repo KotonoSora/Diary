@@ -29,6 +29,7 @@ media3 = "1.11.0"
 kizitonwoseCalendar = "2.10.1"
 datastore = "1.2.1"
 documentfile = "1.1.0"
+jgrapht = "1.5.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -71,6 +72,7 @@ media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "medi
 kizitonwose-calendar-compose = { group = "com.kizitonwose.calendar", name = "compose", version.ref = "kizitonwoseCalendar" }
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastore" }
 androidx-documentfile = { group = "androidx.documentfile", name = "documentfile", version.ref = "documentfile" }
+jgrapht-core = { group = "org.jgrapht", name = "jgrapht-core", version.ref = "jgrapht" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

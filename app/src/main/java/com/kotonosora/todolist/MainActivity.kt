@@ -5,7 +5,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import com.kotonosora.todolist.navigation.AppNavGraph
+import com.kotonosora.todolist.navigation.AppNavGraphPreview
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -26,5 +29,13 @@ class MainActivity : ComponentActivity() {
                 AppNavGraph()
             }
         }
+    }
+}
+
+@Preview(showBackground = true, name = "Main Activity Navigation Preview")
+@Composable
+fun MainActivityPreview() {
+    TodoListTheme {
+        AppNavGraphPreview()
     }
 }

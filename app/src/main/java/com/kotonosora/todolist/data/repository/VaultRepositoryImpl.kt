@@ -7,10 +7,15 @@ import com.kotonosora.todolist.data.database.NoteDao
 import com.kotonosora.todolist.data.database.NoteEntity
 import com.kotonosora.todolist.data.database.TagDao
 import com.kotonosora.todolist.data.database.TagEntity
+import com.kotonosora.todolist.data.database.ZettelMetadataDao
+import com.kotonosora.todolist.data.database.ZettelMetadataEntity
 import com.kotonosora.todolist.data.file.VaultManager
 import com.kotonosora.todolist.data.native.MdNativeHelper
 import com.kotonosora.todolist.domain.model.NoteItem
+import com.kotonosora.todolist.domain.model.NoteType
+import com.kotonosora.todolist.domain.model.ParaCategory
 import com.kotonosora.todolist.domain.model.VaultNode
+import com.kotonosora.todolist.domain.model.ZettelUidGenerator
 import com.kotonosora.todolist.domain.repository.VaultRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +29,8 @@ class VaultRepositoryImpl @Inject constructor(
     private val vaultManager: VaultManager,
     private val noteDao: NoteDao,
     private val linkDao: LinkDao,
-    private val tagDao: TagDao
+    private val tagDao: TagDao,
+    private val zettelMetadataDao: ZettelMetadataDao
 ) : VaultRepository {
 
     override fun getAllNotes(): Flow<List<NoteItem>> {
@@ -79,6 +85,7 @@ class VaultRepositoryImpl @Inject constructor(
             noteDao.deleteNoteById(relativePath)
             linkDao.deleteLinksForSource(relativePath)
             tagDao.deleteTagsForNote(relativePath)
+            zettelMetadataDao.deleteMetadataForNote(relativePath)
         }
         success
     }
@@ -116,7 +123,9 @@ class VaultRepositoryImpl @Inject constructor(
 
         val entity = NoteEntity(
             id = note.id,
+            uid = note.uid.ifBlank { ZettelUidGenerator.generateUid() },
             title = parsedTitle,
+            noteType = note.noteType.name,
             relativePath = note.relativePath,
             content = note.content,
             fileFormat = note.fileFormat,
@@ -125,6 +134,17 @@ class VaultRepositoryImpl @Inject constructor(
         )
 
         noteDao.insertNote(entity)
+
+        // Index Zettel metadata
+        val metadataEntity = ZettelMetadataEntity(
+            noteId = note.id,
+            uid = entity.uid,
+            noteType = entity.noteType,
+            author = note.author,
+            sourceUrl = note.sourceUrl,
+            paraCategory = note.paraCategory?.name
+        )
+        zettelMetadataDao.insertMetadata(metadataEntity)
 
         // Update links index
         linkDao.deleteLinksForSource(note.id)
@@ -155,15 +175,33 @@ class VaultRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun entityToDomain(entity: NoteEntity): NoteItem {
+    private suspend fun entityToDomain(entity: NoteEntity): NoteItem {
+        val meta = zettelMetadataDao.getMetadataForNote(entity.id)
+        val noteType = try {
+            NoteType.valueOf(entity.noteType)
+        } catch (e: Exception) {
+            NoteType.PERMANENT
+        }
+
+        val paraCategory = try {
+            meta?.paraCategory?.let { ParaCategory.valueOf(it) }
+        } catch (e: Exception) {
+            null
+        }
+
         return NoteItem(
             id = entity.id,
+            uid = entity.uid,
             title = entity.title,
+            noteType = noteType,
             relativePath = entity.relativePath,
             content = entity.content,
             fileFormat = entity.fileFormat,
             updatedAt = entity.updatedAt,
-            sizeBytes = entity.sizeBytes
+            sizeBytes = entity.sizeBytes,
+            author = meta?.author,
+            sourceUrl = meta?.sourceUrl,
+            paraCategory = paraCategory
         )
     }
 }

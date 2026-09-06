@@ -8,6 +8,7 @@ import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.NoteDao
 import com.kotonosora.todolist.data.database.TagDao
 import com.kotonosora.todolist.data.database.TodoDao
+import com.kotonosora.todolist.data.database.ZettelMetadataDao
 import com.kotonosora.todolist.data.file.FileSyncManager
 import com.kotonosora.todolist.data.file.TodoFileManager
 import com.kotonosora.todolist.data.file.VaultManager
@@ -63,6 +64,10 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideZettelMetadataDao(db: AppDatabase): ZettelMetadataDao = db.zettelMetadataDao()
+
+    @Provides
+    @Singleton
     fun provideVaultManager(
         @ApplicationContext context: Context,
         userPreferencesRepository: UserPreferencesRepository
@@ -76,8 +81,9 @@ object AppModule {
         vaultManager: VaultManager,
         noteDao: NoteDao,
         linkDao: LinkDao,
-        tagDao: TagDao
-    ): VaultRepository = VaultRepositoryImpl(vaultManager, noteDao, linkDao, tagDao)
+        tagDao: TagDao,
+        zettelMetadataDao: ZettelMetadataDao
+    ): VaultRepository = VaultRepositoryImpl(vaultManager, noteDao, linkDao, tagDao, zettelMetadataDao)
 
     @Provides
     @Singleton

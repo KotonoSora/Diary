@@ -84,6 +84,9 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.documentfile)
 
+    // JGraphT Graph & Force Layout Core
+    implementation(libs.jgrapht.core)
+
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)

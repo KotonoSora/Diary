@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.vault
 
+import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.domain.repository.VaultRepository
 import io.mockk.coEvery
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -46,16 +48,21 @@ class VaultViewModelTest {
     }
 
     @Test
-    fun `createNoteInFolder saves new note and triggers callback`() = runTest {
+    fun `createZettelNoteInFolder saves new note with template and UID`() = runTest {
         var createdPath = ""
         coEvery { vaultRepository.saveNote(any()) } returns true
 
-        viewModel.createNoteInFolder(folderPath = "Projects", title = "Roadmap") { path ->
+        viewModel.createZettelNoteInFolder(
+            folderPath = "Projects",
+            title = "Roadmap",
+            noteType = NoteType.PERMANENT
+        ) { path ->
             createdPath = path
         }
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertEquals("Projects/Roadmap.md", createdPath)
+        assertTrue(createdPath.startsWith("Projects/"))
+        assertTrue(createdPath.endsWith("-Roadmap.md"))
         coVerify { vaultRepository.saveNote(any()) }
     }
 }

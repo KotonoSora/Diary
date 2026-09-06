@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.navigation
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
@@ -10,6 +11,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -26,6 +29,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.kotonosora.todolist.domain.model.NoteItem
+import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.calendar.CalendarScreen
 import com.kotonosora.todolist.feature.calendar.CalendarViewModel
 import com.kotonosora.todolist.feature.editor.EditorScreen
@@ -37,8 +42,11 @@ import com.kotonosora.todolist.feature.media.MediaViewModel
 import com.kotonosora.todolist.feature.todo.AddEditTodoScreen
 import com.kotonosora.todolist.feature.todo.TodoListScreen
 import com.kotonosora.todolist.feature.todo.TodoViewModel
+import com.kotonosora.todolist.feature.vault.VaultUiState
 import com.kotonosora.todolist.feature.vault.VaultViewModel
+import com.kotonosora.todolist.feature.vault.VaultWorkspaceContent
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceScreen
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -86,12 +94,23 @@ fun AppNavGraph() {
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 3.dp
+                ) {
                     bottomNavItems.forEach { item ->
+                        val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                         NavigationBarItem(
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { Text(item.label) },
-                            selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
+                            selected = isSelected,
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
                             onClick = {
                                 navController.navigate(item.route) {
                                     popUpTo(navController.graph.findStartDestination().id) {
@@ -189,17 +208,58 @@ fun AppNavGraph() {
     }
 }
 
-@Preview(showBackground = true, name = "App Navigation Graph Preview")
+@Preview(showBackground = true, name = "Full Screen App Navigation Graph Preview")
 @Composable
 fun AppNavGraphPreview() {
-    MaterialTheme {
-        NavigationBar {
-            bottomNavItems.forEachIndexed { index, item ->
-                NavigationBarItem(
-                    icon = { Icon(item.icon, contentDescription = item.label) },
-                    label = { Text(item.label) },
-                    selected = index == 0,
-                    onClick = {}
+    val sampleTree = VaultNode.FolderNode(
+        name = "My Knowledge Base",
+        relativePath = "",
+        children = listOf(
+            VaultNode.FileNode("Welcome.md", "Welcome.md", "md", 1024, System.currentTimeMillis()),
+            VaultNode.FolderNode(
+                name = "Projects",
+                relativePath = "Projects",
+                children = listOf(
+                    VaultNode.FileNode("Roadmap.md", "Projects/Roadmap.md", "md", 2048, System.currentTimeMillis())
+                )
+            )
+        )
+    )
+
+    val sampleNotes = listOf(
+        NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!"),
+        NoteItem("Projects/Roadmap.md", "Project Roadmap", "Projects", "Milestones for Q1 architecture and local vault sync.")
+    )
+
+    TodoListTheme {
+        Scaffold(
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 3.dp
+                ) {
+                    bottomNavItems.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) },
+                            selected = index == 0,
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            ),
+                            onClick = {}
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                VaultWorkspaceContent(
+                    uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes),
+                    onNoteSelect = {}
                 )
             }
         }

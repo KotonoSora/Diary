@@ -4,6 +4,7 @@ import com.kotonosora.todolist.data.database.LinkDao
 import com.kotonosora.todolist.data.database.NoteDao
 import com.kotonosora.todolist.data.database.NoteEntity
 import com.kotonosora.todolist.data.database.TagDao
+import com.kotonosora.todolist.data.database.ZettelMetadataDao
 import com.kotonosora.todolist.data.file.VaultManager
 import com.kotonosora.todolist.domain.model.NoteItem
 import io.mockk.coEvery
@@ -22,6 +23,7 @@ class VaultRepositoryTest {
     private val noteDao: NoteDao = mockk(relaxed = true)
     private val linkDao: LinkDao = mockk(relaxed = true)
     private val tagDao: TagDao = mockk(relaxed = true)
+    private val zettelMetadataDao: ZettelMetadataDao = mockk(relaxed = true)
 
     private lateinit var repository: VaultRepositoryImpl
 
@@ -31,7 +33,8 @@ class VaultRepositoryTest {
             vaultManager = vaultManager,
             noteDao = noteDao,
             linkDao = linkDao,
-            tagDao = tagDao
+            tagDao = tagDao,
+            zettelMetadataDao = zettelMetadataDao
         )
     }
 
@@ -66,6 +69,7 @@ class VaultRepositoryTest {
         assertEquals(true, success)
 
         coVerify { noteDao.insertNote(any()) }
+        coVerify { zettelMetadataDao.insertMetadata(any()) }
     }
 
     @Test
@@ -78,5 +82,6 @@ class VaultRepositoryTest {
         coVerify { noteDao.deleteNoteById("Old.md") }
         coVerify { linkDao.deleteLinksForSource("Old.md") }
         coVerify { tagDao.deleteTagsForNote("Old.md") }
+        coVerify { zettelMetadataDao.deleteMetadataForNote("Old.md") }
     }
 }

@@ -4,8 +4,11 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
+import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
+import com.kotonosora.todolist.domain.model.ZettelUidGenerator
 import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.feature.editor.ZettelTemplatePicker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,15 +43,36 @@ class VaultViewModel @Inject constructor(
         }
     }
 
-    fun createNoteInFolder(folderPath: String, title: String, onCreated: (String) -> Unit) {
+    fun createZettelNoteInFolder(
+        folderPath: String,
+        title: String,
+        noteType: NoteType,
+        author: String? = null,
+        sourceUrl: String? = null,
+        onCreated: (String) -> Unit
+    ) {
         if (title.isBlank()) return
-        val relativePath = if (folderPath.isBlank()) "$title.md" else "$folderPath/$title.md"
+        val uid = ZettelUidGenerator.generateUid()
+        val filename = "$uid-$title.md"
+        val relativePath = if (folderPath.isBlank()) filename else "$folderPath/$filename"
+        val content = ZettelTemplatePicker.generateContentForTemplate(
+            noteType = noteType,
+            title = title,
+            author = author,
+            sourceUrl = sourceUrl
+        )
+
         val note = NoteItem(
             id = relativePath,
+            uid = uid,
             title = title,
+            noteType = noteType,
             relativePath = folderPath,
-            content = "# $title\n\n"
+            content = content,
+            author = author,
+            sourceUrl = sourceUrl
         )
+
         viewModelScope.launch {
             val success = vaultRepository.saveNote(note)
             if (success) {

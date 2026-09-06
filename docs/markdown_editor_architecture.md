@@ -46,7 +46,7 @@ To build the most responsive, private, and intuitive mobile-first Personal Knowl
 
 ```mermaid
 graph TD
-    subgraph UI Layer [User Interface]
+    subgraph UI_LAYER ["UI Layer (User Interface)"]
         A1[Folder Tree Explorer]
         A2[Live Preview Editor]
         A3[Backlinks & Mentions Panel]
@@ -54,21 +54,30 @@ graph TD
         A5[WikiLink Autocomplete Overlay]
     end
 
-    subgraph Logic Layer [ViewModels & Use Cases]
+    subgraph LOGIC_LAYER ["Logic Layer (ViewModels & Use Cases)"]
         B1[Vault & Workspace Management]
         B2[Editor & Formatting State]
         B3[Backlink & Tag Resolution]
         B4[Full-Text Search Engine]
     end
 
-    subgraph Storage & Indexing Layer [Data & Native Processing]
+    subgraph STORAGE_LAYER ["Data & Storage Layer (Data & Native Processing)"]
         C1[Vault Manager - Local File System]
         C2[Metadata Database & Search Index]
         C3[Native C++ Parsing Engine]
     end
 
-    UI Layer --> Logic Layer
-    Logic Layer --> Storage & Indexing Layer
+    A1 --> B1
+    A2 --> B2
+    A3 --> B3
+    A4 --> B3
+    A5 --> B3
+
+    B1 --> C1
+    B2 --> C1
+    B3 --> C2
+    B4 --> C2
+    B1 --> C3
 ```
 
 ---

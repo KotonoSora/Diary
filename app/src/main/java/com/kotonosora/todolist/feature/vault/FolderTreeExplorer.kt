@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -41,14 +42,15 @@ fun FolderTreeExplorer(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -104,8 +106,9 @@ private fun RenderFolderNode(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .defaultMinSize(minHeight = 48.dp)
                     .clickable { isExpanded = !isExpanded }
-                    .padding(start = (level * 12).dp, top = 6.dp, bottom = 6.dp),
+                    .padding(start = (level * 16).dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -113,10 +116,10 @@ private fun RenderFolderNode(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.secondary
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(12.dp))
                 Text(
                     text = folder.name,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -139,8 +142,9 @@ private fun RenderFolderNode(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .defaultMinSize(minHeight = 48.dp)
                                 .clickable { onNoteSelect(child.relativePath) }
-                                .padding(start = ((level + 1) * 12).dp, top = 6.dp, bottom = 6.dp),
+                                .padding(start = ((level + 1) * 16).dp, top = 4.dp, bottom = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
@@ -148,7 +152,7 @@ private fun RenderFolderNode(
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(12.dp))
                             Text(
                                 text = child.name,
                                 style = MaterialTheme.typography.bodyMedium,

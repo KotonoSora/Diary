@@ -1,13 +1,22 @@
 package com.kotonosora.todolist.feature.graph
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,15 +33,19 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
+import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.repository.VaultRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +55,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.hypot
-import kotlin.random.Random
 
 data class GraphEdge(
     val sourceId: String,
@@ -107,26 +119,21 @@ fun KnowledgeGraphContent(
 
     val nodePositions = remember { mutableStateMapOf<String, Offset>() }
 
-    LaunchedEffect(uiState.notes) {
+    LaunchedEffect(uiState.notes, uiState.edges) {
         if (uiState.notes.isNotEmpty()) {
-            val rand = Random(42)
-            uiState.notes.forEachIndexed { idx, note ->
-                if (!nodePositions.containsKey(note.id)) {
-                    val angle = idx * (2 * Math.PI / uiState.notes.size)
-                    val radius = 250f + rand.nextFloat() * 100f
-                    nodePositions[note.id] = Offset(
-                        x = 500f + (radius * Math.cos(angle)).toFloat(),
-                        y = 800f + (radius * Math.sin(angle)).toFloat()
-                    )
-                }
-            }
+            val layoutMap = JGraphTLayoutHelper.computeLayoutPositions(
+                notes = uiState.notes,
+                edges = uiState.edges
+            )
+            nodePositions.clear()
+            nodePositions.putAll(layoutMap)
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("2D Knowledge Graph") },
+                title = { Text("Zettelkasten Knowledge Graph") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
@@ -181,28 +188,80 @@ fun KnowledgeGraphContent(
                 uiState.notes.forEach { note ->
                     val pos = nodePositions[note.id] ?: return@forEach
                     val canvasPos = pos * scale + offset
+                    val nodeColor = when (note.noteType) {
+                        NoteType.FLEETING -> Color(0xFFFFC107)    // Yellow
+                        NoteType.LITERATURE -> Color(0xFF2196F3)  // Blue
+                        NoteType.PERMANENT -> Color(0xFF4CAF50)   // Green
+                        NoteType.MOC -> Color(0xFF9C27B0)         // Purple
+                    }
                     drawCircle(
-                        color = Color(0xFF2196F3),
+                        color = nodeColor,
                         radius = 16f * scale,
                         center = canvasPos
                     )
+                }
+            }
+
+            // Legend Overlay Card
+            Card(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text(
+                        text = "Legend",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.size(4.dp))
+                    LegendItem(color = Color(0xFFFFC107), label = "Fleeting Note")
+                    LegendItem(color = Color(0xFF2196F3), label = "Literature Note")
+                    LegendItem(color = Color(0xFF4CAF50), label = "Permanent Note")
+                    LegendItem(color = Color(0xFF9C27B0), label = "Map of Content (MOC)")
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true, name = "Knowledge Graph Screen Preview")
+@Composable
+private fun LegendItem(color: Color, label: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(vertical = 2.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "Zettelkasten Graph Screen Preview")
 @Composable
 fun KnowledgeGraphScreenPreview() {
     val sampleNotes = listOf(
-        NoteItem("Note1.md", "Roadmap", "", "Content"),
-        NoteItem("Note2.md", "Architecture", "", "Content"),
-        NoteItem("Note3.md", "Zettelkasten", "", "Content")
+        NoteItem("Note1.md", "Fleeting Thought", "", "Content", noteType = NoteType.FLEETING),
+        NoteItem("Note2.md", "Book Summary", "", "Content", noteType = NoteType.LITERATURE),
+        NoteItem("Note3.md", "Atomic Zettel Concept", "", "Content", noteType = NoteType.PERMANENT),
+        NoteItem("Note4.md", "MOC Overview", "", "Content", noteType = NoteType.MOC)
     )
     val sampleEdges = listOf(
-        GraphEdge("Note1.md", "Architecture"),
-        GraphEdge("Note2.md", "Zettelkasten")
+        GraphEdge("Note1.md", "Atomic Zettel Concept"),
+        GraphEdge("Note2.md", "Atomic Zettel Concept"),
+        GraphEdge("Note3.md", "MOC Overview")
     )
 
     MaterialTheme {
