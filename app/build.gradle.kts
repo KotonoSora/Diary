@@ -13,7 +13,7 @@ configure<ApplicationExtension> {
 
     defaultConfig {
         applicationId = "com.kotonosora.todolist"
-        minSdk = 30
+        minSdk = 24
         versionCode = 16
         versionName = "3.0.0"
 
@@ -64,6 +64,25 @@ dependencies {
     implementation(libs.navigation.compose)
     debugImplementation(libs.androidx.ui.tooling)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.richeditor.compose)
+
+    // CameraX & Coil Image Loading
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+    implementation(libs.coil.compose)
+
+    // Media3 ExoPlayer Audio Playback
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.ui)
+
+    // Kizitonwose Calendar Compose
+    implementation(libs.kizitonwose.calendar.compose)
+
+    // DataStore Preferences & DocumentFile
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.documentfile)
 
     // Room
     implementation(libs.room.runtime)

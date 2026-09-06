@@ -8,6 +8,7 @@ import com.kotonosora.todolist.data.database.TodoDao
 import com.kotonosora.todolist.data.file.FileSyncManager
 import com.kotonosora.todolist.data.file.TodoFileManager
 import com.kotonosora.todolist.data.repository.TodoRepositoryImpl
+import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.repository.TodoRepository
 import com.kotonosora.todolist.domain.usecase.AddTodoUseCase
 import com.kotonosora.todolist.domain.usecase.DeleteTodoUseCase
@@ -44,16 +45,20 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTodoFileManager(@ApplicationContext context: Context): TodoFileManager {
-        return TodoFileManager(context)
+    fun provideTodoFileManager(
+        @ApplicationContext context: Context,
+        userPreferencesRepository: UserPreferencesRepository
+    ): TodoFileManager {
+        return TodoFileManager(context, userPreferencesRepository)
     }
 
     @Provides
     @Singleton
     fun provideFileSyncManager(
         @ApplicationContext context: Context,
-        todoDao: TodoDao
-    ): FileSyncManager = FileSyncManager(context, todoDao)
+        todoDao: TodoDao,
+        userPreferencesRepository: UserPreferencesRepository
+    ): FileSyncManager = FileSyncManager(context, todoDao, userPreferencesRepository)
 
     @Provides
     @Singleton

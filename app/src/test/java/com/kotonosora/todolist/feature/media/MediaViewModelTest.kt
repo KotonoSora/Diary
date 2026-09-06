@@ -80,12 +80,9 @@ class MediaViewModelTest {
         val vm = buildViewModel(listOf(entity))
         val job = launch { vm.capturedPhotoPaths.collect {} }
         advanceUntilIdle()
-        mockkConstructor(File::class)
-        every { anyConstructed<File>().delete() } returns true
         vm.deletePhoto("/old.jpg")
         advanceUntilIdle()
         coVerify { mediaDao.deleteMedia(entity) }
-        unmockkConstructor(File::class)
         job.cancel()
     }
     @Test
@@ -94,12 +91,9 @@ class MediaViewModelTest {
         val vm = buildViewModel(listOf(entity))
         val job = launch { vm.recordedAudioPaths.collect {} }
         advanceUntilIdle()
-        mockkConstructor(File::class)
-        every { anyConstructed<File>().delete() } returns true
         vm.deleteAudio("/rec.m4a")
         advanceUntilIdle()
         coVerify { mediaDao.deleteMedia(entity) }
-        unmockkConstructor(File::class)
         job.cancel()
     }
 }

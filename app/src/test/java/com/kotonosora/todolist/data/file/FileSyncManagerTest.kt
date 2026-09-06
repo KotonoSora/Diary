@@ -1,7 +1,8 @@
 package com.kotonosora.todolist.data.file
 
-import io.mockk.*
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -17,7 +18,7 @@ class FileSyncManagerTest {
         mdFile.writeText("# My Test Todo\n\n- **Status**: Pending\n")
 
         val titleLine = mdFile.readLines().firstOrNull { it.startsWith("# ") }
-        assert(titleLine?.removePrefix("# ")?.trim() == "My Test Todo")
+        assertEquals("My Test Todo", titleLine?.removePrefix("# ")?.trim())
     }
 
     @Test
@@ -33,7 +34,7 @@ class FileSyncManagerTest {
         file.writeText(mdContent)
 
         val titleLine = file.readLines().firstOrNull { it.startsWith("# ") }
-        assert(titleLine?.removePrefix("# ")?.trim() == "Buy Groceries")
+        assertEquals("Buy Groceries", titleLine?.removePrefix("# ")?.trim())
     }
 
     @Test
@@ -43,7 +44,7 @@ class FileSyncManagerTest {
         file.writeText(mdContent)
 
         val isCompleted = file.readLines().any { it.contains("**Status**: Completed") }
-        assert(isCompleted)
+        assertTrue(isCompleted)
     }
 
     @Test
@@ -62,6 +63,27 @@ class FileSyncManagerTest {
                 inDesc -> descLines.add(line)
             }
         }
-        assert(descLines.joinToString("\n").trim() == "This is the description content.")
+        assertEquals("This is the description content.", descLines.joinToString("\n").trim())
+    }
+
+    @Test
+    fun `txt file can be parsed for title status and description`() = runTest {
+        val txtContent = """
+            TITLE: Read Book
+            STATUS: Completed
+            
+            DESCRIPTION:
+            Finish reading chapter 5 of Kotlin in Action.
+        """.trimIndent()
+
+        val file = tempFolder.newFile("read.txt")
+        file.writeText(txtContent)
+
+        val lines = file.readLines()
+        val titleLine = lines.firstOrNull { it.startsWith("TITLE: ") }?.removePrefix("TITLE: ")?.trim()
+        val isCompleted = lines.any { it.startsWith("STATUS: Completed") }
+
+        assertEquals("Read Book", titleLine)
+        assertTrue(isCompleted)
     }
 }

@@ -26,6 +26,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -35,10 +37,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kotonosora.todolist.domain.model.TodoItem
+import java.text.DateFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -53,8 +59,21 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
     val allTodos by viewModel.allTodos.collectAsState()
     val todosForDate by viewModel.todosForSelectedDate.collectAsState()
 
-    val monthNames = remember {
-        listOf("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    val locale = LocalConfiguration.current.locales[0]
+    val monthTitle = remember(year, month, locale) {
+        val cal = Calendar.getInstance(locale).apply { set(year, month, 1) }
+        SimpleDateFormat("MMMM yyyy", locale).format(cal.time)
+    }
+
+    val weekDays = remember(locale) {
+        val symbols = DateFormatSymbols(locale).shortWeekdays
+        val firstDayOfWeek = Calendar.getInstance(locale).firstDayOfWeek
+        val days = mutableListOf<String>()
+        for (i in 0..6) {
+            val dayIndex = ((firstDayOfWeek - 1 + i) % 7) + 1
+            days.add(symbols[dayIndex])
+        }
+        days
     }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Calendar") }) }) { paddingValues ->
@@ -64,7 +83,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                 .padding(paddingValues)
                 .padding(horizontal = 8.dp)
         ) {
-            // Month navigation header
+            // Month navigation header (locale formatted)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -74,7 +93,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month")
                 }
                 Text(
-                    "${monthNames[month]} $year",
+                    text = monthTitle,
                     style = MaterialTheme.typography.titleLarge
                 )
                 IconButton(onClick = { viewModel.nextMonth() }) {
@@ -82,9 +101,9 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                 }
             }
 
-            // Day of week headers
+            // Locale-aware Day of week headers
             Row(modifier = Modifier.fillMaxWidth()) {
-                listOf("Su", "Mo", "Tu", "We", "Th", "Fr", "Sa").forEach { label ->
+                weekDays.forEach { label ->
                     Text(
                         text = label,
                         modifier = Modifier.weight(1f),
@@ -97,19 +116,20 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
 
             Spacer(Modifier.height(4.dp))
 
-            // Calendar grid
+            // Calendar grid with event indicators
             CalendarGrid(
                 year = year,
                 month = month,
                 selectedDateMillis = selectedDateMillis,
                 allTodos = allTodos,
+                locale = locale,
                 onDateSelected = { viewModel.selectDate(it) }
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-            // Todos for selected date
-            val formatter = remember { SimpleDateFormat("EEEE, MMM d", Locale.getDefault()) }
+            // Todos for selected date formatted in locale language
+            val formatter = remember(locale) { SimpleDateFormat("EEEE, MMM d, yyyy", locale) }
             Text(
                 text = formatter.format(Date(selectedDateMillis)),
                 style = MaterialTheme.typography.titleMedium,
@@ -138,28 +158,40 @@ private fun CalendarGrid(
     month: Int,
     selectedDateMillis: Long,
     allTodos: List<TodoItem>,
+    locale: Locale,
     onDateSelected: (Long) -> Unit
 ) {
-    val cal = Calendar.getInstance().apply { set(year, month, 1) }
+    val firstDayOfWeek = Calendar.getInstance(locale).firstDayOfWeek
+    val cal = Calendar.getInstance(locale).apply { set(year, month, 1) }
     val daysInMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val firstDayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1 // 0 = Sunday
+    val firstDayOffset = ((cal.get(Calendar.DAY_OF_WEEK) - firstDayOfWeek + 7) % 7)
 
-    val selectedCal = Calendar.getInstance().apply { timeInMillis = selectedDateMillis }
+    val selectedCal = Calendar.getInstance(locale).apply { timeInMillis = selectedDateMillis }
     val selectedDay =
         if (selectedCal.get(Calendar.YEAR) == year && selectedCal.get(Calendar.MONTH) == month)
             selectedCal.get(Calendar.DAY_OF_MONTH) else -1
 
-    val todoDays = remember(allTodos, year, month) {
-        allTodos.mapNotNull { todo ->
+    // Map dayOfMonth -> (pendingCount, completedCount)
+    val dayEventsMap = remember(allTodos, year, month) {
+        val map = mutableMapOf<Int, Pair<Int, Int>>()
+        allTodos.forEach { todo ->
             todo.dueDate?.let {
                 val c = Calendar.getInstance().apply { timeInMillis = it }
-                if (c.get(Calendar.YEAR) == year && c.get(Calendar.MONTH) == month)
-                    c.get(Calendar.DAY_OF_MONTH) else null
+                if (c.get(Calendar.YEAR) == year && c.get(Calendar.MONTH) == month) {
+                    val day = c.get(Calendar.DAY_OF_MONTH)
+                    val current = map.getOrDefault(day, Pair(0, 0))
+                    if (todo.isCompleted) {
+                        map[day] = Pair(current.first, current.second + 1)
+                    } else {
+                        map[day] = Pair(current.first + 1, current.second)
+                    }
+                }
             }
-        }.toSet()
+        }
+        map
     }
 
-    val cells = firstDayOfWeek + daysInMonth
+    val cells = firstDayOffset + daysInMonth
     val rows = (cells + 6) / 7
 
     Column {
@@ -167,15 +199,18 @@ private fun CalendarGrid(
             Row(modifier = Modifier.fillMaxWidth()) {
                 repeat(7) { col ->
                     val cellIndex = row * 7 + col
-                    val day = cellIndex - firstDayOfWeek + 1
+                    val day = cellIndex - firstDayOffset + 1
                     if (day < 1 || day > daysInMonth) {
-                        Box(modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f))
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                        )
                     } else {
                         val isSelected = day == selectedDay
-                        val hasTodo = day in todoDays
-                        val today = Calendar.getInstance()
+                        val (pendingCount, completedCount) = dayEventsMap.getOrDefault(day, Pair(0, 0))
+                        val totalEvents = pendingCount + completedCount
+                        val today = Calendar.getInstance(locale)
                         val isToday = today.get(Calendar.YEAR) == year &&
                                 today.get(Calendar.MONTH) == month &&
                                 today.get(Calendar.DAY_OF_MONTH) == day
@@ -185,16 +220,16 @@ private fun CalendarGrid(
                                 .weight(1f)
                                 .aspectRatio(1f)
                                 .padding(2.dp)
-                                .clip(CircleShape)
+                                .clip(MaterialTheme.shapes.small)
                                 .background(
                                     when {
                                         isSelected -> MaterialTheme.colorScheme.primary
                                         isToday -> MaterialTheme.colorScheme.primaryContainer
-                                        else -> MaterialTheme.colorScheme.surface
+                                        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
                                     }
                                 )
                                 .clickable {
-                                    val c = Calendar.getInstance().apply {
+                                    val c = Calendar.getInstance(locale).apply {
                                         set(year, month, day, 0, 0, 0)
                                         set(Calendar.MILLISECOND, 0)
                                     }
@@ -205,20 +240,51 @@ private fun CalendarGrid(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
                                     text = day.toString(),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
                                     color = if (isSelected) MaterialTheme.colorScheme.onPrimary
                                     else MaterialTheme.colorScheme.onSurface
                                 )
-                                if (hasTodo) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(4.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                                else MaterialTheme.colorScheme.tertiary
+
+                                if (totalEvents > 0) {
+                                    if (totalEvents >= 2) {
+                                        // Small event chip tag
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(top = 1.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f)
+                                                    else MaterialTheme.colorScheme.primaryContainer
+                                                )
+                                                .padding(horizontal = 4.dp, vertical = 0.dp)
+                                        ) {
+                                            Text(
+                                                text = "$totalEvents",
+                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                                else MaterialTheme.colorScheme.onPrimaryContainer
                                             )
-                                    )
+                                        }
+                                    } else {
+                                        // Single event status dot
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(5.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                                        else if (pendingCount > 0) MaterialTheme.colorScheme.primary
+                                                        else MaterialTheme.colorScheme.secondary
+                                                    )
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -253,6 +319,15 @@ private fun CalendarTodoItem(todo: TodoItem) {
             color = if (todo.isCompleted) MaterialTheme.colorScheme.outline
             else MaterialTheme.colorScheme.onSurface
         )
+        if (todo.isCompleted) {
+            Spacer(Modifier.width(8.dp))
+            SuggestionChip(
+                onClick = {},
+                label = { Text("Completed", style = MaterialTheme.typography.labelSmall) },
+                colors = SuggestionChipDefaults.suggestionChipColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        }
     }
 }
-

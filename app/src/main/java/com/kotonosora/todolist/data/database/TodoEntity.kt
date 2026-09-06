@@ -12,5 +12,6 @@ data class TodoEntity(
     val dueDate: Long?,
     val filePath: String?,
     val isCompleted: Boolean = false,
-    val reminderTime: Long? = null
+    val reminderTime: Long? = null,
+    val fileFormat: String = "md"
 )
