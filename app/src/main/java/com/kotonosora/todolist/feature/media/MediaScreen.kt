@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -37,44 +38,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import com.kotonosora.todolist.ui.components.AudioPlayerView
+import com.kotonosora.todolist.ui.components.CameraCaptureView
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
-    val context = LocalContext.current
     val capturedPhotos by viewModel.capturedPhotoPaths.collectAsState()
     val recordedAudios by viewModel.recordedAudioPaths.collectAsState()
     val isRecording by viewModel.isRecording.collectAsState()
+    val customFolderUri by viewModel.customFolderUri.collectAsState()
 
-    var photoUri by remember { mutableStateOf<Uri?>(null) }
+    var showCameraView by remember { mutableStateOf(false) }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture()
-    ) { success ->
-        if (success) photoUri?.path?.let { viewModel.onPhotoCaptured(it) }
-    }
-
-    val multiplePermissionsLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        val cameraGranted = permissions[Manifest.permission.CAMERA] == true
-        val audioGranted = permissions[Manifest.permission.RECORD_AUDIO] == true
-        if (cameraGranted) {
-            val imageFile = File(
-                context.getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES),
-                "IMG_${System.currentTimeMillis()}.jpg"
-            )
-            val uri = FileProvider.getUriForFile(
-                context, "${context.packageName}.fileprovider", imageFile
-            )
-            photoUri = uri
-            cameraLauncher.launch(uri)
-        }
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) showCameraView = true
     }
 
     val audioPermissionLauncher = rememberLauncherForActivityResult(
@@ -100,9 +90,7 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
             item {
                 Button(
                     onClick = {
-                        multiplePermissionsLauncher.launch(
-                            arrayOf(Manifest.permission.CAMERA)
-                        )
+                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -111,8 +99,9 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
             }
             items(capturedPhotos) { path ->
                 MediaFileItem(
-                    name = File(path).name,
+                    name = formatMediaDisplayName(path, isAudio = false),
                     subtitle = path,
+                    filePath = path,
                     onDelete = { viewModel.deletePhoto(path) }
                 )
             }
@@ -171,9 +160,9 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
                 }
             }
             items(recordedAudios) { path ->
-                MediaFileItem(
-                    name = File(path).name,
-                    subtitle = path,
+                AudioFileItem(
+                    name = formatMediaDisplayName(path, isAudio = true),
+                    filePath = path,
                     onDelete = { viewModel.deleteAudio(path) }
                 )
             }
@@ -189,10 +178,116 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
             item { Spacer(Modifier.height(16.dp)) }
         }
     }
+
+    // Camera Capture Dialog
+    if (showCameraView) {
+        Dialog(
+            onDismissRequest = { showCameraView = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            CameraCaptureView(
+                onPhotoCaptured = { pathStr ->
+                    viewModel.onPhotoCaptured(pathStr)
+                    showCameraView = false
+                },
+                onDismiss = { showCameraView = false },
+                customFolderUriStr = customFolderUri
+            )
+        }
+    }
+}
+
+fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
+    val fileName = try {
+        if (pathOrName.startsWith("content://")) {
+            val uri = Uri.parse(pathOrName)
+            uri.lastPathSegment?.substringAfterLast("/") ?: pathOrName
+        } else {
+            File(pathOrName).name
+        }
+    } catch (e: Exception) {
+        pathOrName
+    }
+
+    val regex = Regex("""(IMG|AUD|REC)_(\d{8}_\d{6}|\d+)""")
+    val match = regex.find(fileName)
+
+    if (match != null) {
+        val type = match.groupValues[1]
+        val rawTime = match.groupValues[2]
+
+        val typeLabel = when (type) {
+            "IMG" -> "Photo"
+            "AUD", "REC" -> "Audio"
+            else -> if (isAudio) "Audio" else "Photo"
+        }
+
+        if (rawTime.contains("_")) {
+            try {
+                val inputFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
+                val outputFormat = SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.getDefault())
+                val date = inputFormat.parse(rawTime)
+                if (date != null) {
+                    return "$typeLabel - ${outputFormat.format(date)}"
+                }
+            } catch (e: Exception) {
+                // ignore
+            }
+        } else {
+            rawTime.toLongOrNull()?.let { millis ->
+                try {
+                    val outputFormat = SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.getDefault())
+                    return "$typeLabel - ${outputFormat.format(Date(millis))}"
+                } catch (e: Exception) {
+                    // ignore
+                }
+            }
+        }
+    }
+
+    val prefix = if (isAudio) "Audio - " else "Photo - "
+    return prefix + fileName.removeSuffix(".jpg").removeSuffix(".png").removeSuffix(".m4a")
 }
 
 @Composable
-private fun MediaFileItem(name: String, subtitle: String, onDelete: () -> Unit) {
+private fun AudioFileItem(
+    name: String,
+    filePath: String,
+    onDelete: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(name, style = MaterialTheme.typography.bodyMedium)
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            AudioPlayerView(filePath = filePath)
+        }
+    }
+}
+
+@Composable
+private fun MediaFileItem(
+    name: String,
+    subtitle: String,
+    filePath: String? = null,
+    onDelete: () -> Unit
+) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -200,6 +295,25 @@ private fun MediaFileItem(name: String, subtitle: String, onDelete: () -> Unit) 
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (filePath != null) {
+                val imageModel = remember(filePath) {
+                    if (filePath.startsWith("content://")) Uri.parse(filePath)
+                    else File(filePath)
+                }
+                Card(
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.size(60.dp)
+                ) {
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+            }
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(name, style = MaterialTheme.typography.bodyMedium)
                 Text(
@@ -219,4 +333,3 @@ private fun MediaFileItem(name: String, subtitle: String, onDelete: () -> Unit) 
         }
     }
 }
-

@@ -1,5 +1,8 @@
 package com.kotonosora.todolist.feature.todo
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,12 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -35,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,12 +58,39 @@ fun TodoListScreen(
     navController: NavController,
     viewModel: TodoViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val todos by viewModel.todos.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val customFolderUri by viewModel.customFolderUri.collectAsState()
+
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            try {
+                context.contentResolver.takePersistableUriPermission(it, flags)
+                viewModel.saveCustomFolderUri(it.toString())
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("My Todos") })
+            TopAppBar(
+                title = { Text("My Todos") },
+                actions = {
+                    IconButton(onClick = { folderPickerLauncher.launch(null) }) {
+                        Icon(
+                            Icons.Default.Folder,
+                            contentDescription = "Configure Auto-Save Folder",
+                            tint = if (customFolderUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
         },
         floatingActionButton = {
             FloatingActionButton(

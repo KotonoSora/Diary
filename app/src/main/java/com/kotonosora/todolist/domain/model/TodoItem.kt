@@ -7,5 +7,6 @@ data class TodoItem(
     val dueDate: Long?,
     val filePath: String?,
     val isCompleted: Boolean,
-    val reminderTime: Long? = null
+    val reminderTime: Long? = null,
+    val fileFormat: String = "md"
 )

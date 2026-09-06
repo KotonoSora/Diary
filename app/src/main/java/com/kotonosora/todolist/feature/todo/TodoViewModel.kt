@@ -7,6 +7,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.kotonosora.todolist.data.native.TodoNativeHelper
+import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.TodoItem
 import com.kotonosora.todolist.domain.usecase.TodoUseCases
 import com.kotonosora.todolist.notification.TodoReminderWorker
@@ -23,8 +24,12 @@ import javax.inject.Inject
 @HiltViewModel
 class TodoViewModel @Inject constructor(
     private val useCases: TodoUseCases,
-    private val workManager: WorkManager
+    private val workManager: WorkManager,
+    private val userPreferencesRepository: UserPreferencesRepository
 ) : ViewModel() {
+
+    val customFolderUri: StateFlow<String?> = userPreferencesRepository.customStorageFolderUri
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Unfiltered list of all todos — use this for lookups (e.g. edit screen). */
     val allTodos: StateFlow<List<TodoItem>> = useCases.getTodos()
@@ -46,6 +51,10 @@ class TodoViewModel @Inject constructor(
 
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
+    }
+
+    fun saveCustomFolderUri(uriStr: String?) = viewModelScope.launch {
+        userPreferencesRepository.saveCustomStorageFolderUri(uriStr)
     }
 
     fun addTodo(todo: TodoItem) = viewModelScope.launch {
@@ -83,5 +92,3 @@ class TodoViewModel @Inject constructor(
         workManager.cancelUniqueWork("reminder_$todoId")
     }
 }
-
-

@@ -11,7 +11,8 @@ fun TodoEntity.toDomain(): TodoItem {
         dueDate = dueDate,
         filePath = filePath,
         isCompleted = isCompleted,
-        reminderTime = reminderTime
+        reminderTime = reminderTime,
+        fileFormat = fileFormat
     )
 }
 
@@ -23,6 +24,7 @@ fun TodoItem.toEntity(): TodoEntity {
         dueDate = dueDate,
         filePath = filePath,
         isCompleted = isCompleted,
-        reminderTime = reminderTime
+        reminderTime = reminderTime,
+        fileFormat = fileFormat
     )
 }
