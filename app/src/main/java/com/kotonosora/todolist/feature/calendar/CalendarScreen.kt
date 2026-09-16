@@ -1,7 +1,6 @@
 package com.kotonosora.todolist.feature.calendar
 
 import android.content.res.Configuration
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -31,7 +29,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,7 +36,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,13 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.WeekCalendar
@@ -69,9 +63,6 @@ import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.WeekDay
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
-import com.kotonosora.todolist.domain.model.ActionStamp
-import com.kotonosora.todolist.domain.model.EmotionStamp
-import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 import kotlinx.coroutines.launch
@@ -82,7 +73,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.TextStyle
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -203,21 +193,33 @@ fun CalendarScreenContent(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onPreviousMonth) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Previous Month")
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Previous Month"
+                        )
                     }
                     Text(
-                        text = "${currentMonth.month.getDisplayName(TextStyle.FULL, Locale.getDefault())} $year",
+                        text = "${
+                            currentMonth.month.getDisplayName(
+                                TextStyle.FULL,
+                                Locale.getDefault()
+                            )
+                        } $year",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     IconButton(onClick = onNextMonth) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next Month")
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Next Month"
+                        )
                     }
                 }
 
                 Row {
                     IconButton(onClick = {
-                        viewMode = if (viewMode == CalendarViewMode.MONTH) CalendarViewMode.WEEK else CalendarViewMode.MONTH
+                        viewMode =
+                            if (viewMode == CalendarViewMode.MONTH) CalendarViewMode.WEEK else CalendarViewMode.MONTH
                     }) {
                         Icon(
                             imageVector = if (viewMode == CalendarViewMode.MONTH) Icons.Default.CalendarViewWeek else Icons.Default.CalendarMonth,
@@ -232,7 +234,11 @@ fun CalendarScreenContent(
                             calendarState.animateScrollToMonth(YearMonth.from(today))
                         }
                     }) {
-                        Icon(Icons.Default.Today, contentDescription = "Today", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Default.Today,
+                            contentDescription = "Today",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }
@@ -254,7 +260,9 @@ fun CalendarScreenContent(
                                 isSelected = day.date == selectedLocalDate,
                                 hasEvent = day.date in datesWithTodos,
                                 onClick = {
-                                    val millis = day.date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                                    val millis =
+                                        day.date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                                            .toEpochMilli()
                                     onSelectDate(millis)
                                 }
                             )
@@ -272,7 +280,9 @@ fun CalendarScreenContent(
                                 isSelected = day.date == selectedLocalDate,
                                 hasEvent = day.date in datesWithTodos,
                                 onClick = {
-                                    val millis = day.date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                                    val millis =
+                                        day.date.atStartOfDay(ZoneId.systemDefault()).toInstant()
+                                            .toEpochMilli()
                                     onSelectDate(millis)
                                 }
                             )
@@ -508,12 +518,23 @@ private fun WeekDayContent(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Calendar Screen - Month Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Calendar Screen - Month Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun CalendarScreenPreview_Dark() {
     val sampleDate = System.currentTimeMillis()
     val sampleTodos = listOf(
-        TaskItem("1", "Architecture Sync Meeting", "Discuss Diary redesign", sampleDate, null, false),
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        ),
         TaskItem("2", "Review PR #42", "Check unit test coverage", sampleDate, null, true)
     )
 
@@ -528,12 +549,23 @@ fun CalendarScreenPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Calendar Screen - Month Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Calendar Screen - Month Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun CalendarScreenPreview_Light() {
     val sampleDate = System.currentTimeMillis()
     val sampleTodos = listOf(
-        TaskItem("1", "Architecture Sync Meeting", "Discuss Diary redesign", sampleDate, null, false)
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        )
     )
 
     TodoListTheme(darkTheme = false) {

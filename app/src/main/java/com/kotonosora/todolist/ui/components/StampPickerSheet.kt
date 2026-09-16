@@ -1,7 +1,6 @@
 package com.kotonosora.todolist.ui.components
 
 import android.content.res.Configuration
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DirectionsRun
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Mood
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,7 +23,6 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -185,11 +182,22 @@ fun StampPickerSheet(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Stamp Picker Sheet - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Stamp Picker Sheet - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun StampPickerSheetPreview_Dark() {
     var selectedEmotion by remember { mutableStateOf<EmotionStamp?>(EmotionStamp.HAPPY) }
-    var selectedActions by remember { mutableStateOf(listOf(ActionStamp.WORK, ActionStamp.EXERCISE)) }
+    var selectedActions by remember {
+        mutableStateOf(
+            listOf(
+                ActionStamp.WORK,
+                ActionStamp.EXERCISE
+            )
+        )
+    }
 
     TodoListTheme(darkTheme = true) {
         Box(modifier = Modifier.padding(16.dp)) {
@@ -209,7 +217,11 @@ fun StampPickerSheetPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Stamp Picker Sheet - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Stamp Picker Sheet - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun StampPickerSheetPreview_Light() {
     var selectedEmotion by remember { mutableStateOf<EmotionStamp?>(EmotionStamp.CALM) }

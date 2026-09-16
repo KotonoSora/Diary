@@ -195,8 +195,19 @@ fun AddEditTaskContent(
                     }
 
                     // Import Text File
-                    IconButton(onClick = { documentPickerLauncher.launch(arrayOf("text/*", "*/*")) }) {
-                        Icon(Icons.Default.FileOpen, contentDescription = "Import file", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    IconButton(onClick = {
+                        documentPickerLauncher.launch(
+                            arrayOf(
+                                "text/*",
+                                "*/*"
+                            )
+                        )
+                    }) {
+                        Icon(
+                            Icons.Default.FileOpen,
+                            contentDescription = "Import file",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
 
                     // Done / Save Checkmark
@@ -206,7 +217,8 @@ fun AddEditTaskContent(
                                 titleError = true
                                 return@IconButton
                             }
-                            val reminderTime = if (remindMe && dueDate != null) dueDate!! - 3_600_000L else null
+                            val reminderTime =
+                                if (remindMe && dueDate != null) dueDate!! - 3_600_000L else null
                             val task = TaskItem(
                                 id = existingTask?.id ?: UUID.randomUUID().toString(),
                                 title = title.trim(),
@@ -241,7 +253,9 @@ fun AddEditTaskContent(
                     Text(
                         text = "Task title…",
                         style = MaterialTheme.typography.headlineSmall,
-                        color = if (titleError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        color = if (titleError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.5f
+                        )
                     )
                 }
                 BasicTextField(
@@ -318,7 +332,11 @@ fun AddEditTaskContent(
                             Text(dueDate?.let { dateFormatter.format(Date(it)) } ?: "Due Date")
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.DateRange, contentDescription = "Pick Due Date", modifier = Modifier.size(16.dp))
+                            Icon(
+                                Icons.Default.DateRange,
+                                contentDescription = "Pick Due Date",
+                                modifier = Modifier.size(16.dp)
+                            )
                         }
                     )
 
@@ -416,7 +434,9 @@ fun AddEditTaskContent(
             onDismissRequest = { showCameraSheet = false },
             sheetState = sheetState
         ) {
-            Box(modifier = Modifier.fillMaxWidth().height(480.dp)) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .height(480.dp)) {
                 CameraCaptureView(
                     onPhotoCaptured = { pathStr ->
                         mediaPath = pathStr
@@ -468,7 +488,11 @@ fun AddEditTaskContent(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Add/Edit Task - New (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Add/Edit Task - New (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun AddEditTaskScreenPreview_New_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -478,7 +502,11 @@ fun AddEditTaskScreenPreview_New_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Add/Edit Task - Existing Task (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "2. Add/Edit Task - Existing Task (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun AddEditTaskScreenPreview_Existing_Dark() {
     val sampleTask = TaskItem(
@@ -497,7 +525,11 @@ fun AddEditTaskScreenPreview_Existing_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "3. Add/Edit Task - Existing Task (Light)", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "3. Add/Edit Task - Existing Task (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun AddEditTaskScreenPreview_Existing_Light() {
     val sampleTask = TaskItem(

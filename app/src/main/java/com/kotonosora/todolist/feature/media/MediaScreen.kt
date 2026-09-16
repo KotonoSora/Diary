@@ -126,7 +126,9 @@ fun MediaScreen(
             onDismissRequest = { showCameraSheet = false },
             sheetState = sheetState
         ) {
-            Box(modifier = Modifier.fillMaxWidth().height(480.dp)) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .height(480.dp)) {
                 CameraCaptureView(
                     onPhotoCaptured = { pathStr ->
                         viewModel.onPhotoCaptured(pathStr)
@@ -194,7 +196,11 @@ fun MediaScreenContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Photos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Photos",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                     IconButton(
                         onClick = onCapturePhotoClick,
                         colors = IconButtonDefaults.iconButtonColors(
@@ -237,7 +243,11 @@ fun MediaScreenContent(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Audio Recordings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Audio Recordings",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         if (!isRecording) {
                             IconButton(
@@ -288,7 +298,11 @@ fun MediaScreenContent(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(
+                                alpha = 0.3f
+                            )
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -308,7 +322,10 @@ fun MediaScreenContent(
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.onError,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            modifier = Modifier.padding(
+                                                horizontal = 6.dp,
+                                                vertical = 2.dp
+                                            )
                                         )
                                     }
                                     Text(
@@ -422,7 +439,11 @@ private fun AudioFileItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
@@ -480,7 +501,11 @@ private fun MediaFileItem(
             }
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
                 Text(
                     subtitle,
                     style = MaterialTheme.typography.bodySmall,
@@ -501,7 +526,11 @@ private fun MediaFileItem(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Media Screen - Populated (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Media Screen - Populated (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun MediaScreenPreview_Populated_Dark() {
     val samplePhotos = listOf("_assets/IMG_20260301_120000.jpg")
@@ -516,7 +545,11 @@ fun MediaScreenPreview_Populated_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Media Screen - Active Recording (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "2. Media Screen - Active Recording (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun MediaScreenPreview_ActiveRecording_Dark() {
     TodoListTheme(darkTheme = true) {

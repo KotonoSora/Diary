@@ -141,7 +141,11 @@ fun TagExplorerScreenPreview() {
 
     MaterialTheme {
         TagExplorerContent(
-            uiState = TagUiState(tags = sampleTags, selectedTag = "#ideas", taggedNotes = sampleNotes),
+            uiState = TagUiState(
+                tags = sampleTags,
+                selectedTag = "#ideas",
+                taggedNotes = sampleNotes
+            ),
             onSelectTag = {},
             onNoteClick = {}
         )

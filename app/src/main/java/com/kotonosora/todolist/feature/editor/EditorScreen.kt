@@ -162,7 +162,12 @@ fun EditorContent(
                                 ) {
                                     DropdownMenuItem(
                                         text = { Text("Insert Template") },
-                                        leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.AutoAwesome,
+                                                contentDescription = null
+                                            )
+                                        },
                                         onClick = {
                                             showOptionsMenu = false
                                             showTemplateSheet = true
@@ -170,7 +175,12 @@ fun EditorContent(
                                     )
                                     DropdownMenuItem(
                                         text = { Text("Rename Note") },
-                                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = null
+                                            )
+                                        },
                                         onClick = {
                                             showOptionsMenu = false
                                             renameInput = uiState.note.title
@@ -179,7 +189,12 @@ fun EditorContent(
                                     )
                                     DropdownMenuItem(
                                         text = { Text("Share Note") },
-                                        leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Share,
+                                                contentDescription = null
+                                            )
+                                        },
                                         onClick = {
                                             showOptionsMenu = false
                                             val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -187,7 +202,12 @@ fun EditorContent(
                                                 putExtra(Intent.EXTRA_TEXT, uiState.note.content)
                                                 type = "text/plain"
                                             }
-                                            context.startActivity(Intent.createChooser(sendIntent, "Share Note"))
+                                            context.startActivity(
+                                                Intent.createChooser(
+                                                    sendIntent,
+                                                    "Share Note"
+                                                )
+                                            )
                                         }
                                     )
                                     DropdownMenuItem(
@@ -205,7 +225,12 @@ fun EditorContent(
                                     )
                                     DropdownMenuItem(
                                         text = { Text("Learn Flashcards ($flashcardCount)") },
-                                        leadingIcon = { Icon(Icons.Default.Style, contentDescription = null) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.Style,
+                                                contentDescription = null
+                                            )
+                                        },
                                         onClick = {
                                             showOptionsMenu = false
                                             onLearnFlashcards()
@@ -343,14 +368,19 @@ fun EditorContent(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
-                                            val templateContent = ZettelTemplatePicker.generateContentForTemplate(
-                                                noteType = type,
-                                                title = uiState.note.title
-                                            )
+                                            val templateContent =
+                                                ZettelTemplatePicker.generateContentForTemplate(
+                                                    noteType = type,
+                                                    title = uiState.note.title
+                                                )
                                             onContentChange(templateContent)
                                             showTemplateSheet = false
                                         },
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                            alpha = 0.5f
+                                        )
+                                    )
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
                                         Text(
@@ -413,7 +443,9 @@ fun EditorContent(
                             OutlinedButton(onClick = { showRenameSheet = false }) {
                                 Text("Cancel")
                             }
-                            Spacer(Modifier.height(0.dp).padding(horizontal = 6.dp))
+                            Spacer(Modifier
+                                .height(0.dp)
+                                .padding(horizontal = 6.dp))
                             Button(onClick = {
                                 if (renameInput.isNotBlank()) {
                                     onRenameNote(renameInput) {
@@ -433,7 +465,11 @@ fun EditorContent(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Editor Screen - Normal Mode (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Editor Screen - Normal Mode (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun EditorScreenPreview_NormalMode_Dark() {
     val sampleNote = NoteItem(
@@ -456,7 +492,11 @@ fun EditorScreenPreview_NormalMode_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Editor Screen - Focus Mode (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "2. Editor Screen - Focus Mode (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun EditorScreenPreview_FocusMode_Dark() {
     val sampleNote = NoteItem(

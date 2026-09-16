@@ -35,24 +35,25 @@ class VaultManager(
     /**
      * Recursively scans the vault directory to build a VaultNode tree.
      */
-    suspend fun getVaultTree(overrideUri: Uri? = null): VaultNode.FolderNode = withContext(Dispatchers.IO) {
-        val resolvedUri = resolveVaultUri(overrideUri)
+    suspend fun getVaultTree(overrideUri: Uri? = null): VaultNode.FolderNode =
+        withContext(Dispatchers.IO) {
+            val resolvedUri = resolveVaultUri(overrideUri)
 
-        if (resolvedUri != null) {
-            try {
-                val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
-                if (rootDocument != null && rootDocument.canRead()) {
-                    return@withContext scanDocumentDirectory(rootDocument, "")
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    if (rootDocument != null && rootDocument.canRead()) {
+                        return@withContext scanDocumentDirectory(rootDocument, "")
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-        }
 
-        // Fallback to local file directory
-        val rootDir = getDefaultStorageDir()
-        return@withContext scanLocalDirectory(rootDir, "")
-    }
+            // Fallback to local file directory
+            val rootDir = getDefaultStorageDir()
+            return@withContext scanLocalDirectory(rootDir, "")
+        }
 
     private fun scanLocalDirectory(dir: File, relativePath: String): VaultNode.FolderNode {
         val children = mutableListOf<VaultNode>()
@@ -64,7 +65,11 @@ class VaultManager(
                 if (file.name != "_assets" && !file.name.startsWith(".")) {
                     children.add(scanLocalDirectory(file, childPath))
                 }
-            } else if (file.extension.equals("md", ignoreCase = true) || file.extension.equals("txt", ignoreCase = true)) {
+            } else if (file.extension.equals(
+                    "md",
+                    ignoreCase = true
+                ) || file.extension.equals("txt", ignoreCase = true)
+            ) {
                 children.add(
                     VaultNode.FileNode(
                         name = file.name,
@@ -84,7 +89,10 @@ class VaultManager(
         )
     }
 
-    private fun scanDocumentDirectory(dir: DocumentFile, relativePath: String): VaultNode.FolderNode {
+    private fun scanDocumentDirectory(
+        dir: DocumentFile,
+        relativePath: String
+    ): VaultNode.FolderNode {
         val children = mutableListOf<VaultNode>()
         val files = dir.listFiles()
 
@@ -95,7 +103,11 @@ class VaultManager(
                 if (name != "_assets" && !name.startsWith(".")) {
                     children.add(scanDocumentDirectory(file, childPath))
                 }
-            } else if (name.endsWith(".md", ignoreCase = true) || name.endsWith(".txt", ignoreCase = true)) {
+            } else if (name.endsWith(".md", ignoreCase = true) || name.endsWith(
+                    ".txt",
+                    ignoreCase = true
+                )
+            ) {
                 val extension = name.substringAfterLast(".", "md")
                 children.add(
                     VaultNode.FileNode(
@@ -119,28 +131,33 @@ class VaultManager(
     /**
      * Reads all notes from the vault directory.
      */
-    suspend fun readAllNotes(overrideUri: Uri? = null): List<NoteItem> = withContext(Dispatchers.IO) {
-        val notes = mutableListOf<NoteItem>()
-        val resolvedUri = resolveVaultUri(overrideUri)
+    suspend fun readAllNotes(overrideUri: Uri? = null): List<NoteItem> =
+        withContext(Dispatchers.IO) {
+            val notes = mutableListOf<NoteItem>()
+            val resolvedUri = resolveVaultUri(overrideUri)
 
-        if (resolvedUri != null) {
-            try {
-                val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
-                if (rootDocument != null && rootDocument.canRead()) {
-                    readDocumentNotesRecursively(rootDocument, "", notes)
-                    return@withContext notes
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    if (rootDocument != null && rootDocument.canRead()) {
+                        readDocumentNotesRecursively(rootDocument, "", notes)
+                        return@withContext notes
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
+
+            val rootDir = getDefaultStorageDir()
+            readLocalNotesRecursively(rootDir, "", notes)
+            return@withContext notes
         }
 
-        val rootDir = getDefaultStorageDir()
-        readLocalNotesRecursively(rootDir, "", notes)
-        return@withContext notes
-    }
-
-    private fun readLocalNotesRecursively(dir: File, relativePath: String, result: MutableList<NoteItem>) {
+    private fun readLocalNotesRecursively(
+        dir: File,
+        relativePath: String,
+        result: MutableList<NoteItem>
+    ) {
         val files = dir.listFiles() ?: return
         for (file in files) {
             val childPath = if (relativePath.isEmpty()) file.name else "$relativePath/${file.name}"
@@ -148,7 +165,11 @@ class VaultManager(
                 if (file.name != "_assets" && !file.name.startsWith(".")) {
                     readLocalNotesRecursively(file, childPath, result)
                 }
-            } else if (file.extension.equals("md", ignoreCase = true) || file.extension.equals("txt", ignoreCase = true)) {
+            } else if (file.extension.equals(
+                    "md",
+                    ignoreCase = true
+                ) || file.extension.equals("txt", ignoreCase = true)
+            ) {
                 val content = file.readText()
                 val title = extractTitleFromContent(content, file.nameWithoutExtension)
                 result.add(
@@ -166,7 +187,11 @@ class VaultManager(
         }
     }
 
-    private fun readDocumentNotesRecursively(dir: DocumentFile, relativePath: String, result: MutableList<NoteItem>) {
+    private fun readDocumentNotesRecursively(
+        dir: DocumentFile,
+        relativePath: String,
+        result: MutableList<NoteItem>
+    ) {
         for (file in dir.listFiles()) {
             val name = file.name ?: continue
             val childPath = if (relativePath.isEmpty()) name else "$relativePath/$name"
@@ -174,8 +199,13 @@ class VaultManager(
                 if (name != "_assets" && !name.startsWith(".")) {
                     readDocumentNotesRecursively(file, childPath, result)
                 }
-            } else if (name.endsWith(".md", ignoreCase = true) || name.endsWith(".txt", ignoreCase = true)) {
-                val content = context.contentResolver.openInputStream(file.uri)?.bufferedReader()?.use { it.readText() } ?: ""
+            } else if (name.endsWith(".md", ignoreCase = true) || name.endsWith(
+                    ".txt",
+                    ignoreCase = true
+                )
+            ) {
+                val content = context.contentResolver.openInputStream(file.uri)?.bufferedReader()
+                    ?.use { it.readText() } ?: ""
                 val extension = name.substringAfterLast(".", "md")
                 val title = extractTitleFromContent(content, name.substringBeforeLast("."))
                 result.add(
@@ -196,42 +226,52 @@ class VaultManager(
     /**
      * Saves or creates a note in the local storage directory or custom SAF vault.
      */
-    suspend fun saveNote(note: NoteItem, overrideUri: Uri? = null): Boolean = withContext(Dispatchers.IO) {
-        val resolvedUri = resolveVaultUri(overrideUri)
+    suspend fun saveNote(note: NoteItem, overrideUri: Uri? = null): Boolean =
+        withContext(Dispatchers.IO) {
+            val resolvedUri = resolveVaultUri(overrideUri)
 
-        if (resolvedUri != null) {
-            try {
-                val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
-                if (rootDocument != null && rootDocument.canWrite()) {
-                    val targetFile = findOrCreateDocumentByRelativePath(rootDocument, note.id, note.fileFormat)
-                    if (targetFile != null) {
-                        context.contentResolver.openOutputStream(targetFile.uri, "wt")?.use { stream ->
-                            stream.write(note.content.toByteArray())
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    if (rootDocument != null && rootDocument.canWrite()) {
+                        val targetFile = findOrCreateDocumentByRelativePath(
+                            rootDocument,
+                            note.id,
+                            note.fileFormat
+                        )
+                        if (targetFile != null) {
+                            context.contentResolver.openOutputStream(targetFile.uri, "wt")
+                                ?.use { stream ->
+                                    stream.write(note.content.toByteArray())
+                                }
+                            return@withContext true
                         }
-                        return@withContext true
                     }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
+            }
+
+            // Fallback to local storage dir
+            try {
+                val file = File(getDefaultStorageDir(), note.id)
+                file.parentFile?.mkdirs()
+                file.writeText(note.content)
+                return@withContext true
             } catch (e: Exception) {
                 e.printStackTrace()
+                return@withContext false
             }
         }
-
-        // Fallback to local storage dir
-        try {
-            val file = File(getDefaultStorageDir(), note.id)
-            file.parentFile?.mkdirs()
-            file.writeText(note.content)
-            return@withContext true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return@withContext false
-        }
-    }
 
     /**
      * Renames a note file locally or via SAF DocumentFile.
      */
-    suspend fun renameNote(oldRelativePath: String, newRelativePath: String, overrideUri: Uri? = null): Boolean = withContext(Dispatchers.IO) {
+    suspend fun renameNote(
+        oldRelativePath: String,
+        newRelativePath: String,
+        overrideUri: Uri? = null
+    ): Boolean = withContext(Dispatchers.IO) {
         val resolvedUri = resolveVaultUri(overrideUri)
 
         if (resolvedUri != null) {
@@ -259,24 +299,25 @@ class VaultManager(
     /**
      * Deletes a note file.
      */
-    suspend fun deleteNote(relativePath: String, overrideUri: Uri? = null): Boolean = withContext(Dispatchers.IO) {
-        val resolvedUri = resolveVaultUri(overrideUri)
+    suspend fun deleteNote(relativePath: String, overrideUri: Uri? = null): Boolean =
+        withContext(Dispatchers.IO) {
+            val resolvedUri = resolveVaultUri(overrideUri)
 
-        if (resolvedUri != null) {
-            try {
-                val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
-                if (rootDocument != null) {
-                    val targetFile = findDocumentByRelativePath(rootDocument, relativePath)
-                    return@withContext targetFile?.delete() ?: false
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    if (rootDocument != null) {
+                        val targetFile = findDocumentByRelativePath(rootDocument, relativePath)
+                        return@withContext targetFile?.delete() ?: false
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
-        }
 
-        val file = File(getDefaultStorageDir(), relativePath)
-        return@withContext if (file.exists()) file.delete() else false
-    }
+            val file = File(getDefaultStorageDir(), relativePath)
+            return@withContext if (file.exists()) file.delete() else false
+        }
 
     private fun findOrCreateDocumentByRelativePath(
         root: DocumentFile,
@@ -300,11 +341,15 @@ class VaultManager(
         val existing = currentDir.findFile(fileName)
         if (existing != null && existing.isFile) return existing
 
-        val mimeType = if (fileFormat.equals("txt", ignoreCase = true)) "text/plain" else "text/markdown"
+        val mimeType =
+            if (fileFormat.equals("txt", ignoreCase = true)) "text/plain" else "text/markdown"
         return currentDir.createFile(mimeType, fileName)
     }
 
-    private fun findDocumentByRelativePath(root: DocumentFile, relativePath: String): DocumentFile? {
+    private fun findDocumentByRelativePath(
+        root: DocumentFile,
+        relativePath: String
+    ): DocumentFile? {
         val segments = relativePath.split("/")
         var current = root
 

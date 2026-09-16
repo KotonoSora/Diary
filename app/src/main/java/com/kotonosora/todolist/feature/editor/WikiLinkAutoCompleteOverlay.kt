@@ -81,18 +81,31 @@ fun WikiLinkAutoCompleteOverlay(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. WikiLink Autocomplete - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. WikiLink Autocomplete - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun WikiLinkAutoCompleteOverlayPreview_Dark() {
     TodoListTheme(darkTheme = true) {
         WikiLinkAutoCompleteOverlay(
-            suggestions = listOf("Project Roadmap", "Meeting Notes", "Architecture Overview", "Weekly Backlog"),
+            suggestions = listOf(
+                "Project Roadmap",
+                "Meeting Notes",
+                "Architecture Overview",
+                "Weekly Backlog"
+            ),
             onSuggestionSelected = {}
         )
     }
 }
 
-@Preview(showBackground = true, name = "2. WikiLink Autocomplete - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. WikiLink Autocomplete - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun WikiLinkAutoCompleteOverlayPreview_Light() {
     TodoListTheme(darkTheme = false) {

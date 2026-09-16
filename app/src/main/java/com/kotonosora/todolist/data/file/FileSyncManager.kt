@@ -49,7 +49,11 @@ class FileSyncManager(
                 if (treeFile != null && treeFile.canRead()) {
                     treeFile.listFiles().forEach { doc ->
                         val name = doc.name ?: ""
-                        if (name.endsWith(".md", ignoreCase = true) || name.endsWith(".txt", ignoreCase = true)) {
+                        if (name.endsWith(".md", ignoreCase = true) || name.endsWith(
+                                ".txt",
+                                ignoreCase = true
+                            )
+                        ) {
                             val todoId = name.substringBeforeLast(".")
                             val extension = name.substringAfterLast(".", "md")
                             val existing = taskDao.getTaskById(todoId)
@@ -80,7 +84,11 @@ class FileSyncManager(
             val todoId = file.nameWithoutExtension
             val existing = taskDao.getTaskById(todoId)
             if (existing == null) {
-                val parsed = if (file.extension == "txt") parseTxtFile(file, todoId) else parseMdFile(file, todoId)
+                val parsed =
+                    if (file.extension == "txt") parseTxtFile(file, todoId) else parseMdFile(
+                        file,
+                        todoId
+                    )
                 taskDao.insertTask(parsed)
             }
         }
@@ -151,10 +159,12 @@ class FileSyncManager(
                     val dateStr = line.substringAfter("**Due Date**: ").trim()
                     dueDate = parseDateString(dateStr)
                 }
+
                 line.contains("**Reminder**: ") -> {
                     val dateStr = line.substringAfter("**Reminder**: ").trim()
                     reminderTime = parseDateString(dateStr)
                 }
+
                 line.contains("**Media**: ") -> {
                     mediaPath = line.substringAfter("**Media**: ").trim().ifBlank { null }
                 }
@@ -200,10 +210,12 @@ class FileSyncManager(
                     val dateStr = line.removePrefix("DUE DATE: ").trim()
                     dueDate = parseDateString(dateStr)
                 }
+
                 line.startsWith("REMINDER: ") -> {
                     val dateStr = line.removePrefix("REMINDER: ").trim()
                     reminderTime = parseDateString(dateStr)
                 }
+
                 line.startsWith("MEDIA: ") -> {
                     mediaPath = line.removePrefix("MEDIA: ").trim().ifBlank { null }
                 }

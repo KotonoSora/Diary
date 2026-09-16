@@ -141,7 +141,11 @@ fun SplashScreenContent(
 
 // ── COMPREHENSIVE CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "Splash Screen - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Splash Screen - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun SplashScreenPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -149,7 +153,11 @@ fun SplashScreenPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Splash Screen - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Splash Screen - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun SplashScreenPreview_Light() {
     TodoListTheme(darkTheme = false) {

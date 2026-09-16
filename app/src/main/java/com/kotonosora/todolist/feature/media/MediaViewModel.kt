@@ -89,12 +89,13 @@ class MediaViewModel(
         val manager = mediaFileManager ?: MediaFileManager(context)
         val location = manager.createAudioOutputLocation(customFolderUriStr)
 
-        val recorder = mediaRecorderFactory?.createMediaRecorder() ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            MediaRecorder(context)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }
+        val recorder = mediaRecorderFactory?.createMediaRecorder()
+            ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                MediaRecorder(context)
+            } else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
+            }
         mediaRecorder = recorder
 
         try {
@@ -112,6 +113,7 @@ class MediaViewModel(
                             currentAudioPath = location.pathString
                         }
                     }
+
                     is MediaOutputLocation.LocalFile -> {
                         setOutputFile(location.file.absolutePath)
                         currentAudioPath = location.file.absolutePath

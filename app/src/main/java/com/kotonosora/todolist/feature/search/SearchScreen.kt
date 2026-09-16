@@ -155,8 +155,18 @@ fun SearchContent(
 @Composable
 fun SearchScreenPreview() {
     val results = listOf(
-        NoteItem("Projects/Roadmap.md", "Project Roadmap", "Projects", "Milestones for Q1 architecture and SAF integration."),
-        NoteItem("Work/Meeting.md", "Meeting Notes", "Work", "Discussed roadmap timelines and FTS search indexing.")
+        NoteItem(
+            "Projects/Roadmap.md",
+            "Project Roadmap",
+            "Projects",
+            "Milestones for Q1 architecture and SAF integration."
+        ),
+        NoteItem(
+            "Work/Meeting.md",
+            "Meeting Notes",
+            "Work",
+            "Discussed roadmap timelines and FTS search indexing."
+        )
     )
 
     MaterialTheme {

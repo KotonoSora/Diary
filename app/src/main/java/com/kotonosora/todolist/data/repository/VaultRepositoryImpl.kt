@@ -68,18 +68,23 @@ class VaultRepositoryImpl(
         }
     }
 
-    override suspend fun saveNote(note: NoteItem, overrideUri: Uri?): Boolean = withContext(Dispatchers.IO) {
-        val success = vaultManager.saveNote(note, overrideUri)
-        if (success) {
-            indexNoteToDb(note)
+    override suspend fun saveNote(note: NoteItem, overrideUri: Uri?): Boolean =
+        withContext(Dispatchers.IO) {
+            val success = vaultManager.saveNote(note, overrideUri)
+            if (success) {
+                indexNoteToDb(note)
+            }
+            success
         }
-        success
-    }
 
     /**
      * Renames a note and performs Cascading WikiLink Refactoring across all notes in the Vault.
      */
-    override suspend fun renameNote(oldNoteId: String, newTitle: String, overrideUri: Uri?): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun renameNote(
+        oldNoteId: String,
+        newTitle: String,
+        overrideUri: Uri?
+    ): Boolean = withContext(Dispatchers.IO) {
         val oldNote = getNoteById(oldNoteId) ?: return@withContext false
         val oldTitle = oldNote.title
 
@@ -90,7 +95,8 @@ class VaultRepositoryImpl(
             "$newTitle.${oldNote.fileFormat}"
         }
 
-        val newNoteId = if (oldNote.relativePath.isBlank()) newFilename else "${oldNote.relativePath}/$newFilename"
+        val newNoteId =
+            if (oldNote.relativePath.isBlank()) newFilename else "${oldNote.relativePath}/$newFilename"
 
         // 1. Update file header content
         val updatedContent = if (oldNote.content.startsWith("# $oldTitle")) {
@@ -125,7 +131,8 @@ class VaultRepositoryImpl(
                         .replace("[[$oldTitle|", "[[$newTitle|")
                         .replace("[[$oldTitle#", "[[$newTitle#")
 
-                    val refactoredNote = entityToDomain(noteEntity).copy(content = refactoredContent)
+                    val refactoredNote =
+                        entityToDomain(noteEntity).copy(content = refactoredContent)
                     vaultManager.saveNote(refactoredNote, overrideUri)
                     indexNoteToDb(refactoredNote)
                 }
@@ -136,16 +143,17 @@ class VaultRepositoryImpl(
         return@withContext false
     }
 
-    override suspend fun deleteNote(relativePath: String, overrideUri: Uri?): Boolean = withContext(Dispatchers.IO) {
-        val success = vaultManager.deleteNote(relativePath, overrideUri)
-        if (success) {
-            noteDao.deleteNoteById(relativePath)
-            linkDao.deleteLinksForSource(relativePath)
-            tagDao.deleteTagsForNote(relativePath)
-            zettelMetadataDao.deleteMetadataForNote(relativePath)
+    override suspend fun deleteNote(relativePath: String, overrideUri: Uri?): Boolean =
+        withContext(Dispatchers.IO) {
+            val success = vaultManager.deleteNote(relativePath, overrideUri)
+            if (success) {
+                noteDao.deleteNoteById(relativePath)
+                linkDao.deleteLinksForSource(relativePath)
+                tagDao.deleteTagsForNote(relativePath)
+                zettelMetadataDao.deleteMetadataForNote(relativePath)
+            }
+            success
         }
-        success
-    }
 
     override suspend fun searchNotes(query: String): Flow<List<NoteItem>> {
         return noteDao.searchNotesByTitle(query).map { entities ->

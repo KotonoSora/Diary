@@ -13,17 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -90,7 +83,12 @@ fun FlashcardFlowFromHomeContent() {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val steps = listOf("1. Home", "2. Deck Selection", "3. Flashcard Session", "4. Completed")
+                    val steps = listOf(
+                        "1. Home",
+                        "2. Deck Selection",
+                        "3. Flashcard Session",
+                        "4. Completed"
+                    )
                     steps.forEachIndexed { index, title ->
                         Surface(
                             color = if (currentStep == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -161,14 +159,26 @@ fun FlashcardFlowFromHomeContent() {
                                 modifier = Modifier.padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Style, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Icon(
+                                    Icons.Default.Style,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
                                 Spacer(Modifier.width(12.dp))
-                                Text("Open Flashcards Feature", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null)
+                                Text(
+                                    "Open Flashcards Feature",
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null
+                                )
                             }
                         }
                     }
                 }
+
                 1 -> {
                     // Step 2: Deck Selection Screen
                     FlashcardDeckSelectionScreen(
@@ -176,6 +186,7 @@ fun FlashcardFlowFromHomeContent() {
                         onDeckSelected = { currentStep = 2 }
                     )
                 }
+
                 2 -> {
                     // Step 3: Active Flashcard Session
                     FlashcardScreenContent(
@@ -190,6 +201,7 @@ fun FlashcardFlowFromHomeContent() {
                         onSwipeLeft = { currentStep = 3 }
                     )
                 }
+
                 3 -> {
                     // Step 4: Summary Screen
                     FlashcardScreenContent(
@@ -252,7 +264,8 @@ fun FlashcardFlowFromEditorContent() {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val steps = listOf("1. Open Editor File", "2. Flashcard Session", "3. Completed")
+                    val steps =
+                        listOf("1. Open Editor File", "2. Flashcard Session", "3. Completed")
                     steps.forEachIndexed { index, title ->
                         Surface(
                             color = if (currentStep == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
@@ -281,13 +294,19 @@ fun FlashcardFlowFromEditorContent() {
                     EditorContent(
                         uiState = EditorUiState(
                             note = editorNote,
-                            openTabs = listOf(EditorTabItem("Japanese_Vocabulary.md", "Japanese Vocabulary"))
+                            openTabs = listOf(
+                                EditorTabItem(
+                                    "Japanese_Vocabulary.md",
+                                    "Japanese Vocabulary"
+                                )
+                            )
                         ),
                         onBack = {},
                         onSave = {},
                         onLearnFlashcards = { currentStep = 1 }
                     )
                 }
+
                 1 -> {
                     // Step 2: Converted Flashcards Session Screen
                     FlashcardScreenContent(
@@ -302,6 +321,7 @@ fun FlashcardFlowFromEditorContent() {
                         onSwipeLeft = { currentStep = 2 }
                     )
                 }
+
                 2 -> {
                     // Step 3: Summary
                     FlashcardScreenContent(
@@ -323,7 +343,11 @@ fun FlashcardFlowFromEditorContent() {
 
 // ── PREVIEW COMPOSE FUNCTIONS ──
 
-@Preview(showBackground = true, name = "Flow 1: Start from Home Page - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Flow 1: Start from Home Page - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun FlashcardHomeFlowPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -331,7 +355,11 @@ fun FlashcardHomeFlowPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Flow 1: Start from Home Page - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Flow 1: Start from Home Page - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun FlashcardHomeFlowPreview_Light() {
     TodoListTheme(darkTheme = false) {
@@ -339,7 +367,11 @@ fun FlashcardHomeFlowPreview_Light() {
     }
 }
 
-@Preview(showBackground = true, name = "Flow 2: Convert from Editor File - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Flow 2: Convert from Editor File - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun FlashcardEditorFlowPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -347,7 +379,11 @@ fun FlashcardEditorFlowPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Flow 2: Convert from Editor File - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Flow 2: Convert from Editor File - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun FlashcardEditorFlowPreview_Light() {
     TodoListTheme(darkTheme = false) {

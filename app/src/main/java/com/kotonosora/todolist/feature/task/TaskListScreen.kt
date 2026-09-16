@@ -78,7 +78,8 @@ fun TaskListScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let {
-            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            val flags =
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             try {
                 context.contentResolver.takePersistableUriPermission(it, flags)
                 viewModel.saveCustomFolderUri(it.toString())
@@ -148,7 +149,11 @@ fun TaskListContent(
 
                 Row {
                     IconButton(onClick = onAddTask) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Task", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add Task",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     IconButton(onClick = { showOptionsMenu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Options")
@@ -302,12 +307,30 @@ fun TaskListItem(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Task List - Flat Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Task List - Flat Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun TaskListScreenPreview_Populated_Dark() {
     val sampleTasks = listOf(
-        TaskItem("1", "Buy groceries", "Milk, Eggs, Bread", System.currentTimeMillis() + 86400000L, null, false),
-        TaskItem("2", "Finish Task UI Redesign", "Refactor screens and drawer", System.currentTimeMillis() + 172800000L, null, false)
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        ),
+        TaskItem(
+            "2",
+            "Finish Task UI Redesign",
+            "Refactor screens and drawer",
+            System.currentTimeMillis() + 172800000L,
+            null,
+            false
+        )
     )
 
     TodoListTheme(darkTheme = true) {
@@ -318,11 +341,22 @@ fun TaskListScreenPreview_Populated_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Task List - Flat Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Task List - Flat Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun TaskListScreenPreview_Populated_Light() {
     val sampleTasks = listOf(
-        TaskItem("1", "Buy groceries", "Milk, Eggs, Bread", System.currentTimeMillis() + 86400000L, null, false)
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        )
     )
 
     TodoListTheme(darkTheme = false) {

@@ -81,7 +81,8 @@ object MarkdownParser {
                     val phoneticParenMatch = Regex("""^(.+?)\s*\(([^)]+)\)$""").find(wordPart)
                     if (phoneticParenMatch != null) {
                         wordPart = phoneticParenMatch.groupValues[1].trim()
-                        val rawPhonetic = phoneticParenMatch.groupValues[2].trim().removePrefix("/").removeSuffix("/")
+                        val rawPhonetic = phoneticParenMatch.groupValues[2].trim().removePrefix("/")
+                            .removeSuffix("/")
                         phonetic = "/$rawPhonetic/"
                     }
                 }
@@ -89,7 +90,10 @@ object MarkdownParser {
                 // Check if definition contains example: "Definition (e.g. Example)"
                 var definition = defPart
                 var example = ""
-                val exampleMatch = Regex("""^(.+?)\s*(?:\(e\.g\.|e\.g\.|Example:)\s*(.+?)\)?$""", RegexOption.IGNORE_CASE).find(defPart)
+                val exampleMatch = Regex(
+                    """^(.+?)\s*(?:\(e\.g\.|e\.g\.|Example:)\s*(.+?)\)?$""",
+                    RegexOption.IGNORE_CASE
+                ).find(defPart)
                 if (exampleMatch != null) {
                     definition = exampleMatch.groupValues[1].trim().removeSuffix("(")
                     example = exampleMatch.groupValues[2].trim().removeSuffix(")")
@@ -109,7 +113,8 @@ object MarkdownParser {
     }
 
     private fun parseTableFormat(text: String): List<Flashcard> {
-        val tableLines = text.lines().map { it.trim() }.filter { it.startsWith("|") && it.endsWith("|") }
+        val tableLines =
+            text.lines().map { it.trim() }.filter { it.startsWith("|") && it.endsWith("|") }
         if (tableLines.size < 2) return emptyList()
 
         val cards = mutableListOf<Flashcard>()
@@ -117,7 +122,11 @@ object MarkdownParser {
         for (line in tableLines) {
             if (line.contains("---")) continue
             val cells = line.split("|").map { it.trim() }.filter { it.isNotEmpty() }
-            if (cells.isNotEmpty() && !cells[0].equals("Term", ignoreCase = true) && !cells[0].equals("Word", ignoreCase = true)) {
+            if (cells.isNotEmpty() && !cells[0].equals(
+                    "Term",
+                    ignoreCase = true
+                ) && !cells[0].equals("Word", ignoreCase = true)
+            ) {
                 val word = cells[0]
                 val def = cells.getOrNull(1) ?: ""
                 val example = cells.getOrNull(2) ?: ""
