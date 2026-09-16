@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
@@ -15,7 +16,7 @@ import androidx.room.RoomDatabase
         NoteFtsEntity::class,
         ZettelMetadataEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,6 +39,14 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "todolist_database"
                 )
+                    .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                    .addCallback(object : Callback() {
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
+                            db.execSQL("PRAGMA synchronous = NORMAL;")
+                            db.execSQL("PRAGMA temp_store = MEMORY;")
+                        }
+                    })
                     .fallbackToDestructiveMigration(true)
                     .build()
                 INSTANCE = instance
