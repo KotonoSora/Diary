@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 /**
- * Re-schedules pending todo reminders after device reboot.
+ * Re-schedules pending task reminders after device reboot.
  * WorkManager re-enqueues persisted tasks automatically, but this receiver
  * provides an extra safety net by querying the DB directly.
  */
@@ -30,20 +30,20 @@ class BootReceiver : BroadcastReceiver() {
                 val db = AppDatabase.getDatabase(context)
                 val workManager = WorkManager.getInstance(context)
 
-                // Re-enqueue reminders for incomplete todos with a future reminderTime
+                // Re-enqueue reminders for incomplete tasks with a future reminderTime
                 // Use the suspend one-shot query to avoid hanging on a never-completing Flow
-                val incompleteTodos = db.todoDao().getAllTodosOnce()
+                val incompleteTasks = db.taskDao().getAllTasksOnce()
 
                 val now = System.currentTimeMillis()
-                incompleteTodos
+                incompleteTasks
                     .filter { !it.isCompleted && it.reminderTime != null && it.reminderTime > now }
                     .forEach { entity ->
                         val delay = entity.reminderTime!! - now
                         val data = workDataOf(
-                            TodoReminderWorker.KEY_TODO_ID to entity.id,
-                            TodoReminderWorker.KEY_TODO_TITLE to entity.title
+                            AppReminderWorker.KEY_TASK_ID to entity.id,
+                            AppReminderWorker.KEY_TASK_TITLE to entity.title
                         )
-                        val request = OneTimeWorkRequestBuilder<TodoReminderWorker>()
+                        val request = OneTimeWorkRequestBuilder<AppReminderWorker>()
                             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
                             .setInputData(data)
                             .build()
@@ -59,4 +59,3 @@ class BootReceiver : BroadcastReceiver() {
         }
     }
 }
-

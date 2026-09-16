@@ -1,6 +1,6 @@
 package com.kotonosora.todolist.domain.model
 
-data class TodoItem(
+data class TaskItem(
     val id: String,
     val title: String,
     val description: String?,

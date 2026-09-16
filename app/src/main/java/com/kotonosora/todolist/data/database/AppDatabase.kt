@@ -8,7 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
-        TodoEntity::class,
+        TaskEntity::class,
         MediaEntity::class,
         NoteEntity::class,
         LinkEntity::class,
@@ -16,12 +16,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         NoteFtsEntity::class,
         ZettelMetadataEntity::class
     ],
-    version = 8,
+    version = 1,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun todoDao(): TodoDao
+    abstract fun taskDao(): TaskDao
     abstract fun mediaDao(): MediaDao
     abstract fun noteDao(): NoteDao
     abstract fun linkDao(): LinkDao

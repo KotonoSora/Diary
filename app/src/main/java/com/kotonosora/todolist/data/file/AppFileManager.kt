@@ -5,7 +5,7 @@ import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
-import com.kotonosora.todolist.domain.model.TodoItem
+import com.kotonosora.todolist.domain.model.TaskItem
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class TodoFileManager(
+class AppFileManager(
     private val context: Context,
     private val userPreferencesRepository: UserPreferencesRepository? = null
 ) {
@@ -36,52 +36,52 @@ class TodoFileManager(
         return if (!savedUriStr.isNullOrBlank()) Uri.parse(savedUriStr) else null
     }
 
-    fun saveTodoToFile(todo: TodoItem, customFolderUri: Uri? = null): String? {
+    fun saveTaskToFile(task: TaskItem, customFolderUri: Uri? = null): String? {
         val resolvedUri = resolveCustomFolderUri(customFolderUri)
-        val extension = if (todo.fileFormat.equals("txt", ignoreCase = true)) "txt" else "md"
+        val extension = if (task.fileFormat.equals("txt", ignoreCase = true)) "txt" else "md"
         val oppositeExtension = if (extension == "txt") "md" else "txt"
-        val fileName = "${todo.id}.$extension"
-        val oppositeFileName = "${todo.id}.$oppositeExtension"
+        val fileName = "${task.id}.$extension"
+        val oppositeFileName = "${task.id}.$oppositeExtension"
 
         val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 
         val content = if (extension == "txt") {
             buildString {
-                appendLine("TITLE: ${todo.title}")
-                appendLine("STATUS: ${if (todo.isCompleted) "Completed" else "Pending"}")
-                if (todo.dueDate != null) {
-                    appendLine("DUE DATE: ${formatter.format(Date(todo.dueDate))}")
+                appendLine("TITLE: ${task.title}")
+                appendLine("STATUS: ${if (task.isCompleted) "Completed" else "Pending"}")
+                if (task.dueDate != null) {
+                    appendLine("DUE DATE: ${formatter.format(Date(task.dueDate))}")
                 }
-                if (todo.reminderTime != null) {
-                    appendLine("REMINDER: ${formatter.format(Date(todo.reminderTime))}")
+                if (task.reminderTime != null) {
+                    appendLine("REMINDER: ${formatter.format(Date(task.reminderTime))}")
                 }
-                if (todo.filePath != null) {
-                    appendLine("MEDIA: ${todo.filePath}")
+                if (task.filePath != null) {
+                    appendLine("MEDIA: ${task.filePath}")
                 }
                 appendLine()
-                if (!todo.description.isNullOrBlank()) {
+                if (!task.description.isNullOrBlank()) {
                     appendLine("DESCRIPTION:")
-                    appendLine(todo.description)
+                    appendLine(task.description)
                 }
             }
         } else {
             buildString {
-                appendLine("# ${todo.title}")
+                appendLine("# ${task.title}")
                 appendLine()
-                appendLine("- **Status**: ${if (todo.isCompleted) "Completed" else "Pending"}")
-                if (todo.dueDate != null) {
-                    appendLine("- **Due Date**: ${formatter.format(Date(todo.dueDate))}")
+                appendLine("- **Status**: ${if (task.isCompleted) "Completed" else "Pending"}")
+                if (task.dueDate != null) {
+                    appendLine("- **Due Date**: ${formatter.format(Date(task.dueDate))}")
                 }
-                if (todo.reminderTime != null) {
-                    appendLine("- **Reminder**: ${formatter.format(Date(todo.reminderTime))}")
+                if (task.reminderTime != null) {
+                    appendLine("- **Reminder**: ${formatter.format(Date(task.reminderTime))}")
                 }
-                if (todo.filePath != null) {
-                    appendLine("- **Media**: ${todo.filePath}")
+                if (task.filePath != null) {
+                    appendLine("- **Media**: ${task.filePath}")
                 }
                 appendLine()
-                if (!todo.description.isNullOrBlank()) {
+                if (!task.description.isNullOrBlank()) {
                     appendLine("## Description")
-                    appendLine(todo.description)
+                    appendLine(task.description)
                 }
             }
         }
@@ -128,15 +128,15 @@ class TodoFileManager(
         }
     }
 
-    fun deleteTodoFile(todoId: String, customFolderUri: Uri? = null): Boolean {
+    fun deleteTaskFile(taskId: String, customFolderUri: Uri? = null): Boolean {
         val resolvedUri = resolveCustomFolderUri(customFolderUri)
         var success = true
         if (resolvedUri != null) {
             try {
                 val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
                 if (treeFile != null) {
-                    treeFile.findFile("$todoId.md")?.delete()
-                    treeFile.findFile("$todoId.txt")?.delete()
+                    treeFile.findFile("$taskId.md")?.delete()
+                    treeFile.findFile("$taskId.txt")?.delete()
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -144,8 +144,8 @@ class TodoFileManager(
         }
 
         val dir = getStorageDir()
-        val mdFile = File(dir, "$todoId.md")
-        val txtFile = File(dir, "$todoId.txt")
+        val mdFile = File(dir, "$taskId.md")
+        val txtFile = File(dir, "$taskId.txt")
         if (mdFile.exists()) success = success && mdFile.delete()
         if (txtFile.exists()) success = success && txtFile.delete()
         return success

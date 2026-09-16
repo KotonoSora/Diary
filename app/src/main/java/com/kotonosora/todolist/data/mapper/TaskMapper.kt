@@ -1,10 +1,10 @@
 package com.kotonosora.todolist.data.mapper
 
-import com.kotonosora.todolist.data.database.TodoEntity
-import com.kotonosora.todolist.domain.model.TodoItem
+import com.kotonosora.todolist.data.database.TaskEntity
+import com.kotonosora.todolist.domain.model.TaskItem
 
-fun TodoEntity.toDomain(): TodoItem {
-    return TodoItem(
+fun TaskEntity.toDomain(): TaskItem {
+    return TaskItem(
         id = id,
         title = title,
         description = description,
@@ -16,8 +16,8 @@ fun TodoEntity.toDomain(): TodoItem {
     )
 }
 
-fun TodoItem.toEntity(): TodoEntity {
-    return TodoEntity(
+fun TaskItem.toEntity(): TaskEntity {
+    return TaskEntity(
         id = id,
         title = title,
         description = description,

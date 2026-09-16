@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
 
-        val userPreferencesRepository = (application as TodoApplication).container.userPreferencesRepository
+        val userPreferencesRepository = (application as MainApplication).container.userPreferencesRepository
 
         setContent {
             val themeMode by userPreferencesRepository.themeMode.collectAsState(initial = "system")

@@ -9,25 +9,25 @@ import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
-interface TodoDao {
+interface TaskDao {
     @Query("SELECT * FROM todo_items ORDER BY dueDate ASC")
-    fun getAllTodos(): Flow<List<TodoEntity>>
+    fun getAllTasks(): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM todo_items WHERE dueDate >= :startOfDay AND dueDate <= :endOfDay ORDER BY dueDate ASC")
-    fun getTodosByDate(startOfDay: Long, endOfDay: Long): Flow<List<TodoEntity>>
+    fun getTasksByDate(startOfDay: Long, endOfDay: Long): Flow<List<TaskEntity>>
 
     @Query("SELECT * FROM todo_items WHERE id = :id")
-    suspend fun getTodoById(id: String): TodoEntity?
+    suspend fun getTaskById(id: String): TaskEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertTodo(todo: TodoEntity)
+    suspend fun insertTask(task: TaskEntity)
 
     @Update
-    suspend fun updateTodo(todo: TodoEntity)
+    suspend fun updateTask(task: TaskEntity)
 
     @Delete
-    suspend fun deleteTodo(todo: TodoEntity)
+    suspend fun deleteTask(task: TaskEntity)
 
     @Query("SELECT * FROM todo_items")
-    suspend fun getAllTodosOnce(): List<TodoEntity>
+    suspend fun getAllTasksOnce(): List<TaskEntity>
 }

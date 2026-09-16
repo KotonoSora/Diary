@@ -12,7 +12,7 @@ import java.util.UUID
         Index(value = ["isCompleted"])
     ]
 )
-data class TodoEntity(
+data class TaskEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val title: String,
     val description: String?,

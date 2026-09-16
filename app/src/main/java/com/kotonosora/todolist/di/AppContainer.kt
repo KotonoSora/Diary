@@ -8,29 +8,29 @@ import com.kotonosora.todolist.data.database.LinkDao
 import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.NoteDao
 import com.kotonosora.todolist.data.database.TagDao
-import com.kotonosora.todolist.data.database.TodoDao
+import com.kotonosora.todolist.data.database.TaskDao
 import com.kotonosora.todolist.data.database.ZettelMetadataDao
 import com.kotonosora.todolist.data.factory.DefaultExoPlayerFactory
 import com.kotonosora.todolist.data.factory.DefaultMediaRecorderFactory
 import com.kotonosora.todolist.data.factory.ExoPlayerFactory
 import com.kotonosora.todolist.data.factory.MediaRecorderFactory
+import com.kotonosora.todolist.data.file.AppFileManager
 import com.kotonosora.todolist.data.file.FileSyncManager
 import com.kotonosora.todolist.data.file.MediaFileManager
-import com.kotonosora.todolist.data.file.TodoFileManager
 import com.kotonosora.todolist.data.file.VaultManager
-import com.kotonosora.todolist.data.repository.TodoRepositoryImpl
+import com.kotonosora.todolist.data.repository.TaskRepositoryImpl
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.data.repository.VaultRepositoryImpl
-import com.kotonosora.todolist.domain.repository.TodoRepository
+import com.kotonosora.todolist.domain.repository.TaskRepository
 import com.kotonosora.todolist.domain.repository.VaultRepository
-import com.kotonosora.todolist.domain.usecase.AddTodoUseCase
-import com.kotonosora.todolist.domain.usecase.DeleteTodoUseCase
-import com.kotonosora.todolist.domain.usecase.GetTodosByDateUseCase
-import com.kotonosora.todolist.domain.usecase.GetTodosUseCase
-import com.kotonosora.todolist.domain.usecase.SyncTodosUseCase
-import com.kotonosora.todolist.domain.usecase.TodoUseCases
-import com.kotonosora.todolist.domain.usecase.UpdateTodoUseCase
-import com.kotonosora.todolist.notification.TodoNotificationManager
+import com.kotonosora.todolist.domain.usecase.AddTaskUseCase
+import com.kotonosora.todolist.domain.usecase.DeleteTaskUseCase
+import com.kotonosora.todolist.domain.usecase.GetTasksByDateUseCase
+import com.kotonosora.todolist.domain.usecase.GetTasksUseCase
+import com.kotonosora.todolist.domain.usecase.SyncTasksUseCase
+import com.kotonosora.todolist.domain.usecase.TaskUseCases
+import com.kotonosora.todolist.domain.usecase.UpdateTaskUseCase
+import com.kotonosora.todolist.notification.AppNotificationManager
 
 class AppContainer(private val applicationContext: Context) {
 
@@ -38,7 +38,7 @@ class AppContainer(private val applicationContext: Context) {
         AppDatabase.getDatabase(applicationContext)
     }
 
-    val todoDao: TodoDao by lazy { appDatabase.todoDao() }
+    val taskDao: TaskDao by lazy { appDatabase.taskDao() }
     val mediaDao: MediaDao by lazy { appDatabase.mediaDao() }
     val noteDao: NoteDao by lazy { appDatabase.noteDao() }
     val linkDao: LinkDao by lazy { appDatabase.linkDao() }
@@ -53,8 +53,8 @@ class AppContainer(private val applicationContext: Context) {
         VaultManager(applicationContext, userPreferencesRepository)
     }
 
-    val todoFileManager: TodoFileManager by lazy {
-        TodoFileManager(applicationContext, userPreferencesRepository)
+    val appFileManager: AppFileManager by lazy {
+        AppFileManager(applicationContext, userPreferencesRepository)
     }
 
     val mediaFileManager: MediaFileManager by lazy {
@@ -70,25 +70,25 @@ class AppContainer(private val applicationContext: Context) {
     }
 
     val fileSyncManager: FileSyncManager by lazy {
-        FileSyncManager(applicationContext, todoDao, userPreferencesRepository)
+        FileSyncManager(applicationContext, taskDao, userPreferencesRepository)
     }
 
     val vaultRepository: VaultRepository by lazy {
         VaultRepositoryImpl(vaultManager, noteDao, linkDao, tagDao, zettelMetadataDao)
     }
 
-    val todoRepository: TodoRepository by lazy {
-        TodoRepositoryImpl(todoDao, todoFileManager)
+    val taskRepository: TaskRepository by lazy {
+        TaskRepositoryImpl(taskDao, appFileManager)
     }
 
-    val todoUseCases: TodoUseCases by lazy {
-        TodoUseCases(
-            getTodos = GetTodosUseCase(todoRepository),
-            getTodosByDate = GetTodosByDateUseCase(todoRepository),
-            addTodo = AddTodoUseCase(todoRepository),
-            updateTodo = UpdateTodoUseCase(todoRepository),
-            deleteTodo = DeleteTodoUseCase(todoRepository),
-            syncTodos = SyncTodosUseCase(fileSyncManager, todoFileManager)
+    val taskUseCases: TaskUseCases by lazy {
+        TaskUseCases(
+            getTasks = GetTasksUseCase(taskRepository),
+            getTasksByDate = GetTasksByDateUseCase(taskRepository),
+            addTask = AddTaskUseCase(taskRepository),
+            updateTask = UpdateTaskUseCase(taskRepository),
+            deleteTask = DeleteTaskUseCase(taskRepository),
+            syncTasks = SyncTasksUseCase(fileSyncManager, appFileManager)
         )
     }
 
@@ -96,8 +96,8 @@ class AppContainer(private val applicationContext: Context) {
         WorkManager.getInstance(applicationContext)
     }
 
-    val notificationManager: TodoNotificationManager by lazy {
-        TodoNotificationManager(applicationContext)
+    val notificationManager: AppNotificationManager by lazy {
+        AppNotificationManager(applicationContext)
     }
 }
 

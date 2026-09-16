@@ -1,4 +1,4 @@
-package com.kotonosora.todolist.feature.todo
+package com.kotonosora.todolist.feature.task
 
 import android.Manifest
 import android.content.res.Configuration
@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -55,7 +54,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -65,7 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
-import com.kotonosora.todolist.domain.model.TodoItem
+import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.feature.media.formatMediaDisplayName
 import com.kotonosora.todolist.ui.components.CameraCaptureView
 import com.kotonosora.todolist.ui.components.FormattedTextPreview
@@ -80,22 +78,22 @@ import java.util.Locale
 import java.util.UUID
 
 @Composable
-fun AddEditTodoScreen(
+fun AddEditTaskScreen(
     navController: NavController,
-    todoId: String?,
-    viewModel: TodoViewModel = viewModel()
+    taskId: String?,
+    viewModel: TaskViewModel = viewModel()
 ) {
-    val allTodos by viewModel.allTodos.collectAsState()
+    val allTasks by viewModel.allTasks.collectAsState()
     val customFolderUri by viewModel.customFolderUri.collectAsState()
-    val existingTodo = remember(todoId, allTodos) {
-        if (todoId == null || todoId == "new") null else allTodos.find { it.id == todoId }
+    val existingTask = remember(taskId, allTasks) {
+        if (taskId == null || taskId == "new") null else allTasks.find { it.id == taskId }
     }
 
-    AddEditTodoContent(
-        existingTodo = existingTodo,
+    AddEditTaskContent(
+        existingTask = existingTask,
         customFolderUri = customFolderUri,
-        onSaveTodo = { todo ->
-            if (existingTodo == null) viewModel.addTodo(todo) else viewModel.updateTodo(todo)
+        onSaveTask = { task ->
+            if (existingTask == null) viewModel.addTask(task) else viewModel.updateTask(task)
             navController.popBackStack()
         },
         onBack = { navController.popBackStack() }
@@ -104,25 +102,25 @@ fun AddEditTodoScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddEditTodoContent(
-    existingTodo: TodoItem?,
+fun AddEditTaskContent(
+    existingTask: TaskItem?,
     customFolderUri: String? = null,
-    onSaveTodo: (TodoItem) -> Unit = {},
+    onSaveTask: (TaskItem) -> Unit = {},
     onBack: () -> Unit = {}
 ) {
-    var title by remember(existingTodo) { mutableStateOf(existingTodo?.title ?: "") }
+    var title by remember(existingTask) { mutableStateOf(existingTask?.title ?: "") }
     val richTextState = rememberRichTextState()
 
-    LaunchedEffect(existingTodo) {
-        richTextState.setMarkdown(existingTodo?.description ?: "")
+    LaunchedEffect(existingTask) {
+        richTextState.setMarkdown(existingTask?.description ?: "")
     }
 
-    var fileFormat by remember(existingTodo) { mutableStateOf(existingTodo?.fileFormat ?: "md") }
+    var fileFormat by remember(existingTask) { mutableStateOf(existingTask?.fileFormat ?: "md") }
     var isPreviewMode by remember { mutableStateOf(false) }
 
-    var dueDate by remember(existingTodo) { mutableStateOf(existingTodo?.dueDate) }
-    var remindMe by remember(existingTodo) { mutableStateOf(existingTodo?.reminderTime != null) }
-    var mediaPath by remember(existingTodo) { mutableStateOf(existingTodo?.filePath) }
+    var dueDate by remember(existingTask) { mutableStateOf(existingTask?.dueDate) }
+    var remindMe by remember(existingTask) { mutableStateOf(existingTask?.reminderTime != null) }
+    var mediaPath by remember(existingTask) { mutableStateOf(existingTask?.filePath) }
     var showDatePickerSheet by remember { mutableStateOf(false) }
     var showCameraSheet by remember { mutableStateOf(false) }
     var titleError by remember { mutableStateOf(false) }
@@ -209,17 +207,17 @@ fun AddEditTodoContent(
                                 return@IconButton
                             }
                             val reminderTime = if (remindMe && dueDate != null) dueDate!! - 3_600_000L else null
-                            val todo = TodoItem(
-                                id = existingTodo?.id ?: UUID.randomUUID().toString(),
+                            val task = TaskItem(
+                                id = existingTask?.id ?: UUID.randomUUID().toString(),
                                 title = title.trim(),
                                 description = richTextState.toMarkdown().trim().ifBlank { null },
                                 dueDate = dueDate,
                                 filePath = mediaPath,
-                                isCompleted = existingTodo?.isCompleted ?: false,
+                                isCompleted = existingTask?.isCompleted ?: false,
                                 reminderTime = reminderTime,
                                 fileFormat = fileFormat
                             )
-                            onSaveTodo(todo)
+                            onSaveTask(task)
                         },
                         colors = IconButtonDefaults.iconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -472,20 +470,20 @@ fun AddEditTodoContent(
 
 @Preview(showBackground = true, name = "1. Add/Edit Task - New (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun AddEditTodoScreenPreview_New_Dark() {
+fun AddEditTaskScreenPreview_New_Dark() {
     TodoListTheme(darkTheme = true) {
-        AddEditTodoContent(
-            existingTodo = null
+        AddEditTaskContent(
+            existingTask = null
         )
     }
 }
 
 @Preview(showBackground = true, name = "2. Add/Edit Task - Existing Task (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun AddEditTodoScreenPreview_Existing_Dark() {
-    val sampleTodo = TodoItem(
+fun AddEditTaskScreenPreview_Existing_Dark() {
+    val sampleTask = TaskItem(
         id = "1",
-        title = "Refactor Diary Task Editor",
+        title = "Refactor Task Editor",
         description = "# Tasks\n- [x] Inline Title\n- [x] Flat Docked Accessory Toolbar\n- [x] Case-by-case Previews",
         dueDate = System.currentTimeMillis() + 86400000L,
         filePath = "_assets/IMG_20260301_120000.jpg",
@@ -493,18 +491,18 @@ fun AddEditTodoScreenPreview_Existing_Dark() {
     )
 
     TodoListTheme(darkTheme = true) {
-        AddEditTodoContent(
-            existingTodo = sampleTodo
+        AddEditTaskContent(
+            existingTask = sampleTask
         )
     }
 }
 
 @Preview(showBackground = true, name = "3. Add/Edit Task - Existing Task (Light)", uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
-fun AddEditTodoScreenPreview_Existing_Light() {
-    val sampleTodo = TodoItem(
+fun AddEditTaskScreenPreview_Existing_Light() {
+    val sampleTask = TaskItem(
         id = "1",
-        title = "Refactor Diary Task Editor",
+        title = "Refactor Task Editor",
         description = "Task details in light theme",
         dueDate = System.currentTimeMillis() + 86400000L,
         filePath = null,
@@ -512,8 +510,8 @@ fun AddEditTodoScreenPreview_Existing_Light() {
     )
 
     TodoListTheme(darkTheme = false) {
-        AddEditTodoContent(
-            existingTodo = sampleTodo
+        AddEditTaskContent(
+            existingTask = sampleTask
         )
     }
 }
