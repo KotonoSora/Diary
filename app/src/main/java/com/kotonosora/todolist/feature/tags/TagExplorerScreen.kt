@@ -15,9 +15,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -94,57 +92,41 @@ fun TagExplorerContent(
     onSelectTag: (String) -> Unit,
     onNoteClick: (String) -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Tag Explorer") }
-            )
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = "Tags in Vault",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                uiState.tags.forEach { tag ->
-                    FilterChip(
-                        selected = uiState.selectedTag == tag,
-                        onClick = { onSelectTag(tag) },
-                        label = { Text(tag) }
-                    )
-                }
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-
-            if (uiState.selectedTag != null) {
-                Text(
-                    text = "Notes with ${uiState.selectedTag}",
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(bottom = 8.dp)
+            uiState.tags.forEach { tag ->
+                FilterChip(
+                    selected = uiState.selectedTag == tag,
+                    onClick = { onSelectTag(tag) },
+                    label = { Text(tag) }
                 )
-                LazyColumn {
-                    items(uiState.taggedNotes) { note ->
-                        ListItem(
-                            headlineContent = { Text(note.title) },
-                            supportingContent = { Text(note.id) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onNoteClick(note.id) }
-                        )
-                    }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
+
+        if (uiState.selectedTag != null) {
+            Text(
+                text = "Notes with ${uiState.selectedTag}",
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            LazyColumn {
+                items(uiState.taggedNotes, key = { it.id }) { note ->
+                    ListItem(
+                        headlineContent = { Text(note.title) },
+                        supportingContent = { Text(note.id) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onNoteClick(note.id) }
+                    )
                 }
             }
         }

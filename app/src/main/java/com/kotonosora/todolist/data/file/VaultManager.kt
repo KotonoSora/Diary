@@ -232,6 +232,34 @@ class VaultManager @Inject constructor(
     }
 
     /**
+     * Renames a note file locally or via SAF DocumentFile.
+     */
+    suspend fun renameNote(oldRelativePath: String, newRelativePath: String, overrideUri: Uri? = null): Boolean = withContext(Dispatchers.IO) {
+        val resolvedUri = resolveVaultUri(overrideUri)
+
+        if (resolvedUri != null) {
+            try {
+                val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                if (rootDocument != null) {
+                    val targetFile = findDocumentByRelativePath(rootDocument, oldRelativePath)
+                    val newFileName = newRelativePath.substringAfterLast("/")
+                    return@withContext targetFile?.renameTo(newFileName) ?: false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        val oldFile = File(getDefaultStorageDir(), oldRelativePath)
+        val newFile = File(getDefaultStorageDir(), newRelativePath)
+        if (oldFile.exists()) {
+            newFile.parentFile?.mkdirs()
+            return@withContext oldFile.renameTo(newFile)
+        }
+        return@withContext false
+    }
+
+    /**
      * Deletes a note file.
      */
     suspend fun deleteNote(relativePath: String, overrideUri: Uri? = null): Boolean = withContext(Dispatchers.IO) {

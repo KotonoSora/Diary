@@ -14,8 +14,10 @@ import javax.inject.Inject
 
 data class EditorUiState(
     val note: NoteItem = NoteItem(id = "", title = "", relativePath = "", content = ""),
+    val openTabs: List<EditorTabItem> = emptyList(),
     val suggestions: List<String> = emptyList(),
     val showSuggestions: Boolean = false,
+    val isFocusMode: Boolean = false,
     val isLoading: Boolean = false
 )
 
@@ -31,16 +33,33 @@ class EditorViewModel @Inject constructor(
         if (noteId.isBlank()) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val note = vaultRepository.getNoteById(noteId)
-            if (note != null) {
-                _uiState.value = _uiState.value.copy(note = note, isLoading = false)
-            } else {
-                _uiState.value = _uiState.value.copy(
-                    note = NoteItem(id = noteId, title = noteId.substringBeforeLast(".").substringAfterLast("/"), relativePath = "", content = ""),
-                    isLoading = false
-                )
+            val note = vaultRepository.getNoteById(noteId) ?: NoteItem(
+                id = noteId,
+                title = noteId.substringBeforeLast(".").substringAfterLast("/"),
+                relativePath = "",
+                content = ""
+            )
+
+            val currentTabs = _uiState.value.openTabs.toMutableList()
+            if (currentTabs.none { it.id == note.id }) {
+                currentTabs.add(EditorTabItem(id = note.id, title = note.title))
             }
+
+            _uiState.value = _uiState.value.copy(
+                note = note,
+                openTabs = currentTabs,
+                isLoading = false
+            )
         }
+    }
+
+    fun toggleFocusMode() {
+        _uiState.value = _uiState.value.copy(isFocusMode = !_uiState.value.isFocusMode)
+    }
+
+    fun closeTab(tabId: String) {
+        val currentTabs = _uiState.value.openTabs.filterNot { it.id == tabId }
+        _uiState.value = _uiState.value.copy(openTabs = currentTabs)
     }
 
     fun onContentChange(newContent: String) {
@@ -83,6 +102,26 @@ class EditorViewModel @Inject constructor(
                 suggestions = emptyList(),
                 showSuggestions = false
             )
+        }
+    }
+
+    fun renameNote(newTitle: String, onRenamed: (String) -> Unit = {}) {
+        val currentNote = _uiState.value.note
+        if (newTitle.isBlank() || currentNote.id.isBlank()) return
+
+        viewModelScope.launch {
+            val success = vaultRepository.renameNote(currentNote.id, newTitle)
+            if (success) {
+                val newFilename = if (currentNote.id.contains("-")) {
+                    val prefix = currentNote.id.substringAfterLast("/").substringBefore("-")
+                    "$prefix-$newTitle.${currentNote.fileFormat}"
+                } else {
+                    "$newTitle.${currentNote.fileFormat}"
+                }
+                val newNoteId = if (currentNote.relativePath.isBlank()) newFilename else "${currentNote.relativePath}/$newFilename"
+                loadNote(newNoteId)
+                onRenamed(newNoteId)
+            }
         }
     }
 

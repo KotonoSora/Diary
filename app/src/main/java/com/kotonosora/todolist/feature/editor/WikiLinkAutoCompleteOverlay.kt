@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.editor
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @Composable
 fun WikiLinkAutoCompleteOverlay(
@@ -33,9 +35,9 @@ fun WikiLinkAutoCompleteOverlay(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Column(
@@ -51,7 +53,7 @@ fun WikiLinkAutoCompleteOverlay(
             LazyColumn(
                 modifier = Modifier.fillMaxWidth()
             ) {
-                items(suggestions) { title ->
+                items(suggestions, key = { it }) { title ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -77,12 +79,25 @@ fun WikiLinkAutoCompleteOverlay(
     }
 }
 
-@Preview(showBackground = true, name = "WikiLink Autocomplete Pop-up")
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. WikiLink Autocomplete - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun WikiLinkAutoCompleteOverlayPreview() {
-    MaterialTheme {
+fun WikiLinkAutoCompleteOverlayPreview_Dark() {
+    TodoListTheme(darkTheme = true) {
         WikiLinkAutoCompleteOverlay(
             suggestions = listOf("Project Roadmap", "Meeting Notes", "Architecture Overview", "Weekly Backlog"),
+            onSuggestionSelected = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "2. WikiLink Autocomplete - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun WikiLinkAutoCompleteOverlayPreview_Light() {
+    TodoListTheme(darkTheme = false) {
+        WikiLinkAutoCompleteOverlay(
+            suggestions = listOf("Project Roadmap", "Meeting Notes"),
             onSuggestionSelected = {}
         )
     }

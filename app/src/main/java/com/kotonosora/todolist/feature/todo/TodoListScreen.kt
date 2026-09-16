@@ -1,8 +1,10 @@
 package com.kotonosora.todolist.feature.todo
 
 import android.content.Intent
+import android.content.res.Configuration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,11 +21,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,12 +41,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,20 +59,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.kotonosora.todolist.domain.model.TodoItem
 import com.kotonosora.todolist.navigation.NavRoute
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoListScreen(
     navController: NavController,
-    viewModel: TodoViewModel = viewModel()
+    viewModel: TodoViewModel = viewModel(),
+    onOpenDrawer: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val todos by viewModel.todos.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
-    val customFolderUri by viewModel.customFolderUri.collectAsState()
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -78,24 +88,38 @@ fun TodoListScreen(
         }
     }
 
+    TodoListContent(
+        todos = todos,
+        searchQuery = searchQuery,
+        onSearchQueryChange = { viewModel.setSearchQuery(it) },
+        onToggle = { viewModel.toggleComplete(it) },
+        onDelete = { viewModel.deleteTodo(it) },
+        onClickTodo = { id -> navController.navigate(NavRoute.AddEditTodo.createRoute(id)) },
+        onAddTodo = { navController.navigate(NavRoute.AddEditTodo.createRoute()) },
+        onConfigureFolder = { folderPickerLauncher.launch(null) },
+        onOpenDrawer = onOpenDrawer
+    )
+}
+
+@Composable
+fun TodoListContent(
+    todos: List<TodoItem>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit = {},
+    onToggle: (TodoItem) -> Unit = {},
+    onDelete: (TodoItem) -> Unit = {},
+    onClickTodo: (String) -> Unit = {},
+    onAddTodo: () -> Unit = {},
+    onConfigureFolder: () -> Unit = {},
+    onOpenDrawer: (() -> Unit)? = null
+) {
+    var showOptionsMenu by remember { mutableStateOf(false) }
+
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("My Todos") },
-                actions = {
-                    IconButton(onClick = { folderPickerLauncher.launch(null) }) {
-                        Icon(
-                            Icons.Default.Folder,
-                            contentDescription = "Configure Auto-Save Folder",
-                            tint = if (customFolderUri != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            )
-        },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate(NavRoute.AddEditTodo.createRoute()) }
+                onClick = onAddTodo,
+                elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(0.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Todo")
             }
@@ -106,13 +130,55 @@ fun TodoListScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Flat Frameless Action Header Row (No Header Title)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (onOpenDrawer != null) {
+                    IconButton(onClick = onOpenDrawer) {
+                        Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
+                    }
+                } else {
+                    Spacer(Modifier.width(48.dp))
+                }
+
+                Row {
+                    IconButton(onClick = onAddTodo) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Todo", tint = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = { showOptionsMenu = true }) {
+                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
+                    }
+
+                    DropdownMenu(
+                        expanded = showOptionsMenu,
+                        onDismissRequest = { showOptionsMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Configure Auto-Save Folder") },
+                            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null) },
+                            onClick = {
+                                showOptionsMenu = false
+                                onConfigureFolder()
+                            }
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(bottom = 8.dp))
+
             // Search bar
             OutlinedTextField(
                 value = searchQuery,
-                onValueChange = { viewModel.setSearchQuery(it) },
+                onValueChange = onSearchQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
                 placeholder = { Text("Search todos…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 singleLine = true,
@@ -138,9 +204,9 @@ fun TodoListScreen(
                     items(todos, key = { it.id }) { todo ->
                         TodoListItem(
                             todo = todo,
-                            onToggle = { viewModel.toggleComplete(todo) },
-                            onDelete = { viewModel.deleteTodo(todo) },
-                            onClick = { navController.navigate(NavRoute.AddEditTodo.createRoute(todo.id)) }
+                            onToggle = { onToggle(todo) },
+                            onDelete = { onDelete(todo) },
+                            onClick = { onClickTodo(todo.id) }
                         )
                     }
                 }
@@ -190,6 +256,10 @@ fun TodoListItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 4.dp),
+            elevation = CardDefaults.cardElevation(0.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            ),
             onClick = onClick
         ) {
             Row(
@@ -230,24 +300,35 @@ fun TodoListItem(
     }
 }
 
-@Preview(showBackground = true, name = "Todo Item Preview")
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. Todo List - Flat Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun TodoListItemPreview() {
-    val sampleTodo = TodoItem(
-        id = "1",
-        title = "Buy groceries",
-        description = "Milk, Eggs, Bread",
-        dueDate = System.currentTimeMillis() + 86400000L,
-        filePath = null,
-        isCompleted = false
+fun TodoListScreenPreview_Populated_Dark() {
+    val sampleTodos = listOf(
+        TodoItem("1", "Buy groceries", "Milk, Eggs, Bread", System.currentTimeMillis() + 86400000L, null, false),
+        TodoItem("2", "Finish Diary UI Redesign", "Refactor screens and drawer", System.currentTimeMillis() + 172800000L, null, false)
     )
 
-    MaterialTheme {
-        TodoListItem(
-            todo = sampleTodo,
-            onToggle = {},
-            onDelete = {},
-            onClick = {}
+    TodoListTheme(darkTheme = true) {
+        TodoListContent(
+            todos = sampleTodos,
+            searchQuery = ""
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "2. Todo List - Flat Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun TodoListScreenPreview_Populated_Light() {
+    val sampleTodos = listOf(
+        TodoItem("1", "Buy groceries", "Milk, Eggs, Bread", System.currentTimeMillis() + 86400000L, null, false)
+    )
+
+    TodoListTheme(darkTheme = false) {
+        TodoListContent(
+            todos = sampleTodos,
+            searchQuery = ""
         )
     }
 }

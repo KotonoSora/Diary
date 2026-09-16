@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.editor
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,8 +21,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @Composable
 fun BacklinkPanel(
@@ -31,29 +34,31 @@ fun BacklinkPanel(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(0.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         )
     ) {
         Column(
             modifier = Modifier.padding(12.dp)
         ) {
             Text(
-                text = "Backlinks & Mentions (${incomingLinks.size})",
+                text = "Linked Notes (${incomingLinks.size})",
                 style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             if (incomingLinks.isEmpty()) {
                 Text(
-                    text = "No incoming links to this note.",
+                    text = "No linked notes referencing this entry.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             } else {
                 LazyColumn {
-                    items(incomingLinks) { sourceNoteId ->
+                    items(incomingLinks, key = { it }) { sourceNoteId ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -80,21 +85,23 @@ fun BacklinkPanel(
     }
 }
 
-@Preview(showBackground = true, name = "Backlink Panel with Links")
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. Backlink Panel With Links - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun BacklinkPanelPreview_WithLinks() {
-    MaterialTheme {
+fun BacklinkPanelPreview_WithLinks_Dark() {
+    TodoListTheme(darkTheme = true) {
         BacklinkPanel(
-            incomingLinks = listOf("Projects/Roadmap.md", "Ideas/Zettelkasten.md", "Work/Meeting.md"),
+            incomingLinks = listOf("Projects/Roadmap.md", "Ideas/Concepts.md", "Work/Meeting.md"),
             onNoteClick = {}
         )
     }
 }
 
-@Preview(showBackground = true, name = "Backlink Panel Empty")
+@Preview(showBackground = true, name = "2. Backlink Panel Empty - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
-fun BacklinkPanelPreview_Empty() {
-    MaterialTheme {
+fun BacklinkPanelPreview_Empty_Light() {
+    TodoListTheme(darkTheme = false) {
         BacklinkPanel(
             incomingLinks = emptyList(),
             onNoteClick = {}

@@ -11,6 +11,14 @@ enum class NoteType {
     MOC          // Map of Content (Structural Index Note)
 }
 
+val NoteType.displayName: String
+    get() = when (this) {
+        NoteType.FLEETING -> "Quick Note"
+        NoteType.LITERATURE -> "Reference Note"
+        NoteType.PERMANENT -> "Core Note"
+        NoteType.MOC -> "Topic Index"
+    }
+
 enum class ParaCategory {
     PROJECT,     // Active goals with deadlines
     AREA,        // Long-term areas of responsibility
@@ -20,7 +28,7 @@ enum class ParaCategory {
 
 object ZettelUidGenerator {
     /**
-     * Generates a 12-digit Zettelkasten Timestamp UID in format YYYYMMDDHHMM.
+     * Generates a 12-digit Timestamp UID in format YYYYMMDDHHMM.
      */
     fun generateUid(timestamp: Long = System.currentTimeMillis()): String {
         val sdf = SimpleDateFormat("yyyyMMddHHmm", Locale.US)

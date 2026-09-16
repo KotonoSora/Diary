@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -70,6 +71,31 @@ class VaultRepositoryTest {
 
         coVerify { noteDao.insertNote(any()) }
         coVerify { zettelMetadataDao.insertMetadata(any()) }
+    }
+
+    @Test
+    fun `renameNote renames file and refactors WikiLinks in other notes`() = runTest {
+        val oldNoteEntity = NoteEntity(
+            id = "Roadmap.md",
+            title = "Roadmap",
+            relativePath = "",
+            content = "# Roadmap\n\nProject milestones"
+        )
+        val referencingNoteEntity = NoteEntity(
+            id = "Project.md",
+            title = "Project",
+            relativePath = "",
+            content = "# Project\n\nSee [[Roadmap]] for details."
+        )
+
+        coEvery { noteDao.getNoteById("Roadmap.md") } returns oldNoteEntity
+        coEvery { vaultManager.renameNote("Roadmap.md", any(), any()) } returns true
+        coEvery { noteDao.getAllNotesOnce() } returns listOf(referencingNoteEntity)
+
+        val success = repository.renameNote("Roadmap.md", "Strategy")
+        assertTrue(success)
+
+        coVerify { vaultManager.saveNote(match { it.content.contains("[[Strategy]]") }, any()) }
     }
 
     @Test

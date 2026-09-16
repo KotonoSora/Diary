@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.calendar
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,7 +31,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,21 +46,50 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kotonosora.todolist.domain.model.TodoItem
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 import java.text.DateFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
+fun CalendarScreen(
+    viewModel: CalendarViewModel = viewModel(),
+    onOpenDrawer: (() -> Unit)? = null
+) {
     val year by viewModel.currentYear.collectAsState()
     val month by viewModel.currentMonth.collectAsState()
     val selectedDateMillis by viewModel.selectedDateMillis.collectAsState()
     val allTodos by viewModel.allTodos.collectAsState()
     val todosForDate by viewModel.todosForSelectedDate.collectAsState()
 
+    CalendarScreenContent(
+        year = year,
+        month = month,
+        selectedDateMillis = selectedDateMillis,
+        allTodos = allTodos,
+        todosForDate = todosForDate,
+        onPreviousMonth = { viewModel.previousMonth() },
+        onNextMonth = { viewModel.nextMonth() },
+        onDateSelected = { viewModel.selectDate(it) },
+        onOpenDrawer = onOpenDrawer
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CalendarScreenContent(
+    year: Int,
+    month: Int,
+    selectedDateMillis: Long,
+    allTodos: List<TodoItem>,
+    todosForDate: List<TodoItem>,
+    onPreviousMonth: () -> Unit = {},
+    onNextMonth: () -> Unit = {},
+    onDateSelected: (Long) -> Unit = {},
+    onOpenDrawer: (() -> Unit)? = null
+) {
     val locale = LocalConfiguration.current.locales[0]
     val monthTitle = remember(year, month, locale) {
         val cal = Calendar.getInstance(locale).apply { set(year, month, 1) }
@@ -77,7 +107,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
         days
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Calendar") }) }) { paddingValues ->
+    Scaffold { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -86,18 +116,28 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
         ) {
             // Month navigation header (locale formatted)
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { viewModel.previousMonth() }) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onOpenDrawer != null) {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
+                        }
+                    }
+                    IconButton(onClick = onPreviousMonth) {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Previous month")
+                    }
                 }
                 Text(
                     text = monthTitle,
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = { viewModel.nextMonth() }) {
+                IconButton(onClick = onNextMonth) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Next month")
                 }
             }
@@ -124,7 +164,7 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                 selectedDateMillis = selectedDateMillis,
                 allTodos = allTodos,
                 locale = locale,
-                onDateSelected = { viewModel.selectDate(it) }
+                onDateSelected = onDateSelected
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -146,7 +186,9 @@ fun CalendarScreen(viewModel: CalendarViewModel = viewModel()) {
                 )
             } else {
                 LazyColumn {
-                    items(todosForDate) { todo -> CalendarTodoItem(todo) }
+                    items(todosForDate, key = { it.id }) { todo ->
+                        CalendarTodoItem(todo)
+                    }
                 }
             }
         }
@@ -333,17 +375,59 @@ private fun CalendarTodoItem(todo: TodoItem) {
     }
 }
 
-@Preview(showBackground = true, name = "Calendar Grid Preview")
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. Calendar Screen - Populated Tasks (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun CalendarGridPreview() {
-    MaterialTheme {
-        CalendarGrid(
+fun CalendarScreenPreview_Populated_Dark() {
+    val sampleDate = System.currentTimeMillis()
+    val sampleTodos = listOf(
+        TodoItem("1", "Architecture Sync Meeting", "Discuss Diary redesign", sampleDate, null, false),
+        TodoItem("2", "Review Pull Request #42", "Check unit tests and UI state", sampleDate, null, true),
+        TodoItem("3", "Grocery Shopping", "Milk, Bread, Coffee", sampleDate + 86400000L, null, false)
+    )
+
+    TodoListTheme(darkTheme = true) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = sampleDate,
+            allTodos = sampleTodos,
+            todosForDate = sampleTodos.take(2)
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "2. Calendar Screen - Populated Tasks (Light)", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun CalendarScreenPreview_Populated_Light() {
+    val sampleDate = System.currentTimeMillis()
+    val sampleTodos = listOf(
+        TodoItem("1", "Architecture Sync Meeting", "Discuss Diary redesign", sampleDate, null, false),
+        TodoItem("2", "Review Pull Request #42", "Check unit tests and UI state", sampleDate, null, true)
+    )
+
+    TodoListTheme(darkTheme = false) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = sampleDate,
+            allTodos = sampleTodos,
+            todosForDate = sampleTodos
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "3. Calendar Screen - Empty Selected Date")
+@Composable
+fun CalendarScreenPreview_EmptyTasks() {
+    TodoListTheme(darkTheme = true) {
+        CalendarScreenContent(
             year = 2026,
             month = 2,
             selectedDateMillis = System.currentTimeMillis(),
             allTodos = emptyList(),
-            locale = Locale.US,
-            onDateSelected = {}
+            todosForDate = emptyList()
         )
     }
 }

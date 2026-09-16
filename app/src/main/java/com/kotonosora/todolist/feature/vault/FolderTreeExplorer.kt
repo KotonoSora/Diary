@@ -1,12 +1,16 @@
 package com.kotonosora.todolist.feature.vault
 
-import androidx.compose.foundation.clickable
+import android.content.Intent
+import android.content.res.Configuration
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
@@ -14,6 +18,7 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -28,9 +33,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.domain.model.VaultNode
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @Composable
 fun FolderTreeExplorer(
@@ -38,11 +45,13 @@ fun FolderTreeExplorer(
     onNoteSelect: (String) -> Unit,
     onCreateNote: (String) -> Unit,
     onCreateFolder: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDeleteNote: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.medium,
+        elevation = CardDefaults.cardElevation(0.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         )
@@ -57,7 +66,7 @@ fun FolderTreeExplorer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Vault: ${rootNode.name}",
+                    text = rootNode.name,
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
@@ -85,21 +94,26 @@ fun FolderTreeExplorer(
                 level = 0,
                 onNoteSelect = onNoteSelect,
                 onCreateNote = onCreateNote,
-                onCreateFolder = onCreateFolder
+                onCreateFolder = onCreateFolder,
+                onDeleteNote = onDeleteNote
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RenderFolderNode(
     folder: VaultNode.FolderNode,
     level: Int,
     onNoteSelect: (String) -> Unit,
     onCreateNote: (String) -> Unit,
-    onCreateFolder: (String) -> Unit
+    onCreateFolder: (String) -> Unit,
+    onDeleteNote: (String) -> Unit
 ) {
+    val context = LocalContext.current
     var isExpanded by remember { mutableStateOf(level == 0) }
+    var activeActionFile by remember { mutableStateOf<VaultNode.FileNode?>(null) }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         if (level > 0) {
@@ -107,7 +121,9 @@ private fun RenderFolderNode(
                 modifier = Modifier
                     .fillMaxWidth()
                     .defaultMinSize(minHeight = 48.dp)
-                    .clickable { isExpanded = !isExpanded }
+                    .combinedClickable(
+                        onClick = { isExpanded = !isExpanded }
+                    )
                     .padding(start = (level * 16).dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -120,7 +136,8 @@ private fun RenderFolderNode(
                 Text(
                     text = folder.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
@@ -134,7 +151,8 @@ private fun RenderFolderNode(
                             level = level + 1,
                             onNoteSelect = onNoteSelect,
                             onCreateNote = onCreateNote,
-                            onCreateFolder = onCreateFolder
+                            onCreateFolder = onCreateFolder,
+                            onDeleteNote = onDeleteNote
                         )
                     }
 
@@ -143,7 +161,10 @@ private fun RenderFolderNode(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .defaultMinSize(minHeight = 48.dp)
-                                .clickable { onNoteSelect(child.relativePath) }
+                                .combinedClickable(
+                                    onClick = { onNoteSelect(child.relativePath) },
+                                    onLongClick = { activeActionFile = child }
+                                )
                                 .padding(start = ((level + 1) * 16).dp, top = 4.dp, bottom = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -156,21 +177,55 @@ private fun RenderFolderNode(
                             Text(
                                 text = child.name,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
                             )
+                            IconButton(
+                                onClick = { activeActionFile = child },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "File Options",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
+
+    if (activeActionFile != null) {
+        val file = activeActionFile!!
+        FileActionsBottomSheet(
+            fileName = file.name,
+            filePath = file.relativePath,
+            onDismiss = { activeActionFile = null },
+            onOpenNote = { onNoteSelect(file.relativePath) },
+            onRenameNote = { onNoteSelect(file.relativePath) },
+            onShareNote = {
+                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                    putExtra(Intent.EXTRA_TITLE, file.name)
+                    putExtra(Intent.EXTRA_TEXT, "Markdown file: ${file.relativePath}")
+                    type = "text/plain"
+                }
+                context.startActivity(Intent.createChooser(sendIntent, "Share Markdown File"))
+            },
+            onDeleteNote = { onDeleteNote(file.relativePath) }
+        )
+    }
 }
 
-@Preview(showBackground = true, name = "Folder Tree Explorer")
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. Folder Tree Explorer - Flat Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun FolderTreeExplorerPreview() {
+fun FolderTreeExplorerPreview_Dark() {
     val sampleTree = VaultNode.FolderNode(
-        name = "My Vault",
+        name = "My Personal Vault",
         relativePath = "",
         children = listOf(
             VaultNode.FileNode("Index.md", "Index.md", "md", 1024, System.currentTimeMillis()),
@@ -178,26 +233,41 @@ fun FolderTreeExplorerPreview() {
                 name = "Projects",
                 relativePath = "Projects",
                 children = listOf(
-                    VaultNode.FileNode("Roadmap.md", "Projects/Roadmap.md", "md", 2048, System.currentTimeMillis()),
-                    VaultNode.FileNode("Architecture.md", "Projects/Architecture.md", "md", 1536, System.currentTimeMillis())
-                )
-            ),
-            VaultNode.FolderNode(
-                name = "Journal",
-                relativePath = "Journal",
-                children = listOf(
-                    VaultNode.FileNode("2026-03-01.md", "Journal/2026-03-01.md", "md", 512, System.currentTimeMillis())
+                    VaultNode.FileNode("Roadmap.md", "Projects/Roadmap.md", "md", 2048, System.currentTimeMillis())
                 )
             )
         )
     )
 
-    MaterialTheme {
+    TodoListTheme(darkTheme = true) {
         FolderTreeExplorer(
             rootNode = sampleTree,
             onNoteSelect = {},
             onCreateNote = {},
-            onCreateFolder = {}
+            onCreateFolder = {},
+            onDeleteNote = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "2. Folder Tree Explorer - Flat Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun FolderTreeExplorerPreview_Light() {
+    val sampleTree = VaultNode.FolderNode(
+        name = "My Personal Vault",
+        relativePath = "",
+        children = listOf(
+            VaultNode.FileNode("Index.md", "Index.md", "md", 1024, System.currentTimeMillis())
+        )
+    )
+
+    TodoListTheme(darkTheme = false) {
+        FolderTreeExplorer(
+            rootNode = sampleTree,
+            onNoteSelect = {},
+            onCreateNote = {},
+            onCreateFolder = {},
+            onDeleteNote = {}
         )
     }
 }

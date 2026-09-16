@@ -1,27 +1,45 @@
 package com.kotonosora.todolist.navigation
 
-import androidx.compose.foundation.layout.Box
+import android.content.res.Configuration
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,14 +50,28 @@ import androidx.navigation.navArgument
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.calendar.CalendarScreen
+import com.kotonosora.todolist.feature.calendar.CalendarScreenContent
 import com.kotonosora.todolist.feature.calendar.CalendarViewModel
+import com.kotonosora.todolist.feature.editor.EditorContent
 import com.kotonosora.todolist.feature.editor.EditorScreen
+import com.kotonosora.todolist.feature.editor.EditorUiState
 import com.kotonosora.todolist.feature.editor.EditorViewModel
+import com.kotonosora.todolist.feature.graph.GraphUiState
 import com.kotonosora.todolist.feature.graph.GraphViewModel
+import com.kotonosora.todolist.feature.graph.KnowledgeGraphContent
 import com.kotonosora.todolist.feature.graph.KnowledgeGraphScreen
+import com.kotonosora.todolist.feature.guide.OnboardingGuideScreen
 import com.kotonosora.todolist.feature.media.MediaScreen
+import com.kotonosora.todolist.feature.media.MediaScreenContent
 import com.kotonosora.todolist.feature.media.MediaViewModel
+import com.kotonosora.todolist.feature.settings.SettingsScreen
+import com.kotonosora.todolist.feature.settings.SettingsScreenContent
+import com.kotonosora.todolist.feature.settings.SettingsViewModel
+import com.kotonosora.todolist.feature.splash.SplashScreen
+import com.kotonosora.todolist.feature.splash.SplashScreenContent
+import com.kotonosora.todolist.feature.todo.AddEditTodoContent
 import com.kotonosora.todolist.feature.todo.AddEditTodoScreen
+import com.kotonosora.todolist.feature.todo.TodoListContent
 import com.kotonosora.todolist.feature.todo.TodoListScreen
 import com.kotonosora.todolist.feature.todo.TodoViewModel
 import com.kotonosora.todolist.feature.vault.VaultUiState
@@ -47,11 +79,13 @@ import com.kotonosora.todolist.feature.vault.VaultViewModel
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceContent
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceScreen
 import com.kotonosora.todolist.ui.theme.TodoListTheme
+import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
 sealed class NavRoute(val route: String) {
+    object Splash : NavRoute("splash")
     object VaultWorkspace : NavRoute("vault_workspace")
     object KnowledgeGraph : NavRoute("knowledge_graph")
     object MarkdownEditor : NavRoute("markdown_editor/{noteId}") {
@@ -68,200 +102,309 @@ sealed class NavRoute(val route: String) {
 
     object Calendar : NavRoute("calendar")
     object Media : NavRoute("media")
+    object Settings : NavRoute("settings")
+    object OnboardingGuide : NavRoute("onboarding_guide")
 }
 
-private data class BottomNavItem(
+private data class DrawerNavItem(
     val label: String,
     val icon: ImageVector,
     val route: String
 )
 
-private val bottomNavItems = listOf(
-    BottomNavItem("Vault", Icons.Default.Folder, NavRoute.VaultWorkspace.route),
-    BottomNavItem("Todos", Icons.AutoMirrored.Filled.List, NavRoute.TodoList.route),
-    BottomNavItem("Calendar", Icons.Default.DateRange, NavRoute.Calendar.route),
-    BottomNavItem("Media", Icons.Default.PlayArrow, NavRoute.Media.route)
+private val drawerNavItems = listOf(
+    DrawerNavItem("Vault Workspace", Icons.Default.Folder, NavRoute.VaultWorkspace.route),
+    DrawerNavItem("Todos", Icons.AutoMirrored.Filled.List, NavRoute.TodoList.route),
+    DrawerNavItem("Calendar", Icons.Default.DateRange, NavRoute.Calendar.route),
+    DrawerNavItem("Media & Captures", Icons.Default.PermMedia, NavRoute.Media.route),
+    DrawerNavItem("Knowledge Graph", Icons.Default.Hub, NavRoute.KnowledgeGraph.route),
+    DrawerNavItem("Settings", Icons.Default.Settings, NavRoute.Settings.route),
+    DrawerNavItem("Feature Guide", Icons.AutoMirrored.Filled.HelpOutline, NavRoute.OnboardingGuide.route)
 )
 
 @Composable
 fun AppNavGraph() {
     val navController = rememberNavController()
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    val showBottomBar = bottomNavItems.any { it.route == currentDestination?.route }
 
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 3.dp
-                ) {
-                    bottomNavItems.forEach { item ->
-                        val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                        NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
-                            selected = isSelected,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            onClick = {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AppNavDrawerSheet(
+                currentRoute = currentDestination?.route,
+                onNavigate = { route ->
+                    scope.launch { drawerState.close() }
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    ) {
+        Scaffold { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = NavRoute.Splash.route,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable(NavRoute.Splash.route) {
+                    if (LocalInspectionMode.current) {
+                        SplashScreenContent()
+                    } else {
+                        SplashScreen(
+                            onSplashFinished = {
+                                navController.navigate(NavRoute.VaultWorkspace.route) {
+                                    popUpTo(NavRoute.Splash.route) { inclusive = true }
                                 }
                             }
                         )
                     }
                 }
-            }
-        }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = NavRoute.VaultWorkspace.route,
-            modifier = Modifier.padding(innerPadding)
-        ) {
-            composable(NavRoute.VaultWorkspace.route) {
-                val vaultViewModel = hiltViewModel<VaultViewModel>()
-                VaultWorkspaceScreen(
-                    viewModel = vaultViewModel,
-                    onNoteSelect = { noteId ->
-                        navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
-                    },
-                    onOpenGraph = {
-                        navController.navigate(NavRoute.KnowledgeGraph.route)
+
+                composable(NavRoute.VaultWorkspace.route) {
+                    if (LocalInspectionMode.current) {
+                        VaultWorkspaceContent(
+                            uiState = VaultUiState(),
+                            onNoteSelect = {},
+                            onOpenGraph = {},
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    } else {
+                        val vaultViewModel = hiltViewModel<VaultViewModel>()
+                        VaultWorkspaceScreen(
+                            viewModel = vaultViewModel,
+                            onNoteSelect = { noteId ->
+                                navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                            },
+                            onOpenGraph = {
+                                navController.navigate(NavRoute.KnowledgeGraph.route)
+                            },
+                            onOpenDrawer = {
+                                scope.launch { drawerState.open() }
+                            }
+                        )
                     }
-                )
-            }
+                }
 
-            composable(NavRoute.KnowledgeGraph.route) {
-                val graphViewModel = hiltViewModel<GraphViewModel>()
-                KnowledgeGraphScreen(
-                    viewModel = graphViewModel,
-                    onBack = { navController.popBackStack() },
-                    onNoteClick = { noteId ->
-                        navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                composable(NavRoute.KnowledgeGraph.route) {
+                    if (LocalInspectionMode.current) {
+                        KnowledgeGraphContent(
+                            uiState = GraphUiState(),
+                            onBack = {},
+                            onNoteClick = {}
+                        )
+                    } else {
+                        val graphViewModel = hiltViewModel<GraphViewModel>()
+                        KnowledgeGraphScreen(
+                            viewModel = graphViewModel,
+                            onBack = { navController.popBackStack() },
+                            onNoteClick = { noteId ->
+                                navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                            }
+                        )
                     }
-                )
-            }
+                }
 
-            composable(
-                route = NavRoute.MarkdownEditor.route,
-                arguments = listOf(navArgument("noteId") {
-                    type = NavType.StringType
-                })
-            ) { backStackEntry ->
-                val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
-                val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
-                val editorViewModel = hiltViewModel<EditorViewModel>()
-                EditorScreen(
-                    noteId = noteId,
-                    viewModel = editorViewModel,
-                    onBack = { navController.popBackStack() },
-                    onNavigateToNote = { targetNoteId ->
-                        navController.navigate(NavRoute.MarkdownEditor.createRoute(targetNoteId))
+                composable(
+                    route = NavRoute.MarkdownEditor.route,
+                    arguments = listOf(navArgument("noteId") {
+                        type = NavType.StringType
+                    })
+                ) { backStackEntry ->
+                    if (LocalInspectionMode.current) {
+                        EditorContent(
+                            uiState = EditorUiState(
+                                note = NoteItem("preview.md", "Preview Note", "", "Preview content...")
+                            ),
+                            onBack = {},
+                            onSave = {}
+                        )
+                    } else {
+                        val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
+                        val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
+                        val editorViewModel = hiltViewModel<EditorViewModel>()
+                        EditorScreen(
+                            noteId = noteId,
+                            viewModel = editorViewModel,
+                            onBack = { navController.popBackStack() },
+                            onNavigateToNote = { targetNoteId ->
+                                navController.navigate(NavRoute.MarkdownEditor.createRoute(targetNoteId))
+                            }
+                        )
                     }
-                )
-            }
+                }
 
-            composable(NavRoute.TodoList.route) {
-                val todoViewModel = hiltViewModel<TodoViewModel>()
-                TodoListScreen(navController = navController, viewModel = todoViewModel)
-            }
+                composable(NavRoute.TodoList.route) {
+                    if (LocalInspectionMode.current) {
+                        TodoListContent(
+                            todos = emptyList(),
+                            searchQuery = "",
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    } else {
+                        val todoViewModel = hiltViewModel<TodoViewModel>()
+                        TodoListScreen(
+                            navController = navController,
+                            viewModel = todoViewModel,
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    }
+                }
 
-            composable(
-                route = NavRoute.AddEditTodo.route,
-                arguments = listOf(navArgument("todoId") {
-                    type = NavType.StringType
-                    defaultValue = "new"
-                })
-            ) { backStackEntry ->
-                val todoId = backStackEntry.arguments?.getString("todoId")
-                val todoViewModel = hiltViewModel<TodoViewModel>()
-                AddEditTodoScreen(
-                    navController = navController,
-                    todoId = todoId,
-                    viewModel = todoViewModel
-                )
-            }
+                composable(
+                    route = NavRoute.AddEditTodo.route,
+                    arguments = listOf(navArgument("todoId") {
+                        type = NavType.StringType
+                        defaultValue = "new"
+                    })
+                ) { backStackEntry ->
+                    if (LocalInspectionMode.current) {
+                        AddEditTodoContent(
+                            existingTodo = null,
+                            customFolderUri = null,
+                            onSaveTodo = {},
+                            onBack = {}
+                        )
+                    } else {
+                        val todoId = backStackEntry.arguments?.getString("todoId")
+                        val todoViewModel = hiltViewModel<TodoViewModel>()
+                        AddEditTodoScreen(
+                            navController = navController,
+                            todoId = todoId,
+                            viewModel = todoViewModel
+                        )
+                    }
+                }
 
-            composable(NavRoute.Calendar.route) {
-                val calendarViewModel = hiltViewModel<CalendarViewModel>()
-                CalendarScreen(viewModel = calendarViewModel)
-            }
+                composable(NavRoute.Calendar.route) {
+                    if (LocalInspectionMode.current) {
+                        CalendarScreenContent(
+                            year = 2025,
+                            month = 1,
+                            selectedDateMillis = System.currentTimeMillis(),
+                            allTodos = emptyList(),
+                            todosForDate = emptyList(),
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    } else {
+                        val calendarViewModel = hiltViewModel<CalendarViewModel>()
+                        CalendarScreen(
+                            viewModel = calendarViewModel,
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    }
+                }
 
-            composable(NavRoute.Media.route) {
-                val mediaViewModel = hiltViewModel<MediaViewModel>()
-                MediaScreen(viewModel = mediaViewModel)
+                composable(NavRoute.Media.route) {
+                    if (LocalInspectionMode.current) {
+                        MediaScreenContent(
+                            capturedPhotos = emptyList(),
+                            recordedAudios = emptyList(),
+                            isRecording = false,
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    } else {
+                        val mediaViewModel = hiltViewModel<MediaViewModel>()
+                        MediaScreen(
+                            viewModel = mediaViewModel,
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    }
+                }
+
+                composable(NavRoute.Settings.route) {
+                    if (LocalInspectionMode.current) {
+                        SettingsScreenContent(
+                            themeMode = "system",
+                            customStorageUri = null,
+                            defaultNoteFormat = "markdown",
+                            onNavigateToGuide = {},
+                            onOpenDrawer = { scope.launch { drawerState.open() } }
+                        )
+                    } else {
+                        val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                        SettingsScreen(
+                            viewModel = settingsViewModel,
+                            onNavigateToGuide = {
+                                navController.navigate(NavRoute.OnboardingGuide.route)
+                            },
+                            onOpenDrawer = {
+                                scope.launch { drawerState.open() }
+                            }
+                        )
+                    }
+                }
+
+                composable(NavRoute.OnboardingGuide.route) {
+                    OnboardingGuideScreen(
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }
 }
 
-@Preview(showBackground = true, name = "Full Screen App Navigation Graph Preview")
 @Composable
-fun AppNavGraphPreview() {
-    val sampleTree = VaultNode.FolderNode(
-        name = "My Knowledge Base",
-        relativePath = "",
-        children = listOf(
-            VaultNode.FileNode("Welcome.md", "Welcome.md", "md", 1024, System.currentTimeMillis()),
-            VaultNode.FolderNode(
-                name = "Projects",
-                relativePath = "Projects",
-                children = listOf(
-                    VaultNode.FileNode("Roadmap.md", "Projects/Roadmap.md", "md", 2048, System.currentTimeMillis())
-                )
-            )
-        )
-    )
-
-    val sampleNotes = listOf(
-        NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!"),
-        NoteItem("Projects/Roadmap.md", "Project Roadmap", "Projects", "Milestones for Q1 architecture and local vault sync.")
-    )
-
-    TodoListTheme {
-        Scaffold(
-            bottomBar = {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 3.dp
-                ) {
-                    bottomNavItems.forEachIndexed { index, item ->
-                        NavigationBarItem(
-                            icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
-                            selected = index == 0,
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                            ),
-                            onClick = {}
-                        )
-                    }
-                }
-            }
-        ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
-                VaultWorkspaceContent(
-                    uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes),
-                    onNoteSelect = {}
+fun AppNavDrawerSheet(
+    currentRoute: String? = NavRoute.VaultWorkspace.route,
+    onNavigate: (String) -> Unit = {}
+) {
+    ModalDrawerSheet(
+        modifier = Modifier
+            .width(280.dp)
+            .fillMaxHeight(),
+        drawerContainerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+        ) {
+            drawerNavItems.forEach { item ->
+                val isSelected = currentRoute == item.route
+                NavigationDrawerItem(
+                    icon = { Icon(item.icon, contentDescription = item.label) },
+                    label = { Text(item.label) },
+                    selected = isSelected,
+                    shape = RoundedCornerShape(8.dp),
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedIconColor = MaterialTheme.colorScheme.primary,
+                        selectedTextColor = MaterialTheme.colorScheme.primary,
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurface
+                    ),
+                    onClick = { onNavigate(item.route) },
+                    modifier = Modifier.padding(vertical = 2.dp)
                 )
             }
         }
+    }
+}
+
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. Navigation Drawer Sheet - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun AppNavDrawerPreview_Dark() {
+    TodoListTheme(darkTheme = true) {
+        AppNavDrawerSheet(currentRoute = NavRoute.VaultWorkspace.route)
+    }
+}
+
+@Preview(showBackground = true, name = "2. Navigation Drawer Sheet - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun AppNavDrawerPreview_Light() {
+    TodoListTheme(darkTheme = false) {
+        AppNavDrawerSheet(currentRoute = NavRoute.TodoList.route)
     }
 }

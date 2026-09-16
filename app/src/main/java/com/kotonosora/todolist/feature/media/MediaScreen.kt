@@ -1,10 +1,12 @@
 package com.kotonosora.todolist.feature.media
 
 import android.Manifest
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,18 +20,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,12 +48,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.kotonosora.todolist.ui.components.AudioPlayerView
 import com.kotonosora.todolist.ui.components.CameraCaptureView
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -54,18 +60,21 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
+fun MediaScreen(
+    viewModel: MediaViewModel = viewModel(),
+    onOpenDrawer: (() -> Unit)? = null
+) {
     val capturedPhotos by viewModel.capturedPhotoPaths.collectAsState()
     val recordedAudios by viewModel.recordedAudioPaths.collectAsState()
     val isRecording by viewModel.isRecording.collectAsState()
     val customFolderUri by viewModel.customFolderUri.collectAsState()
 
-    var showCameraView by remember { mutableStateOf(false) }
+    var showCameraSheet by remember { mutableStateOf(false) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) showCameraView = true
+        if (granted) showCameraSheet = true
     }
 
     val audioPermissionLauncher = rememberLauncherForActivityResult(
@@ -74,7 +83,53 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
         if (granted) viewModel.startRecording()
     }
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Media") }) }) { paddingValues ->
+    MediaScreenContent(
+        capturedPhotos = capturedPhotos,
+        recordedAudios = recordedAudios,
+        isRecording = isRecording,
+        onCapturePhotoClick = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
+        onStartRecordClick = { audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+        onStopRecordClick = { viewModel.stopRecording() },
+        onDeletePhoto = { viewModel.deletePhoto(it) },
+        onDeleteAudio = { viewModel.deleteAudio(it) },
+        onOpenDrawer = onOpenDrawer
+    )
+
+    // Camera Capture Bottom Sheet
+    if (showCameraSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showCameraSheet = false },
+            sheetState = sheetState
+        ) {
+            Box(modifier = Modifier.fillMaxWidth().height(480.dp)) {
+                CameraCaptureView(
+                    onPhotoCaptured = { pathStr ->
+                        viewModel.onPhotoCaptured(pathStr)
+                        showCameraSheet = false
+                    },
+                    onDismiss = { showCameraSheet = false },
+                    customFolderUriStr = customFolderUri
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MediaScreenContent(
+    capturedPhotos: List<String>,
+    recordedAudios: List<String>,
+    isRecording: Boolean,
+    onCapturePhotoClick: () -> Unit = {},
+    onStartRecordClick: () -> Unit = {},
+    onStopRecordClick: () -> Unit = {},
+    onDeletePhoto: (String) -> Unit = {},
+    onDeleteAudio: (String) -> Unit = {},
+    onOpenDrawer: (() -> Unit)? = null
+) {
+    Scaffold { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -82,28 +137,55 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { Spacer(Modifier.height(4.dp)) }
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (onOpenDrawer != null) {
+                        IconButton(onClick = onOpenDrawer) {
+                            Icon(Icons.Default.Menu, contentDescription = "Open Sidebar")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = "Media & Captures",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
             // ── Photos section ──
             item {
-                Text("Photos", style = MaterialTheme.typography.titleMedium)
-            }
-            item {
-                Button(
-                    onClick = {
-                        cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("📷  Take Photo")
+                    Text("Photos", style = MaterialTheme.typography.titleMedium)
+                    IconButton(
+                        onClick = onCapturePhotoClick,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.PhotoCamera,
+                            contentDescription = "Capture Photo",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
             }
-            items(capturedPhotos) { path ->
+            items(capturedPhotos, key = { it }) { path ->
                 MediaFileItem(
                     name = formatMediaDisplayName(path, isAudio = false),
                     subtitle = path,
                     filePath = path,
-                    onDelete = { viewModel.deletePhoto(path) }
+                    onDelete = { onDeletePhoto(path) }
                 )
             }
             if (capturedPhotos.isEmpty()) {
@@ -120,26 +202,39 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
 
             // ── Audio section ──
             item {
-                Text("Audio Recordings", style = MaterialTheme.typography.titleMedium)
-            }
-            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = { audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                        enabled = !isRecording,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("🎙  Start Recording")
-                    }
-                    OutlinedButton(
-                        onClick = { viewModel.stopRecording() },
-                        enabled = isRecording,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("⏹  Stop")
+                    Text("Audio Recordings", style = MaterialTheme.typography.titleMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IconButton(
+                            onClick = onStartRecordClick,
+                            enabled = !isRecording,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Mic,
+                                contentDescription = "Start Recording",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        IconButton(
+                            onClick = onStopRecordClick,
+                            enabled = isRecording,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer
+                            )
+                        ) {
+                            Icon(
+                                Icons.Default.Stop,
+                                contentDescription = "Stop Recording",
+                                tint = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                        }
                     }
                 }
             }
@@ -160,11 +255,11 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
                     }
                 }
             }
-            items(recordedAudios) { path ->
+            items(recordedAudios, key = { it }) { path ->
                 AudioFileItem(
                     name = formatMediaDisplayName(path, isAudio = true),
                     filePath = path,
-                    onDelete = { viewModel.deleteAudio(path) }
+                    onDelete = { onDeleteAudio(path) }
                 )
             }
             if (recordedAudios.isEmpty()) {
@@ -177,23 +272,6 @@ fun MediaScreen(viewModel: MediaViewModel = viewModel()) {
                 }
             }
             item { Spacer(Modifier.height(16.dp)) }
-        }
-    }
-
-    // Camera Capture Dialog
-    if (showCameraView) {
-        Dialog(
-            onDismissRequest = { showCameraView = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            CameraCaptureView(
-                onPhotoCaptured = { pathStr ->
-                    viewModel.onPhotoCaptured(pathStr)
-                    showCameraView = false
-                },
-                onDismiss = { showCameraView = false },
-                customFolderUriStr = customFolderUri
-            )
         }
     }
 }
@@ -335,15 +413,46 @@ private fun MediaFileItem(
     }
 }
 
-@Preview(showBackground = true, name = "Media Item Preview")
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. Media Screen - Populated (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun MediaFileItemPreview() {
-    MaterialTheme {
-        MediaFileItem(
-            name = "Photo - Mar 1, 2026",
-            subtitle = "_assets/IMG_20260301_120000.jpg",
-            filePath = null,
-            onDelete = {}
+fun MediaScreenPreview_Populated_Dark() {
+    val samplePhotos = listOf("_assets/IMG_20260301_120000.jpg")
+    val sampleAudios = listOf("_assets/REC_20260301_120000.m4a")
+
+    TodoListTheme(darkTheme = true) {
+        MediaScreenContent(
+            capturedPhotos = samplePhotos,
+            recordedAudios = sampleAudios,
+            isRecording = false
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "2. Media Screen - Populated (Light)", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun MediaScreenPreview_Populated_Light() {
+    val samplePhotos = listOf("_assets/IMG_20260301_120000.jpg")
+    val sampleAudios = listOf("_assets/REC_20260301_120000.m4a")
+
+    TodoListTheme(darkTheme = false) {
+        MediaScreenContent(
+            capturedPhotos = samplePhotos,
+            recordedAudios = sampleAudios,
+            isRecording = false
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "3. Media Screen - Empty State")
+@Composable
+fun MediaScreenPreview_EmptyState() {
+    TodoListTheme(darkTheme = true) {
+        MediaScreenContent(
+            capturedPhotos = emptyList(),
+            recordedAudios = emptyList(),
+            isRecording = false
         )
     }
 }

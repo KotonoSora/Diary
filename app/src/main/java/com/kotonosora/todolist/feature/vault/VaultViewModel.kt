@@ -81,4 +81,13 @@ class VaultViewModel @Inject constructor(
             }
         }
     }
+
+    fun deleteNote(relativePath: String) {
+        viewModelScope.launch {
+            val success = vaultRepository.deleteNote(relativePath)
+            if (success) {
+                loadVault()
+            }
+        }
+    }
 }

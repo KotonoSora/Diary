@@ -79,6 +79,66 @@ class VaultRepositoryImpl @Inject constructor(
         success
     }
 
+    /**
+     * Renames a note and performs Cascading WikiLink Refactoring across all notes in the Vault.
+     */
+    override suspend fun renameNote(oldNoteId: String, newTitle: String, overrideUri: Uri?): Boolean = withContext(Dispatchers.IO) {
+        val oldNote = getNoteById(oldNoteId) ?: return@withContext false
+        val oldTitle = oldNote.title
+
+        val newFilename = if (oldNote.id.contains("-")) {
+            val prefix = oldNote.id.substringAfterLast("/").substringBefore("-")
+            "$prefix-$newTitle.${oldNote.fileFormat}"
+        } else {
+            "$newTitle.${oldNote.fileFormat}"
+        }
+
+        val newNoteId = if (oldNote.relativePath.isBlank()) newFilename else "${oldNote.relativePath}/$newFilename"
+
+        // 1. Update file header content
+        val updatedContent = if (oldNote.content.startsWith("# $oldTitle")) {
+            oldNote.content.replaceFirst("# $oldTitle", "# $newTitle")
+        } else {
+            oldNote.content
+        }
+
+        val updatedNote = oldNote.copy(
+            id = newNoteId,
+            title = newTitle,
+            content = updatedContent,
+            updatedAt = System.currentTimeMillis()
+        )
+
+        // 2. Perform local/SAF file rename
+        val renamedOnDisk = vaultManager.renameNote(oldNoteId, newNoteId, overrideUri)
+        if (renamedOnDisk) {
+            vaultManager.saveNote(updatedNote, overrideUri)
+            noteDao.deleteNoteById(oldNoteId)
+            linkDao.deleteLinksForSource(oldNoteId)
+            tagDao.deleteTagsForNote(oldNoteId)
+            zettelMetadataDao.deleteMetadataForNote(oldNoteId)
+            indexNoteToDb(updatedNote)
+
+            // 3. Cascading WikiLink Refactoring across all other notes in the Vault
+            val allNotes = noteDao.getAllNotesOnce()
+            for (noteEntity in allNotes) {
+                if (noteEntity.id != newNoteId && noteEntity.content.contains("[[$oldTitle")) {
+                    val refactoredContent = noteEntity.content
+                        .replace("[[$oldTitle]]", "[[$newTitle]]")
+                        .replace("[[$oldTitle|", "[[$newTitle|")
+                        .replace("[[$oldTitle#", "[[$newTitle#")
+
+                    val refactoredNote = entityToDomain(noteEntity).copy(content = refactoredContent)
+                    vaultManager.saveNote(refactoredNote, overrideUri)
+                    indexNoteToDb(refactoredNote)
+                }
+            }
+            return@withContext true
+        }
+
+        return@withContext false
+    }
+
     override suspend fun deleteNote(relativePath: String, overrideUri: Uri?): Boolean = withContext(Dispatchers.IO) {
         val success = vaultManager.deleteNote(relativePath, overrideUri)
         if (success) {
@@ -99,25 +159,19 @@ class VaultRepositoryImpl @Inject constructor(
     private suspend fun indexNoteToDb(note: NoteItem) {
         val parsedTitle = try {
             MdNativeHelper.parseTitle(note.content).ifBlank { note.title }
-        } catch (e: UnsatisfiedLinkError) {
-            note.title
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             note.title
         }
 
         val extractedLinks = try {
             MdNativeHelper.extractWikiLinks(note.content).toList()
-        } catch (e: UnsatisfiedLinkError) {
-            emptyList()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             emptyList()
         }
 
         val extractedTags = try {
             MdNativeHelper.extractTags(note.content).toList()
-        } catch (e: UnsatisfiedLinkError) {
-            emptyList()
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             emptyList()
         }
 

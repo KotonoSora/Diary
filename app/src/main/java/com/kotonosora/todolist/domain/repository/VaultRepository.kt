@@ -15,6 +15,7 @@ interface VaultRepository {
     suspend fun getVaultTree(overrideUri: Uri? = null): VaultNode.FolderNode
     suspend fun syncVaultFilesToDb(overrideUri: Uri? = null)
     suspend fun saveNote(note: NoteItem, overrideUri: Uri? = null): Boolean
+    suspend fun renameNote(oldNoteId: String, newTitle: String, overrideUri: Uri? = null): Boolean
     suspend fun deleteNote(relativePath: String, overrideUri: Uri? = null): Boolean
     suspend fun searchNotes(query: String): Flow<List<NoteItem>>
 }

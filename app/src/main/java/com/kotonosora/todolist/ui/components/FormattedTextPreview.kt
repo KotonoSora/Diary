@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,7 +31,9 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @Composable
 fun FormattedTextPreview(
@@ -40,8 +43,9 @@ fun FormattedTextPreview(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(0.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
         )
     ) {
         Column(
@@ -322,5 +326,54 @@ private fun parseInlineMarkdown(input: String): AnnotatedString {
                 }
             }
         }
+    }
+}
+
+// ── FULL CASE-BY-CASE PREVIEWS ──
+
+@Preview(showBackground = true, name = "1. Formatted Preview - Markdown (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun FormattedTextPreview_Markdown_Dark() {
+    val markdown = """
+        # Diary Project Roadmap
+        ## Milestones & Tasks
+        - [x] Flat Design System
+        - [ ] Live WYSIWYG Editor
+        > "Knowledge management is atomic thinking."
+        
+        ```kotlin
+        val status = "Flat Design Complete"
+        ```
+    """.trimIndent()
+
+    TodoListTheme(darkTheme = true) {
+        FormattedTextPreview(
+            text = markdown,
+            format = "md"
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "2. Formatted Preview - Plain Text (Light)", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Composable
+fun FormattedTextPreview_PlainText_Light() {
+    val plainText = "Plain text notes formatted as raw monospace text."
+
+    TodoListTheme(darkTheme = false) {
+        FormattedTextPreview(
+            text = plainText,
+            format = "txt"
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "3. Formatted Preview - Empty")
+@Composable
+fun FormattedTextPreview_Empty() {
+    TodoListTheme(darkTheme = true) {
+        FormattedTextPreview(
+            text = "",
+            format = "md"
+        )
     }
 }

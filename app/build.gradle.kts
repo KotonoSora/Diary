@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
+    implementation(libs.androidx.core.splashscreen)
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -76,9 +77,6 @@ dependencies {
     // Media3 ExoPlayer Audio Playback
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
-
-    // Kizitonwose Calendar Compose
-    implementation(libs.kizitonwose.calendar.compose)
 
     // DataStore Preferences & DocumentFile
     implementation(libs.androidx.datastore.preferences)

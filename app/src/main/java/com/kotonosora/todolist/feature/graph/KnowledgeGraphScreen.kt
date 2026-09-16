@@ -22,8 +22,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -130,27 +130,12 @@ fun KnowledgeGraphContent(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Zettelkasten Knowledge Graph") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
-                    }
-                }
-            )
-        }
-    ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            Canvas(
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surface)
+    ) {
+        Canvas(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(Unit) {
@@ -202,11 +187,12 @@ fun KnowledgeGraphContent(
                 }
             }
 
-            // Legend Overlay Card
+            // Flat Legend Overlay Card
             Card(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(16.dp),
+                elevation = CardDefaults.cardElevation(0.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
                 )
@@ -218,14 +204,31 @@ fun KnowledgeGraphContent(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.size(4.dp))
-                    LegendItem(color = Color(0xFFFFC107), label = "Fleeting Note")
-                    LegendItem(color = Color(0xFF2196F3), label = "Literature Note")
-                    LegendItem(color = Color(0xFF4CAF50), label = "Permanent Note")
-                    LegendItem(color = Color(0xFF9C27B0), label = "Map of Content (MOC)")
+                    LegendItem(color = Color(0xFFFFC107), label = "Quick Note")
+                    LegendItem(color = Color(0xFF2196F3), label = "Reference Note")
+                    LegendItem(color = Color(0xFF4CAF50), label = "Core Note")
+                    LegendItem(color = Color(0xFF9C27B0), label = "Topic Index")
+                }
+            }
+
+            // Floating Back Button Overlay
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+                shadowElevation = 4.dp,
+                modifier = Modifier
+                    .padding(16.dp)
+                    .align(Alignment.TopStart)
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
         }
-    }
 }
 
 @Composable
