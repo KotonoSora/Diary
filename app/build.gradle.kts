@@ -39,12 +39,6 @@ configure<ApplicationExtension> {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
     buildFeatures {
         compose = true
     }
@@ -54,7 +48,6 @@ configure<ApplicationExtension> {
             excludes += "**/*.kotlin_module"
         }
     }
-    ndkVersion = "28.2.13676358"
 }
 
 tasks.configureEach {

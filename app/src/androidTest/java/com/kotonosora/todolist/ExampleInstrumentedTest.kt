@@ -8,7 +8,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * Instrumented smoke tests verifying the app package and native library load.
+ * Instrumented smoke tests verifying the app package and helper logic.
  */
 @RunWith(AndroidJUnit4::class)
 class AppInstrumentedTest {
@@ -20,9 +20,7 @@ class AppInstrumentedTest {
     }
 
     @Test
-    fun nativeLibrary_loadsWithoutException() {
-        // MainApplication loads the library on start; verify it is already loaded by
-        // exercising a simple JNI round-trip using MainNativeHelper.
+    fun mainNativeHelper_sortStrings_sortsAlphabetically() {
         val result = MainNativeHelper.sortStrings(
             arrayOf("banana", "apple", "cherry")
         )
@@ -30,7 +28,7 @@ class AppInstrumentedTest {
     }
 
     @Test
-    fun nativeLibrary_filterByPrefix_returnsMatches() {
+    fun mainNativeHelper_filterByPrefix_returnsMatches() {
         val titles = arrayOf("Buy groceries", "Read book", "Build app", "Bake cake")
         val matches = MainNativeHelper.filterByPrefix(titles, "b")
         assertEquals(3, matches.size)

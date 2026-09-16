@@ -1,23 +1,34 @@
 package com.kotonosora.todolist.data.native
 
 /**
- * Kotlin JNI wrapper for native C++ performance helpers.
- * The "todolist" native library is loaded once via MainApplication.
+ * Pure Kotlin helper replacing former native C++ performance helpers.
  */
 object MainNativeHelper {
 
     /**
-     * Sorts an array of strings alphabetically using C++ std::sort.
+     * Sorts an array of strings alphabetically.
      */
-    external fun sortStrings(arr: Array<String>): Array<String>
+    fun sortStrings(arr: Array<String>): Array<String> {
+        return arr.sortedArray()
+    }
 
     /**
-     * Parses the title (first "# " heading) from a Markdown string using C++.
+     * Parses the title (first "# " heading) from a Markdown string.
      */
-    external fun parseMdTitle(mdContent: String): String
+    fun parseMdTitle(mdContent: String): String {
+        return mdContent.lineSequence()
+            .map { it.trim() }
+            .firstOrNull { it.startsWith("# ") }
+            ?.removePrefix("# ")
+            ?.trim()
+            .orEmpty()
+    }
 
     /**
-     * Filters an array of strings by a case-insensitive prefix using C++.
+     * Filters an array of strings by a case-insensitive prefix.
      */
-    external fun filterByPrefix(arr: Array<String>, prefix: String): Array<String>
+    fun filterByPrefix(arr: Array<String>, prefix: String): Array<String> {
+        if (prefix.isEmpty()) return arr
+        return arr.filter { it.startsWith(prefix, ignoreCase = true) }.toTypedArray()
+    }
 }
