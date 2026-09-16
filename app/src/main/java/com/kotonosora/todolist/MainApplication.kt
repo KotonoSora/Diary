@@ -17,8 +17,6 @@ class MainApplication : Application() {
         super.onCreate()
         container = AppContainer(this)
 
-        // Load the native library once for the entire app lifecycle
-        System.loadLibrary("todolist")
         // Create the notification channel
         AppNotificationManager.createNotificationChannel(this)
         // Trigger a one-time bidirectional sync of .md files <-> Room DB on every launch.
