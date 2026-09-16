@@ -6,7 +6,6 @@ import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.TodoItem
 import com.kotonosora.todolist.domain.usecase.TodoUseCases
 import com.kotonosora.todolist.domain.repository.VaultRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,10 +14,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
-import javax.inject.Inject
 
-@HiltViewModel
-class CalendarViewModel @Inject constructor(
+class CalendarViewModel(
     private val useCases: TodoUseCases,
     private val vaultRepository: VaultRepository? = null
 ) : ViewModel() {

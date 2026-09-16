@@ -32,6 +32,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,19 +43,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.repository.VaultRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
+import com.kotonosora.todolist.navigation.appViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import kotlin.math.hypot
 
 data class GraphEdge(
@@ -66,8 +66,7 @@ data class GraphUiState(
     val edges: List<GraphEdge> = emptyList()
 )
 
-@HiltViewModel
-class GraphViewModel @Inject constructor(
+class GraphViewModel(
     private val vaultRepository: VaultRepository
 ) : ViewModel() {
 
@@ -95,7 +94,7 @@ class GraphViewModel @Inject constructor(
 
 @Composable
 fun KnowledgeGraphScreen(
-    viewModel: GraphViewModel = hiltViewModel(),
+    viewModel: GraphViewModel,
     onBack: () -> Unit,
     onNoteClick: (String) -> Unit
 ) {

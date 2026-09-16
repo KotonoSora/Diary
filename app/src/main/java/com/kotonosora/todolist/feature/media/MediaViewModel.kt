@@ -9,11 +9,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.MediaEntity
+import com.kotonosora.todolist.data.factory.MediaRecorderFactory
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.MediaOutputLocation
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,14 +23,13 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
-import javax.inject.Inject
 
-@HiltViewModel
-class MediaViewModel @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+class MediaViewModel(
+    private val context: Context,
     private val mediaDao: MediaDao,
     private val userPreferencesRepository: UserPreferencesRepository? = null,
-    private val mediaFileManager: MediaFileManager? = null
+    private val mediaFileManager: MediaFileManager? = null,
+    private val mediaRecorderFactory: MediaRecorderFactory? = null
 ) : ViewModel() {
 
     private val _capturedPhotoPaths = MutableStateFlow<List<String>>(emptyList())
@@ -91,7 +89,7 @@ class MediaViewModel @Inject constructor(
         val manager = mediaFileManager ?: MediaFileManager(context)
         val location = manager.createAudioOutputLocation(customFolderUriStr)
 
-        val recorder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        val recorder = mediaRecorderFactory?.createMediaRecorder() ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             MediaRecorder(context)
         } else {
             @Suppress("DEPRECATION")
@@ -143,7 +141,7 @@ class MediaViewModel @Inject constructor(
                     try {
                         val amp = mediaRecorder?.maxAmplitude ?: 0
                         _currentAmplitude.value = amp
-                    } catch (e: Exception) {
+                    } catch (_: Exception) {
                         // ignore
                     }
                     _recordingDurationSeconds.value += 1
@@ -155,10 +153,8 @@ class MediaViewModel @Inject constructor(
     fun pauseRecording() {
         if (_isRecording.value && !_isPaused.value) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    mediaRecorder?.pause()
-                    _isPaused.value = true
-                }
+                mediaRecorder?.pause()
+                _isPaused.value = true
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -168,10 +164,8 @@ class MediaViewModel @Inject constructor(
     fun resumeRecording() {
         if (_isRecording.value && _isPaused.value) {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    mediaRecorder?.resume()
-                    _isPaused.value = false
-                }
+                mediaRecorder?.resume()
+                _isPaused.value = false
             } catch (e: Exception) {
                 e.printStackTrace()
             }

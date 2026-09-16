@@ -53,7 +53,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.kotonosora.todolist.domain.model.ActionStamp
 import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteItem
@@ -61,11 +60,12 @@ import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.search.SearchScreen
 import com.kotonosora.todolist.feature.tags.TagExplorerScreen
+import com.kotonosora.todolist.navigation.appViewModel
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @Composable
 fun VaultWorkspaceScreen(
-    viewModel: VaultViewModel = hiltViewModel(),
+    viewModel: VaultViewModel = appViewModel { container -> VaultViewModel(container.vaultRepository) },
     onNoteSelect: (String) -> Unit,
     onOpenGraph: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null

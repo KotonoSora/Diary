@@ -13,11 +13,8 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class TodoFileManager @Inject constructor(
+class TodoFileManager(
     private val context: Context,
     private val userPreferencesRepository: UserPreferencesRepository? = null
 ) {

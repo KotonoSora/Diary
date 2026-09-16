@@ -11,7 +11,6 @@ import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.TodoItem
 import com.kotonosora.todolist.domain.usecase.TodoUseCases
 import com.kotonosora.todolist.notification.TodoReminderWorker
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,10 +18,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
 
-@HiltViewModel
-class TodoViewModel @Inject constructor(
+class TodoViewModel(
     private val useCases: TodoUseCases,
     private val workManager: WorkManager,
     private val userPreferencesRepository: UserPreferencesRepository
@@ -38,7 +35,7 @@ class TodoViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    /** All todos, filtered via native C++ filterByPrefix when a search query is active. */
+    /** Filtered list of todos based on prefix search using C++ native helper. */
     val todos: StateFlow<List<TodoItem>> = combine(allTodos, _searchQuery) { todos, query ->
         if (query.isBlank()) {
             todos
@@ -64,28 +61,41 @@ class TodoViewModel @Inject constructor(
 
     fun updateTodo(todo: TodoItem) = viewModelScope.launch {
         useCases.updateTodo(todo)
-        if (todo.reminderTime != null) scheduleReminder(todo) else cancelReminder(todo.id)
+        if (todo.reminderTime != null) {
+            scheduleReminder(todo)
+        } else {
+            cancelReminder(todo.id)
+        }
     }
 
     fun deleteTodo(todo: TodoItem) = viewModelScope.launch {
-        cancelReminder(todo.id)
         useCases.deleteTodo(todo)
+        cancelReminder(todo.id)
     }
 
-    fun toggleComplete(todo: TodoItem) = updateTodo(todo.copy(isCompleted = !todo.isCompleted))
+    fun toggleTodo(todo: TodoItem) = viewModelScope.launch {
+        updateTodo(todo.copy(isCompleted = !todo.isCompleted))
+    }
 
     private fun scheduleReminder(todo: TodoItem) {
         val delay = (todo.reminderTime ?: return) - System.currentTimeMillis()
         if (delay <= 0) return
+
         val data = workDataOf(
             TodoReminderWorker.KEY_TODO_ID to todo.id,
             TodoReminderWorker.KEY_TODO_TITLE to todo.title
         )
+
         val request = OneTimeWorkRequestBuilder<TodoReminderWorker>()
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
             .setInputData(data)
             .build()
-        workManager.enqueueUniqueWork("reminder_${todo.id}", ExistingWorkPolicy.REPLACE, request)
+
+        workManager.enqueueUniqueWork(
+            "reminder_${todo.id}",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
     }
 
     private fun cancelReminder(todoId: String) {

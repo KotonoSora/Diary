@@ -37,11 +37,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -49,6 +51,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.kotonosora.todolist.TodoApplication
+import com.kotonosora.todolist.di.AppContainer
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.calendar.CalendarScreen
@@ -58,6 +62,9 @@ import com.kotonosora.todolist.feature.editor.EditorContent
 import com.kotonosora.todolist.feature.editor.EditorScreen
 import com.kotonosora.todolist.feature.editor.EditorUiState
 import com.kotonosora.todolist.feature.editor.EditorViewModel
+import com.kotonosora.todolist.feature.flashcard.FlashcardDeckSelectionScreen
+import com.kotonosora.todolist.feature.flashcard.FlashcardScreen
+import com.kotonosora.todolist.feature.flashcard.FlashcardViewModel
 import com.kotonosora.todolist.feature.graph.GraphUiState
 import com.kotonosora.todolist.feature.graph.GraphViewModel
 import com.kotonosora.todolist.feature.graph.KnowledgeGraphContent
@@ -80,14 +87,23 @@ import com.kotonosora.todolist.feature.vault.VaultUiState
 import com.kotonosora.todolist.feature.vault.VaultViewModel
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceContent
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceScreen
-import com.kotonosora.todolist.feature.flashcard.FlashcardScreen
-import com.kotonosora.todolist.feature.flashcard.FlashcardDeckSelectionScreen
-import com.kotonosora.todolist.feature.flashcard.FlashcardViewModel
+import com.kotonosora.todolist.ui.ViewModelFactory
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+
+@Composable
+inline fun <reified T : ViewModel> appViewModel(
+    crossinline creator: (AppContainer) -> T
+): T {
+    val context = LocalContext.current
+    val app = context.applicationContext as TodoApplication
+    return viewModel(
+        factory = ViewModelFactory { creator(app.container) }
+    )
+}
 
 sealed class NavRoute(val route: String) {
     object Splash : NavRoute("splash")
@@ -192,7 +208,9 @@ fun AppNavGraph() {
                             onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     } else {
-                        val vaultViewModel = hiltViewModel<VaultViewModel>()
+                        val vaultViewModel = appViewModel { container ->
+                            VaultViewModel(container.vaultRepository)
+                        }
                         VaultWorkspaceScreen(
                             viewModel = vaultViewModel,
                             onNoteSelect = { noteId ->
@@ -216,7 +234,9 @@ fun AppNavGraph() {
                             onNoteClick = {}
                         )
                     } else {
-                        val graphViewModel = hiltViewModel<GraphViewModel>()
+                        val graphViewModel = appViewModel { container ->
+                            GraphViewModel(container.vaultRepository)
+                        }
                         KnowledgeGraphScreen(
                             viewModel = graphViewModel,
                             onBack = { navController.popBackStack() },
@@ -244,7 +264,9 @@ fun AppNavGraph() {
                     } else {
                         val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
                         val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
-                        val editorViewModel = hiltViewModel<EditorViewModel>()
+                        val editorViewModel = appViewModel { container ->
+                            EditorViewModel(container.vaultRepository)
+                        }
                         EditorScreen(
                             noteId = noteId,
                             viewModel = editorViewModel,
@@ -270,7 +292,9 @@ fun AppNavGraph() {
                     val isDemo = backStackEntry.arguments?.getBoolean("isDemo") ?: false
                     val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
                     
-                    val viewModel = hiltViewModel<FlashcardViewModel>()
+                    val viewModel = appViewModel { container ->
+                        FlashcardViewModel(container.vaultRepository)
+                    }
                     LaunchedEffect(noteId) {
                         viewModel.loadNote(noteId, isDemo = isDemo)
                     }
@@ -299,7 +323,9 @@ fun AppNavGraph() {
                             onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     } else {
-                        val todoViewModel = hiltViewModel<TodoViewModel>()
+                        val todoViewModel = appViewModel { container ->
+                            TodoViewModel(container.todoUseCases, container.workManager, container.userPreferencesRepository)
+                        }
                         TodoListScreen(
                             navController = navController,
                             viewModel = todoViewModel,
@@ -324,7 +350,9 @@ fun AppNavGraph() {
                         )
                     } else {
                         val todoId = backStackEntry.arguments?.getString("todoId")
-                        val todoViewModel = hiltViewModel<TodoViewModel>()
+                        val todoViewModel = appViewModel { container ->
+                            TodoViewModel(container.todoUseCases, container.workManager, container.userPreferencesRepository)
+                        }
                         AddEditTodoScreen(
                             navController = navController,
                             todoId = todoId,
@@ -344,7 +372,9 @@ fun AppNavGraph() {
                             onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     } else {
-                        val calendarViewModel = hiltViewModel<CalendarViewModel>()
+                        val calendarViewModel = appViewModel { container ->
+                            CalendarViewModel(container.todoUseCases, container.vaultRepository)
+                        }
                         CalendarScreen(
                             viewModel = calendarViewModel,
                             onOpenDrawer = { scope.launch { drawerState.open() } }
@@ -353,6 +383,7 @@ fun AppNavGraph() {
                 }
 
                 composable(NavRoute.Media.route) {
+                    val context = LocalContext.current
                     if (LocalInspectionMode.current) {
                         MediaScreenContent(
                             capturedPhotos = emptyList(),
@@ -361,7 +392,14 @@ fun AppNavGraph() {
                             onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     } else {
-                        val mediaViewModel = hiltViewModel<MediaViewModel>()
+                        val mediaViewModel = appViewModel { container ->
+                            MediaViewModel(
+                                context = context.applicationContext,
+                                mediaDao = container.mediaDao,
+                                userPreferencesRepository = container.userPreferencesRepository,
+                                mediaFileManager = container.mediaFileManager
+                            )
+                        }
                         MediaScreen(
                             viewModel = mediaViewModel,
                             onOpenDrawer = { scope.launch { drawerState.open() } }
@@ -379,7 +417,9 @@ fun AppNavGraph() {
                             onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     } else {
-                        val settingsViewModel = hiltViewModel<SettingsViewModel>()
+                        val settingsViewModel = appViewModel { container ->
+                            SettingsViewModel(container.userPreferencesRepository)
+                        }
                         SettingsScreen(
                             viewModel = settingsViewModel,
                             onNavigateToGuide = {

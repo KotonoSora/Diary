@@ -28,26 +28,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.repository.VaultRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
+import com.kotonosora.todolist.navigation.appViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class SearchUiState(
     val query: String = "",
     val searchResults: List<NoteItem> = emptyList()
 )
 
-@HiltViewModel
-class SearchViewModel @Inject constructor(
+class SearchViewModel(
     private val vaultRepository: VaultRepository
 ) : ViewModel() {
 
@@ -73,7 +70,7 @@ class SearchViewModel @Inject constructor(
 
 @Composable
 fun SearchScreen(
-    viewModel: SearchViewModel = hiltViewModel(),
+    viewModel: SearchViewModel = appViewModel { container -> SearchViewModel(container.vaultRepository) },
     onNoteClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()

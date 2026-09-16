@@ -92,7 +92,7 @@ fun TodoListScreen(
         todos = todos,
         searchQuery = searchQuery,
         onSearchQueryChange = { viewModel.setSearchQuery(it) },
-        onToggle = { viewModel.toggleComplete(it) },
+        onToggle = { viewModel.toggleTodo(it) },
         onDelete = { viewModel.deleteTodo(it) },
         onClickTodo = { id -> navController.navigate(NavRoute.AddEditTodo.createRoute(id)) },
         onAddTodo = { navController.navigate(NavRoute.AddEditTodo.createRoute()) },

@@ -4,13 +4,10 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
 sealed class MediaOutputLocation {
     data class LocalFile(val file: File) : MediaOutputLocation()
@@ -21,9 +18,8 @@ sealed class MediaOutputLocation {
     ) : MediaOutputLocation()
 }
 
-@Singleton
-class MediaFileManager @Inject constructor(
-    @param:ApplicationContext private val context: Context
+class MediaFileManager(
+    private val context: Context
 ) {
 
     private fun generateTimestamp(): String {

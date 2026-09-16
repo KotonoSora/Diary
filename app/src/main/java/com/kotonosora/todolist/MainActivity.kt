@@ -12,17 +12,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.navigation.AppNavGraph
 import com.kotonosora.todolist.ui.theme.TodoListTheme
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    @Inject
-    lateinit var userPreferencesRepository: UserPreferencesRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install Android System Splash Screen
@@ -36,6 +29,8 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
+
+        val userPreferencesRepository = (application as TodoApplication).container.userPreferencesRepository
 
         setContent {
             val themeMode by userPreferencesRepository.themeMode.collectAsState(initial = "system")

@@ -41,12 +41,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import com.kotonosora.todolist.navigation.appViewModel
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel(),
+    viewModel: SettingsViewModel = appViewModel { container -> SettingsViewModel(container.userPreferencesRepository) },
     onNavigateToGuide: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null
 ) {

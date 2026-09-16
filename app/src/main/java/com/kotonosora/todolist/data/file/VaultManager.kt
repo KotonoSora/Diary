@@ -11,11 +11,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class VaultManager @Inject constructor(
+class VaultManager(
     private val context: Context,
     private val userPreferencesRepository: UserPreferencesRepository? = null
 ) {

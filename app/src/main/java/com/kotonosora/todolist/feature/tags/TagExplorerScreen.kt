@@ -22,18 +22,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.repository.VaultRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
+import com.kotonosora.todolist.navigation.appViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class TagUiState(
     val tags: List<String> = emptyList(),
@@ -41,8 +39,7 @@ data class TagUiState(
     val taggedNotes: List<NoteItem> = emptyList()
 )
 
-@HiltViewModel
-class TagViewModel @Inject constructor(
+class TagViewModel(
     private val vaultRepository: VaultRepository
 ) : ViewModel() {
 
@@ -74,7 +71,7 @@ class TagViewModel @Inject constructor(
 
 @Composable
 fun TagExplorerScreen(
-    viewModel: TagViewModel = hiltViewModel(),
+    viewModel: TagViewModel = appViewModel { container -> TagViewModel(container.vaultRepository) },
     onNoteClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()

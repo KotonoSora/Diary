@@ -11,12 +11,10 @@ import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.domain.model.ZettelUidGenerator
 import com.kotonosora.todolist.domain.repository.VaultRepository
 import com.kotonosora.todolist.feature.editor.ZettelTemplatePicker
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class VaultUiState(
     val rootNode: VaultNode.FolderNode = VaultNode.FolderNode(name = "Vault", relativePath = ""),
@@ -24,8 +22,7 @@ data class VaultUiState(
     val isLoading: Boolean = false
 )
 
-@HiltViewModel
-class VaultViewModel @Inject constructor(
+class VaultViewModel(
     private val vaultRepository: VaultRepository
 ) : ViewModel() {
 

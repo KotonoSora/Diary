@@ -4,13 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.repository.VaultRepository
-import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
 data class EditorUiState(
     val note: NoteItem = NoteItem(id = "", title = "", relativePath = "", content = ""),
@@ -21,8 +19,7 @@ data class EditorUiState(
     val isLoading: Boolean = false
 )
 
-@HiltViewModel
-class EditorViewModel @Inject constructor(
+class EditorViewModel(
     private val vaultRepository: VaultRepository
 ) : ViewModel() {
 
