@@ -1,4 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Starting Splash Screen Theme (Night) -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#121212</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Diary</item>
+    </style>
+
     <!-- Base application theme (night). -->
     <style name="Theme.Diary" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Primary brand color. -->

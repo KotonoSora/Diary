@@ -3,14 +3,27 @@ package com.kotonosora.todolist.ui.components
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.FormatBold
+import androidx.compose.material.icons.filled.FormatItalic
+import androidx.compose.material.icons.filled.FormatListNumbered
+import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.StrikethroughS
+import androidx.compose.material.icons.filled.Title
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -28,17 +41,18 @@ fun TextFormatToolbar(
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = MaterialTheme.shapes.small
+        shape = RoundedCornerShape(8.dp)
     ) {
         Row(
             modifier = Modifier
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Header 1
-            FormatChip(
-                label = "H1",
+            // Title / H1
+            FormatIconButton(
+                icon = Icons.Default.Title,
+                contentDescription = "Header 1",
                 selected = state.currentSpanStyle.fontSize == 24.sp,
                 onClick = {
                     state.toggleSpanStyle(
@@ -51,8 +65,9 @@ fun TextFormatToolbar(
             )
 
             // Header 2
-            FormatChip(
-                label = "H2",
+            FormatIconButton(
+                icon = Icons.Default.FormatSize,
+                contentDescription = "Header 2",
                 selected = state.currentSpanStyle.fontSize == 20.sp,
                 onClick = {
                     state.toggleSpanStyle(
@@ -65,28 +80,29 @@ fun TextFormatToolbar(
             )
 
             // Bold
-            FormatChip(
-                label = "B",
+            FormatIconButton(
+                icon = Icons.Default.FormatBold,
+                contentDescription = "Bold",
                 selected = state.currentSpanStyle.fontWeight == FontWeight.Bold,
-                fontWeight = FontWeight.Bold,
                 onClick = {
                     state.toggleSpanStyle(SpanStyle(fontWeight = FontWeight.Bold))
                 }
             )
 
             // Italic
-            FormatChip(
-                label = "I",
+            FormatIconButton(
+                icon = Icons.Default.FormatItalic,
+                contentDescription = "Italic",
                 selected = state.currentSpanStyle.fontStyle == FontStyle.Italic,
-                fontWeight = FontWeight.Normal,
                 onClick = {
                     state.toggleSpanStyle(SpanStyle(fontStyle = FontStyle.Italic))
                 }
             )
 
             // Strikethrough
-            FormatChip(
-                label = "~~S~~",
+            FormatIconButton(
+                icon = Icons.Default.StrikethroughS,
+                contentDescription = "Strikethrough",
                 selected = state.currentSpanStyle.textDecoration == TextDecoration.LineThrough,
                 onClick = {
                     state.toggleSpanStyle(SpanStyle(textDecoration = TextDecoration.LineThrough))
@@ -94,24 +110,26 @@ fun TextFormatToolbar(
             )
 
             // Bullet List
-            FormatChip(
-                label = "• List",
+            FormatIconButton(
+                icon = Icons.AutoMirrored.Filled.FormatListBulleted,
+                contentDescription = "Bullet List",
                 selected = state.isUnorderedList,
                 onClick = { state.toggleUnorderedList() }
             )
 
             // Ordered List
-            FormatChip(
-                label = "1. List",
+            FormatIconButton(
+                icon = Icons.Default.FormatListNumbered,
+                contentDescription = "Ordered List",
                 selected = state.isOrderedList,
                 onClick = { state.toggleOrderedList() }
             )
 
             // Code
-            FormatChip(
-                label = "</>",
+            FormatIconButton(
+                icon = Icons.Default.Code,
+                contentDescription = "Code",
                 selected = state.currentSpanStyle.fontFamily == FontFamily.Monospace,
-                fontFamily = FontFamily.Monospace,
                 onClick = {
                     state.toggleSpanStyle(SpanStyle(fontFamily = FontFamily.Monospace))
                 }
@@ -121,24 +139,30 @@ fun TextFormatToolbar(
 }
 
 @Composable
-private fun FormatChip(
-    label: String,
+private fun FormatIconButton(
+    icon: ImageVector,
+    contentDescription: String,
     selected: Boolean = false,
-    onClick: () -> Unit,
-    fontWeight: FontWeight? = null,
-    fontFamily: FontFamily? = null
+    onClick: () -> Unit
 ) {
-    FilterChip(
-        selected = selected,
+    IconButton(
         onClick = onClick,
-        label = {
-            Text(
-                text = label,
-                fontWeight = fontWeight,
-                fontFamily = fontFamily,
-                style = MaterialTheme.typography.labelMedium
+        modifier = Modifier.size(36.dp),
+        colors = if (selected) {
+            IconButtonDefaults.iconButtonColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             )
-        },
-        modifier = Modifier.padding(end = 4.dp)
-    )
+        } else {
+            IconButtonDefaults.iconButtonColors(
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp)
+        )
+    }
 }

@@ -12,14 +12,11 @@ import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Bidirectional sync between .md and .txt files in Documents (or custom folder) and the SQLite database.
  */
-@Singleton
-class FileSyncManager @Inject constructor(
+class FileSyncManager(
     private val context: Context,
     private val todoDao: TodoDao,
     private val userPreferencesRepository: UserPreferencesRepository? = null

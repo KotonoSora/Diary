@@ -1,9 +1,12 @@
 import com.android.build.api.dsl.ApplicationExtension
+import java.io.File
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipEntry
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt)
     alias(libs.plugins.compose.compiler)
 }
 
@@ -22,7 +25,8 @@ configure<ApplicationExtension> {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -30,6 +34,7 @@ configure<ApplicationExtension> {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -43,14 +48,66 @@ configure<ApplicationExtension> {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "**/*.kotlin_module"
+        }
+    }
     ndkVersion = "28.2.13676358"
 }
 
+tasks.configureEach {
+    doLast {
+        outputs.files.files.forEach { file ->
+            if (file.isDirectory) {
+                file.walkTopDown().forEach { f ->
+                    if (f.name.contains(":")) {
+                        println("Task $name output file with colon: ${f.absolutePath}")
+                        f.delete()
+                    }
+                }
+            } else if (file.name.endsWith(".jar") && file.exists()) {
+                val tempJar = File(file.parentFile, "temp_${file.name}")
+                var modified = false
+                try {
+                    ZipInputStream(file.inputStream()).use { zis ->
+                        ZipOutputStream(tempJar.outputStream()).use { zos ->
+                            var entry = zis.nextEntry
+                            while (entry != null) {
+                                if (!entry.name.contains(":")) {
+                                    zos.putNextEntry(ZipEntry(entry.name))
+                                    zis.copyTo(zos)
+                                    zos.closeEntry()
+                                } else {
+                                    modified = true
+                                    println("Task $name: Removed invalid entry from jar ${file.name}: ${entry.name}")
+                                }
+                                entry = zis.nextEntry
+                            }
+                        }
+                    }
+                    if (modified) {
+                        file.delete()
+                        tempJar.renameTo(file)
+                    } else {
+                        tempJar.delete()
+                    }
+                } catch (_: Exception) {
+                    tempJar.delete()
+                }
+            }
+        }
+    }
+}
+
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
+    implementation(libs.androidx.core.splashscreen)
 
     // Compose
     implementation(platform(libs.androidx.compose.bom))
@@ -60,6 +117,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.work.runtime.ktx)
     implementation(libs.navigation.compose)
     debugImplementation(libs.androidx.ui.tooling)
@@ -77,23 +135,25 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
 
-    // Kizitonwose Calendar Compose
-    implementation(libs.kizitonwose.calendar.compose)
-
-    // DataStore Preferences & DocumentFile
+    // DataStore Preferences & DocumentFile & Serialization
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.documentfile)
+    implementation(libs.kotlinx.serialization.json)
+
+    // Kizitonwose Compose Calendar
+    implementation(libs.kizitonwose.calendar.compose)
+
+    // MikePenz Multiplatform Markdown Renderer M3
+    implementation(libs.markdown.renderer)
+
+    // JGraphT Graph & Force Layout Core
+    implementation(libs.jgrapht.core)
 
     // Room
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
-    // Hilt
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.hilt.navigation.compose)
-    implementation(libs.hilt.work)
     implementation(libs.androidx.startup)
 
     testImplementation(libs.junit)
