@@ -3,6 +3,8 @@ package com.kotonosora.todolist.feature.vault
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kotonosora.todolist.domain.model.ActionStamp
+import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
@@ -49,6 +51,8 @@ class VaultViewModel @Inject constructor(
         noteType: NoteType,
         author: String? = null,
         sourceUrl: String? = null,
+        emotion: EmotionStamp? = null,
+        actions: List<ActionStamp> = emptyList(),
         onCreated: (String) -> Unit
     ) {
         if (title.isBlank()) return
@@ -59,7 +63,9 @@ class VaultViewModel @Inject constructor(
             noteType = noteType,
             title = title,
             author = author,
-            sourceUrl = sourceUrl
+            sourceUrl = sourceUrl,
+            emotion = emotion,
+            actions = actions
         )
 
         val note = NoteItem(
@@ -70,7 +76,9 @@ class VaultViewModel @Inject constructor(
             relativePath = folderPath,
             content = content,
             author = author,
-            sourceUrl = sourceUrl
+            sourceUrl = sourceUrl,
+            emotion = emotion,
+            actions = actions
         )
 
         viewModelScope.launch {

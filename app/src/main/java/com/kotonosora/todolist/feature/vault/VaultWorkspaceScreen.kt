@@ -54,6 +54,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.kotonosora.todolist.domain.model.ActionStamp
+import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
@@ -91,8 +93,8 @@ fun VaultWorkspaceScreen(
         onOpenGraph = onOpenGraph,
         onOpenDrawer = onOpenDrawer,
         onSelectCustomVaultFolder = { folderPickerLauncher.launch(null) },
-        onCreateZettelNote = { folderPath, title, noteType, author, url, onCreated ->
-            viewModel.createZettelNoteInFolder(folderPath, title, noteType, author, url, onCreated)
+        onCreateZettelNote = { folderPath, title, noteType, author, url, emotion, actions, onCreated ->
+            viewModel.createZettelNoteInFolder(folderPath, title, noteType, author, url, emotion, actions, onCreated)
         },
         onDeleteNote = { relativePath ->
             viewModel.deleteNote(relativePath)
@@ -107,7 +109,7 @@ fun VaultWorkspaceContent(
     onOpenGraph: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null,
     onSelectCustomVaultFolder: () -> Unit = {},
-    onCreateZettelNote: (String, String, NoteType, String?, String?, (String) -> Unit) -> Unit = { _, _, _, _, _, _ -> },
+    onCreateZettelNote: (String, String, NoteType, String?, String?, EmotionStamp?, List<ActionStamp>, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _ -> },
     onDeleteNote: (String) -> Unit = {}
 ) {
     var selectedFilterTab by remember { mutableIntStateOf(0) } // 0: Files, 1: Search, 2: Tags
@@ -298,8 +300,8 @@ fun VaultWorkspaceContent(
         if (showQuickCapture) {
             QuickCaptureDialog(
                 onDismiss = { showQuickCapture = false },
-                onConfirm = { title, noteType, author, url ->
-                    onCreateZettelNote(targetFolderPath, title, noteType, author, url) { createdNoteId ->
+                onConfirm = { title, noteType, author, url, emotion, actions ->
+                    onCreateZettelNote(targetFolderPath, title, noteType, author, url, emotion, actions) { createdNoteId ->
                         showQuickCapture = false
                         onNoteSelect(createdNoteId)
                     }

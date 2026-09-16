@@ -2,7 +2,6 @@ package com.kotonosora.todolist.feature.calendar
 
 import android.content.res.Configuration
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,14 +32,13 @@ import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SuggestionChipDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,6 +69,9 @@ import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.WeekDay
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
+import com.kotonosora.todolist.domain.model.ActionStamp
+import com.kotonosora.todolist.domain.model.EmotionStamp
+import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.TodoItem
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 import kotlinx.coroutines.launch
@@ -99,14 +100,18 @@ fun CalendarScreen(
     val month by viewModel.currentMonth.collectAsState()
     val selectedDateMillis by viewModel.selectedDateMillis.collectAsState()
     val allTodos by viewModel.allTodos.collectAsState()
+    val allNotes by viewModel.allNotes.collectAsState()
     val todosForDate by viewModel.todosForSelectedDate.collectAsState()
+    val notesForDate by viewModel.notesForSelectedDate.collectAsState()
 
     CalendarScreenContent(
         year = year,
         month = month,
         selectedDateMillis = selectedDateMillis,
         allTodos = allTodos,
+        allNotes = allNotes,
         todosForDate = todosForDate,
+        notesForDate = notesForDate,
         onPreviousMonth = { viewModel.previousMonth() },
         onNextMonth = { viewModel.nextMonth() },
         onSelectToday = { viewModel.selectToday() },
@@ -123,7 +128,9 @@ fun CalendarScreenContent(
     month: Int,
     selectedDateMillis: Long,
     allTodos: List<TodoItem>,
+    allNotes: List<NoteItem> = emptyList(),
     todosForDate: List<TodoItem>,
+    notesForDate: List<NoteItem> = emptyList(),
     onPreviousMonth: () -> Unit = {},
     onNextMonth: () -> Unit = {},
     onSelectToday: () -> Unit = {},
@@ -288,6 +295,7 @@ fun CalendarScreenContent(
                                 day = day,
                                 selectedLocalDate = selectedLocalDate,
                                 allTodos = allTodos,
+                                allNotes = allNotes,
                                 onDateSelected = { selectedDate ->
                                     val millis = selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
                                     onDateSelected(millis)
@@ -350,6 +358,54 @@ fun CalendarScreenContent(
                 }
             }
 
+            // Stamped Notes Mood/Activity Summary Card for Selected Date
+            val selectedDateEmotion = notesForDate.firstNotNullOfOrNull { it.emotion }
+            val selectedDateActions = notesForDate.flatMap { it.actions }.distinct()
+
+            if (selectedDateEmotion != null || selectedDateActions.isNotEmpty()) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("Stamps:", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+
+                        selectedDateEmotion?.let { emo ->
+                            Surface(color = emo.color, shape = RoundedCornerShape(6.dp)) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(emo.icon, contentDescription = emo.label, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(emo.label, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        selectedDateActions.forEach { act ->
+                            Surface(color = act.color, shape = RoundedCornerShape(6.dp)) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(act.icon, contentDescription = act.label, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(act.label, style = MaterialTheme.typography.labelSmall, color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             if (todosForDate.isEmpty()) {
                 Text(
                     text = "No scheduled tasks for this day.",
@@ -400,12 +456,21 @@ private fun CalendarDayCell(
     day: CalendarDay,
     selectedLocalDate: LocalDate,
     allTodos: List<TodoItem>,
+    allNotes: List<NoteItem> = emptyList(),
     onDateSelected: (LocalDate) -> Unit
 ) {
     val date = day.date
     val isSelected = date == selectedLocalDate
     val isToday = date == LocalDate.now()
     val isCurrentMonth = day.position == DayPosition.MonthDate
+
+    // Emotion Vector Badge for this date
+    val dayEmotion = remember(allNotes, date) {
+        allNotes.firstOrNull { note ->
+            val noteDate = Instant.ofEpochMilli(note.updatedAt).atZone(ZoneId.systemDefault()).toLocalDate()
+            noteDate == date && note.emotion != null
+        }?.emotion
+    }
 
     val (pendingCount, completedCount) = remember(allTodos, date) {
         var pending = 0
@@ -438,54 +503,76 @@ private fun CalendarDayCell(
             .clickable { onDateSelected(date) },
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = date.dayOfMonth.toString(),
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                color = when {
-                    isSelected -> MaterialTheme.colorScheme.onPrimary
-                    isCurrentMonth -> MaterialTheme.colorScheme.onSurface
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                }
-            )
-
-            if (totalEvents > 0 && isCurrentMonth) {
-                if (totalEvents >= 2) {
-                    Box(
-                        modifier = Modifier
-                            .padding(top = 1.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f)
-                                else MaterialTheme.colorScheme.primaryContainer
-                            )
-                            .padding(horizontal = 4.dp, vertical = 0.dp)
-                    ) {
-                        Text(
-                            text = totalEvents.toString(),
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
-                            fontWeight = FontWeight.Bold,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = date.dayOfMonth.toString(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = when {
+                        isSelected -> MaterialTheme.colorScheme.onPrimary
+                        isCurrentMonth -> MaterialTheme.colorScheme.onSurface
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
                     }
-                } else {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
+                )
+
+                if (totalEvents > 0 && isCurrentMonth) {
+                    if (totalEvents >= 2) {
                         Box(
                             modifier = Modifier
-                                .size(5.dp)
+                                .padding(top = 1.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                    else if (pendingCount > 0) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.secondary
+                                    if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.3f)
+                                    else MaterialTheme.colorScheme.primaryContainer
                                 )
-                        )
+                                .padding(horizontal = 4.dp, vertical = 0.dp)
+                        ) {
+                            Text(
+                                text = totalEvents.toString(),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    } else {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(5.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.onPrimary
+                                        else if (pendingCount > 0) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.secondary
+                                    )
+                            )
+                        }
                     }
+                }
+            }
+
+            // Emotion Vector Icon Badge at Top Right of Day Cell
+            if (dayEmotion != null && isCurrentMonth) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(2.dp)
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) Color.White else dayEmotion.color),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = dayEmotion.icon,
+                        contentDescription = dayEmotion.label,
+                        tint = if (isSelected) dayEmotion.color else Color.White,
+                        modifier = Modifier.size(9.dp)
+                    )
                 }
             }
         }
@@ -613,7 +700,7 @@ private fun CalendarTodoCard(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Calendar Screen - Populated Tasks (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true, name = "1. Calendar Screen - Populated Tasks & Stamps (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun CalendarScreenPreview_Populated_Dark() {
     val sampleDate = System.currentTimeMillis()
@@ -623,13 +710,19 @@ fun CalendarScreenPreview_Populated_Dark() {
         TodoItem("3", "Grocery Shopping", "Milk, Bread, Coffee", sampleDate + 86400000L, null, false)
     )
 
+    val sampleNotes = listOf(
+        NoteItem("1.md", "Diary Entry", "", "Content", emotion = EmotionStamp.HAPPY, actions = listOf(ActionStamp.WORK, ActionStamp.EXERCISE))
+    )
+
     TodoListTheme(darkTheme = true) {
         CalendarScreenContent(
             year = 2026,
             month = 2,
             selectedDateMillis = sampleDate,
             allTodos = sampleTodos,
-            todosForDate = sampleTodos.take(2)
+            allNotes = sampleNotes,
+            todosForDate = sampleTodos.take(2),
+            notesForDate = sampleNotes
         )
     }
 }

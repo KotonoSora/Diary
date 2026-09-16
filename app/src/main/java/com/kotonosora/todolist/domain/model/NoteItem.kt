@@ -17,5 +17,7 @@ data class NoteItem(
     val sourceUrl: String? = null,
     val paraCategory: ParaCategory? = null,
     val tags: List<String> = emptyList(),
-    val links: List<String> = emptyList() // Target titles referenced by [[WikiLinks]]
+    val links: List<String> = emptyList(), // Target titles referenced by [[WikiLinks]]
+    val emotion: EmotionStamp? = null,
+    val actions: List<ActionStamp> = emptyList()
 )

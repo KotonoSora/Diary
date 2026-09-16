@@ -1,5 +1,7 @@
 package com.kotonosora.todolist.feature.editor
 
+import com.kotonosora.todolist.domain.model.ActionStamp
+import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.ZettelUidGenerator
 import java.text.SimpleDateFormat
@@ -12,10 +14,16 @@ object ZettelTemplatePicker {
         noteType: NoteType,
         title: String,
         author: String? = null,
-        sourceUrl: String? = null
+        sourceUrl: String? = null,
+        emotion: EmotionStamp? = null,
+        actions: List<ActionStamp> = emptyList()
     ): String {
         val uid = ZettelUidGenerator.generateUid()
         val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date())
+
+        val emotionYaml = emotion?.let { "emotion: ${it.name}\n" } ?: ""
+        val actionsYaml = if (actions.isNotEmpty()) "actions: [${actions.joinToString { it.name }}]\n" else ""
+        val stampFrontmatter = "$emotionYaml$actionsYaml"
 
         return when (noteType) {
             NoteType.FLEETING -> {
@@ -24,7 +32,7 @@ object ZettelTemplatePicker {
                 uid: $uid
                 type: fleeting
                 date: $formattedDate
-                ---
+                ${stampFrontmatter}---
                 # $title
 
                 - Quick idea captured on mobile.
@@ -39,7 +47,7 @@ object ZettelTemplatePicker {
                 author: ${author ?: "Unknown"}
                 url: ${sourceUrl ?: ""}
                 date: $formattedDate
-                ---
+                ${stampFrontmatter}---
                 # $title
 
                 ## Source Reference
@@ -60,7 +68,7 @@ object ZettelTemplatePicker {
                 uid: $uid
                 type: permanent
                 date: $formattedDate
-                ---
+                ${stampFrontmatter}---
                 # $title
 
                 ## Statement (1 Idea Rule)
@@ -80,7 +88,7 @@ object ZettelTemplatePicker {
                 uid: $uid
                 type: moc
                 date: $formattedDate
-                ---
+                ${stampFrontmatter}---
                 # MOC: $title
 
                 ## Overview
@@ -99,12 +107,12 @@ object ZettelTemplatePicker {
                 type: diary
                 date: $formattedDate
                 tags: [diary, journal]
-                ---
+                ${stampFrontmatter}---
                 # Diary: $title
 
                 ## Mood & Energy
-                - **Mood**: 😊 Great / 😐 Neutral / 😔 Tired
-                - **Energy Level**: ⚡⚡⚡⚡ (4/5)
+                - **Mood Stamp**: ${emotion?.label ?: "Not selected"}
+                - **Activities**: ${if (actions.isNotEmpty()) actions.joinToString { it.label } else "None"}
 
                 ## Highlights of the Day
                 - What went well today?
@@ -123,7 +131,7 @@ object ZettelTemplatePicker {
                 type: daily
                 date: $formattedDate
                 tags: [daily, planner]
-                ---
+                ${stampFrontmatter}---
                 # Daily Note: $title
 
                 ## Top Priorities Today
@@ -148,7 +156,7 @@ object ZettelTemplatePicker {
                 date: $formattedDate
                 author: ${author ?: "Author"}
                 tags: [report, meeting]
-                ---
+                ${stampFrontmatter}---
                 # Work Report: $title
 
                 ## Executive Summary
@@ -171,7 +179,7 @@ object ZettelTemplatePicker {
                 type: todo
                 date: $formattedDate
                 tags: [todo, tasks]
-                ---
+                ${stampFrontmatter}---
                 # Todo List: $title
 
                 ## High Priority
@@ -194,7 +202,7 @@ object ZettelTemplatePicker {
                 type: flashcard
                 date: $formattedDate
                 tags: [flashcard, vocabulary]
-                ---
+                ${stampFrontmatter}---
                 # Flashcards: $title
 
                 ## Vocabulary List

@@ -20,7 +20,6 @@ import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Checklist
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Hub
@@ -30,8 +29,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -53,17 +50,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.domain.model.ActionStamp
+import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.defaultTitlePrefix
 import com.kotonosora.todolist.domain.model.description
 import com.kotonosora.todolist.domain.model.displayName
+import com.kotonosora.todolist.ui.components.StampPickerSheet
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickCaptureDialog(
     onDismiss: () -> Unit,
-    onConfirm: (title: String, noteType: NoteType, author: String?, url: String?) -> Unit
+    onConfirm: (title: String, noteType: NoteType, author: String?, url: String?, emotion: EmotionStamp?, actions: List<ActionStamp>) -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -84,12 +84,15 @@ fun QuickCaptureDialog(
 @Composable
 fun QuickCaptureSheetContent(
     onDismiss: () -> Unit = {},
-    onConfirm: (title: String, noteType: NoteType, author: String?, url: String?) -> Unit = { _, _, _, _ -> }
+    onConfirm: (title: String, noteType: NoteType, author: String?, url: String?, emotion: EmotionStamp?, actions: List<ActionStamp>) -> Unit = { _, _, _, _, _, _ -> }
 ) {
     var selectedType by remember { mutableStateOf(NoteType.FLEETING) }
     var title by remember { mutableStateOf(selectedType.defaultTitlePrefix) }
     var author by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
+
+    var selectedEmotion by remember { mutableStateOf<EmotionStamp?>(null) }
+    var selectedActions by remember { mutableStateOf<List<ActionStamp>>(emptyList()) }
 
     val compactShape = RoundedCornerShape(8.dp)
 
@@ -162,8 +165,7 @@ fun QuickCaptureSheetContent(
                         shape = compactShape,
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        ),
-                        border = if (isSelected) null else null
+                        )
                     ) {
                         Column(
                             modifier = Modifier.padding(10.dp)
@@ -248,6 +250,22 @@ fun QuickCaptureSheetContent(
                 )
             }
 
+            Spacer(Modifier.height(12.dp))
+
+            // Stamp Picker Section (Emotions & Activities)
+            StampPickerSheet(
+                selectedEmotion = selectedEmotion,
+                selectedActions = selectedActions,
+                onEmotionSelected = { selectedEmotion = it },
+                onActionToggle = { action ->
+                    selectedActions = if (selectedActions.contains(action)) {
+                        selectedActions - action
+                    } else {
+                        selectedActions + action
+                    }
+                }
+            )
+
             Spacer(Modifier.height(16.dp))
 
             Row(
@@ -270,7 +288,9 @@ fun QuickCaptureSheetContent(
                                 title,
                                 selectedType,
                                 author.ifBlank { null },
-                                url.ifBlank { null }
+                                url.ifBlank { null },
+                                selectedEmotion,
+                                selectedActions
                             )
                         }
                     },

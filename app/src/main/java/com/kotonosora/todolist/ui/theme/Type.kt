@@ -12,6 +12,7 @@ import androidx.compose.ui.text.googlefonts.R as GoogleFontsR
 /**
  * Google Fonts Provider using Google Play Services.
  * Automatically downloads and caches modern custom typefaces (Inter, Merriweather, Fira Code).
+ * Configured with system fallback fonts for offline/pending download robustness.
  */
 val GoogleFontProvider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
