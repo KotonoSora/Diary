@@ -333,9 +333,11 @@ fun SwipeableCard(
 @Composable
 fun SwipeableCardPreview_Front_Dark() {
     TodoListTheme(darkTheme = true) {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
             SwipeableCard(
                 flashcard = Flashcard(
                     word = "Serendipity",
@@ -355,9 +357,11 @@ fun SwipeableCardPreview_Front_Dark() {
 @Composable
 fun SwipeableCardPreview_Back_Light() {
     TodoListTheme(darkTheme = false) {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
             SwipeableCard(
                 flashcard = Flashcard(
                     word = "Serendipity",

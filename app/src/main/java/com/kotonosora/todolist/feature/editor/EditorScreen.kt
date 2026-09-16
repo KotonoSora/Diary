@@ -443,9 +443,11 @@ fun EditorContent(
                             OutlinedButton(onClick = { showRenameSheet = false }) {
                                 Text("Cancel")
                             }
-                            Spacer(Modifier
-                                .height(0.dp)
-                                .padding(horizontal = 6.dp))
+                            Spacer(
+                                Modifier
+                                    .height(0.dp)
+                                    .padding(horizontal = 6.dp)
+                            )
                             Button(onClick = {
                                 if (renameInput.isNotBlank()) {
                                     onRenameNote(renameInput) {

@@ -434,9 +434,11 @@ fun AddEditTaskContent(
             onDismissRequest = { showCameraSheet = false },
             sheetState = sheetState
         ) {
-            Box(modifier = Modifier
-                .fillMaxWidth()
-                .height(480.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(480.dp)
+            ) {
                 CameraCaptureView(
                     onPhotoCaptured = { pathStr ->
                         mediaPath = pathStr
