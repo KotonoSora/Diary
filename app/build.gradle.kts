@@ -1,4 +1,8 @@
 import com.android.build.api.dsl.ApplicationExtension
+import java.io.File
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipEntry
 
 plugins {
     alias(libs.plugins.android.application)
@@ -21,7 +25,8 @@ configure<ApplicationExtension> {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -43,7 +48,57 @@ configure<ApplicationExtension> {
     buildFeatures {
         compose = true
     }
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "**/*.kotlin_module"
+        }
+    }
     ndkVersion = "28.2.13676358"
+}
+
+tasks.configureEach {
+    doLast {
+        outputs.files.files.forEach { file ->
+            if (file.isDirectory) {
+                file.walkTopDown().forEach { f ->
+                    if (f.name.contains(":")) {
+                        println("Task $name output file with colon: ${f.absolutePath}")
+                        f.delete()
+                    }
+                }
+            } else if (file.name.endsWith(".jar") && file.exists()) {
+                val tempJar = File(file.parentFile, "temp_${file.name}")
+                var modified = false
+                try {
+                    ZipInputStream(file.inputStream()).use { zis ->
+                        ZipOutputStream(tempJar.outputStream()).use { zos ->
+                            var entry = zis.nextEntry
+                            while (entry != null) {
+                                if (!entry.name.contains(":")) {
+                                    zos.putNextEntry(ZipEntry(entry.name))
+                                    zis.copyTo(zos)
+                                    zos.closeEntry()
+                                } else {
+                                    modified = true
+                                    println("Task $name: Removed invalid entry from jar ${file.name}: ${entry.name}")
+                                }
+                                entry = zis.nextEntry
+                            }
+                        }
+                    }
+                    if (modified) {
+                        file.delete()
+                        tempJar.renameTo(file)
+                    } else {
+                        tempJar.delete()
+                    }
+                } catch (_: Exception) {
+                    tempJar.delete()
+                }
+            }
+        }
+    }
 }
 
 dependencies {

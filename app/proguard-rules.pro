@@ -53,3 +53,7 @@
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -keepnames class kotlinx.coroutines.android.AndroidDispatcherFactory {}
 -dontwarn kotlinx.coroutines.**
+
+# JGraphT / apfloat
+-dontwarn java.lang.management.**
+-dontwarn org.apfloat.**
