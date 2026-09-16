@@ -21,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,8 +31,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +45,6 @@ import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.repository.VaultRepository
-import com.kotonosora.todolist.navigation.appViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -82,7 +78,8 @@ class GraphViewModel(
             val notes = vaultRepository.getAllNotes().firstOrNull() ?: emptyList()
             val edges = mutableListOf<GraphEdge>()
             for (note in notes) {
-                val outgoing = vaultRepository.getOutgoingLinks(note.id).firstOrNull() ?: emptyList()
+                val outgoing =
+                    vaultRepository.getOutgoingLinks(note.id).firstOrNull() ?: emptyList()
                 for (targetTitle in outgoing) {
                     edges.add(GraphEdge(sourceId = note.id, targetTitle = targetTitle))
                 }
@@ -135,104 +132,104 @@ fun KnowledgeGraphContent(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            scale = (scale * zoom).coerceIn(0.2f, 5f)
-                            offset += pan
-                        }
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        scale = (scale * zoom).coerceIn(0.2f, 5f)
+                        offset += pan
                     }
-                    .pointerInput(nodePositions.toMap()) {
-                        detectTapGestures { tapOffset ->
-                            val adjustedTap = (tapOffset - offset) / scale
-                            nodePositions.forEach { (noteId, pos) ->
-                                if (hypot(adjustedTap.x - pos.x, adjustedTap.y - pos.y) <= 30f) {
-                                    onNoteClick(noteId)
-                                }
+                }
+                .pointerInput(nodePositions.toMap()) {
+                    detectTapGestures { tapOffset ->
+                        val adjustedTap = (tapOffset - offset) / scale
+                        nodePositions.forEach { (noteId, pos) ->
+                            if (hypot(adjustedTap.x - pos.x, adjustedTap.y - pos.y) <= 30f) {
+                                onNoteClick(noteId)
                             }
                         }
                     }
-            ) {
-                uiState.edges.forEach { edge ->
-                    val startPos = nodePositions[edge.sourceId]
-                    val targetNote = uiState.notes.firstOrNull { it.title == edge.targetTitle }
-                    val endPos = if (targetNote != null) nodePositions[targetNote.id] else null
-
-                    if (startPos != null && endPos != null) {
-                        drawLine(
-                            color = Color.LightGray.copy(alpha = 0.6f),
-                            start = startPos * scale + offset,
-                            end = endPos * scale + offset,
-                            strokeWidth = 2f * scale
-                        )
-                    }
                 }
+        ) {
+            uiState.edges.forEach { edge ->
+                val startPos = nodePositions[edge.sourceId]
+                val targetNote = uiState.notes.firstOrNull { it.title == edge.targetTitle }
+                val endPos = if (targetNote != null) nodePositions[targetNote.id] else null
 
-                uiState.notes.forEach { note ->
-                    val pos = nodePositions[note.id] ?: return@forEach
-                    val canvasPos = pos * scale + offset
-                    val nodeColor = when (note.noteType) {
-                        NoteType.FLEETING -> Color(0xFFFFC107)    // Yellow
-                        NoteType.LITERATURE -> Color(0xFF2196F3)  // Blue
-                        NoteType.PERMANENT -> Color(0xFF4CAF50)   // Green
-                        NoteType.MOC -> Color(0xFF9C27B0)         // Purple
-                        NoteType.DIARY -> Color(0xFFE91E63)       // Pink
-                        NoteType.DAILY -> Color(0xFF00BCD4)       // Cyan
-                        NoteType.REPORT -> Color(0xFFFF5722)      // Deep Orange
-                        NoteType.TODO -> Color(0xFF8BC34A)        // Light Green
-                        NoteType.FLASHCARD -> Color(0xFF673AB7)   // Deep Purple
-                    }
-                    drawCircle(
-                        color = nodeColor,
-                        radius = 16f * scale,
-                        center = canvasPos
+                if (startPos != null && endPos != null) {
+                    drawLine(
+                        color = Color.LightGray.copy(alpha = 0.6f),
+                        start = startPos * scale + offset,
+                        end = endPos * scale + offset,
+                        strokeWidth = 2f * scale
                     )
                 }
             }
 
-            // Flat Legend Overlay Card
-            Card(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp),
-                elevation = CardDefaults.cardElevation(0.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+            uiState.notes.forEach { note ->
+                val pos = nodePositions[note.id] ?: return@forEach
+                val canvasPos = pos * scale + offset
+                val nodeColor = when (note.noteType) {
+                    NoteType.FLEETING -> Color(0xFFFFC107)    // Yellow
+                    NoteType.LITERATURE -> Color(0xFF2196F3)  // Blue
+                    NoteType.PERMANENT -> Color(0xFF4CAF50)   // Green
+                    NoteType.MOC -> Color(0xFF9C27B0)         // Purple
+                    NoteType.DIARY -> Color(0xFFE91E63)       // Pink
+                    NoteType.DAILY -> Color(0xFF00BCD4)       // Cyan
+                    NoteType.REPORT -> Color(0xFFFF5722)      // Deep Orange
+                    NoteType.TODO -> Color(0xFF8BC34A)        // Light Green
+                    NoteType.FLASHCARD -> Color(0xFF673AB7)   // Deep Purple
+                }
+                drawCircle(
+                    color = nodeColor,
+                    radius = 16f * scale,
+                    center = canvasPos
                 )
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
-                    Text(
-                        text = "Legend",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.size(4.dp))
-                    LegendItem(color = Color(0xFFFFC107), label = "Quick Note")
-                    LegendItem(color = Color(0xFF2196F3), label = "Reference Note")
-                    LegendItem(color = Color(0xFF4CAF50), label = "Core Note")
-                    LegendItem(color = Color(0xFF9C27B0), label = "Topic Index")
-                }
-            }
-
-            // Floating Back Button Overlay
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
-                shadowElevation = 4.dp,
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.TopStart)
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
             }
         }
+
+        // Flat Legend Overlay Card
+        Card(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(16.dp),
+            elevation = CardDefaults.cardElevation(0.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
+            )
+        ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+                Text(
+                    text = "Legend",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.size(4.dp))
+                LegendItem(color = Color(0xFFFFC107), label = "Quick Note")
+                LegendItem(color = Color(0xFF2196F3), label = "Reference Note")
+                LegendItem(color = Color(0xFF4CAF50), label = "Core Note")
+                LegendItem(color = Color(0xFF9C27B0), label = "Topic Index")
+            }
+        }
+
+        // Floating Back Button Overlay
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
+            shadowElevation = 4.dp,
+            modifier = Modifier
+                .padding(16.dp)
+                .align(Alignment.TopStart)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+    }
 }
 
 @Composable

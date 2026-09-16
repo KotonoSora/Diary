@@ -51,7 +51,11 @@ class FeatureFlaggedVaultRepository(
         return activeRepository.saveNote(note, overrideUri)
     }
 
-    override suspend fun renameNote(oldNoteId: String, newTitle: String, overrideUri: Uri?): Boolean {
+    override suspend fun renameNote(
+        oldNoteId: String,
+        newTitle: String,
+        overrideUri: Uri?
+    ): Boolean {
         return activeRepository.renameNote(oldNoteId, newTitle, overrideUri)
     }
 

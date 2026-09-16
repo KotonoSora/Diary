@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Description
@@ -37,10 +35,30 @@ fun ParaExplorerView(
     onNoteClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val projects = notes.filter { it.paraCategory == ParaCategory.PROJECT || it.relativePath.contains("1. Projects", ignoreCase = true) }
-    val areas = notes.filter { it.paraCategory == ParaCategory.AREA || it.relativePath.contains("2. Areas", ignoreCase = true) }
-    val resources = notes.filter { it.paraCategory == ParaCategory.RESOURCE || it.relativePath.contains("3. Resources", ignoreCase = true) }
-    val archives = notes.filter { it.paraCategory == ParaCategory.ARCHIVE || it.relativePath.contains("4. Archives", ignoreCase = true) }
+    val projects = notes.filter {
+        it.paraCategory == ParaCategory.PROJECT || it.relativePath.contains(
+            "1. Projects",
+            ignoreCase = true
+        )
+    }
+    val areas = notes.filter {
+        it.paraCategory == ParaCategory.AREA || it.relativePath.contains(
+            "2. Areas",
+            ignoreCase = true
+        )
+    }
+    val resources = notes.filter {
+        it.paraCategory == ParaCategory.RESOURCE || it.relativePath.contains(
+            "3. Resources",
+            ignoreCase = true
+        )
+    }
+    val archives = notes.filter {
+        it.paraCategory == ParaCategory.ARCHIVE || it.relativePath.contains(
+            "4. Archives",
+            ignoreCase = true
+        )
+    }
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -145,8 +163,20 @@ private fun ParaSectionCard(
 @Composable
 fun ParaExplorerViewPreview() {
     val sampleNotes = listOf(
-        NoteItem("1. Projects/AppLaunch.md", "App Launch Goal", "1. Projects", "Launch details", paraCategory = ParaCategory.PROJECT),
-        NoteItem("2. Areas/Health.md", "Health & Fitness", "2. Areas", "Daily habits", paraCategory = ParaCategory.AREA)
+        NoteItem(
+            "1. Projects/AppLaunch.md",
+            "App Launch Goal",
+            "1. Projects",
+            "Launch details",
+            paraCategory = ParaCategory.PROJECT
+        ),
+        NoteItem(
+            "2. Areas/Health.md",
+            "Health & Fitness",
+            "2. Areas",
+            "Daily habits",
+            paraCategory = ParaCategory.AREA
+        )
     )
 
     MaterialTheme {

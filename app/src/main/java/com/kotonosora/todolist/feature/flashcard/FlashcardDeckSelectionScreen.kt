@@ -44,9 +44,24 @@ data class FlashcardDeck(
 )
 
 val demoDecks = listOf(
-    FlashcardDeck("demo_basic", "Basic Vocabulary", "Common everyday words like student, school, afternoon.", 30),
-    FlashcardDeck("demo_advanced", "Advanced Vocabulary", "Complex words to expand your vocabulary.", 30),
-    FlashcardDeck("demo_tech", "Tech Terminology", "Words used in software engineering and technology.", 30)
+    FlashcardDeck(
+        "demo_basic",
+        "Basic Vocabulary",
+        "Common everyday words like student, school, afternoon.",
+        30
+    ),
+    FlashcardDeck(
+        "demo_advanced",
+        "Advanced Vocabulary",
+        "Complex words to expand your vocabulary.",
+        30
+    ),
+    FlashcardDeck(
+        "demo_tech",
+        "Tech Terminology",
+        "Words used in software engineering and technology.",
+        30
+    )
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -102,7 +117,11 @@ fun FlashcardDeckSelectionScreen(
                         .clickable { onDeckSelected(deck.id) },
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.5f
+                        )
+                    )
                 ) {
                     Row(
                         modifier = Modifier
@@ -140,7 +159,10 @@ fun FlashcardDeckSelectionScreen(
                                         text = "${deck.cardCount} words",
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(
+                                            horizontal = 6.dp,
+                                            vertical = 2.dp
+                                        )
                                     )
                                 }
                             }

@@ -77,7 +77,8 @@ fun VaultWorkspaceScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let {
-            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            val flags =
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             try {
                 context.contentResolver.takePersistableUriPermission(it, flags)
                 viewModel.loadVault(it)
@@ -94,7 +95,16 @@ fun VaultWorkspaceScreen(
         onOpenDrawer = onOpenDrawer,
         onSelectCustomVaultFolder = { folderPickerLauncher.launch(null) },
         onCreateZettelNote = { folderPath, title, noteType, author, url, emotion, actions, onCreated ->
-            viewModel.createZettelNoteInFolder(folderPath, title, noteType, author, url, emotion, actions, onCreated)
+            viewModel.createZettelNoteInFolder(
+                folderPath,
+                title,
+                noteType,
+                author,
+                url,
+                emotion,
+                actions,
+                onCreated
+            )
         },
         onDeleteNote = { relativePath ->
             viewModel.deleteNote(relativePath)
@@ -169,13 +179,22 @@ fun VaultWorkspaceContent(
                         FilterChip(
                             selected = selectedFilterTab == 2,
                             onClick = { selectedFilterTab = 2 },
-                            label = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = "Tags") }
+                            label = {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Label,
+                                    contentDescription = "Tags"
+                                )
+                            }
                         )
                     }
 
                     Row {
                         IconButton(onClick = onOpenGraph) {
-                            Icon(Icons.Default.Hub, contentDescription = "Graph View", tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Default.Hub,
+                                contentDescription = "Graph View",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                         IconButton(onClick = { showOverflowMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Options")
@@ -187,7 +206,12 @@ fun VaultWorkspaceContent(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Open Vault Folder") },
-                                leadingIcon = { Icon(Icons.Default.FolderOpen, contentDescription = null) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.FolderOpen,
+                                        contentDescription = null
+                                    )
+                                },
                                 onClick = {
                                     showOverflowMenu = false
                                     onSelectCustomVaultFolder()
@@ -195,7 +219,12 @@ fun VaultWorkspaceContent(
                             )
                             DropdownMenuItem(
                                 text = { Text("2D Knowledge Graph") },
-                                leadingIcon = { Icon(Icons.Default.Hub, contentDescription = null) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Hub,
+                                        contentDescription = null
+                                    )
+                                },
                                 onClick = {
                                     showOverflowMenu = false
                                     onOpenGraph()
@@ -203,7 +232,12 @@ fun VaultWorkspaceContent(
                             )
                             DropdownMenuItem(
                                 text = { Text("New Capture Note") },
-                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Add,
+                                        contentDescription = null
+                                    )
+                                },
                                 onClick = {
                                     showOverflowMenu = false
                                     targetFolderPath = ""
@@ -236,7 +270,9 @@ fun VaultWorkspaceContent(
                                                     .clickable { onNoteSelect(note.id) },
                                                 elevation = CardDefaults.cardElevation(0.dp),
                                                 colors = CardDefaults.cardColors(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                        alpha = 0.35f
+                                                    )
                                                 )
                                             ) {
                                                 Column(modifier = Modifier.padding(10.dp)) {
@@ -255,7 +291,8 @@ fun VaultWorkspaceContent(
                                                     }
                                                     Spacer(Modifier.height(4.dp))
                                                     Text(
-                                                        text = note.content.take(60).replace("\n", " "),
+                                                        text = note.content.take(60)
+                                                            .replace("\n", " "),
                                                         style = MaterialTheme.typography.bodySmall,
                                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                         maxLines = 2
@@ -301,7 +338,15 @@ fun VaultWorkspaceContent(
             QuickCaptureDialog(
                 onDismiss = { showQuickCapture = false },
                 onConfirm = { title, noteType, author, url, emotion, actions ->
-                    onCreateZettelNote(targetFolderPath, title, noteType, author, url, emotion, actions) { createdNoteId ->
+                    onCreateZettelNote(
+                        targetFolderPath,
+                        title,
+                        noteType,
+                        author,
+                        url,
+                        emotion,
+                        actions
+                    ) { createdNoteId ->
                         showQuickCapture = false
                         onNoteSelect(createdNoteId)
                     }
@@ -313,7 +358,11 @@ fun VaultWorkspaceContent(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Vault Workspace - Flat Dark Design", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Vault Workspace - Flat Dark Design",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun VaultWorkspaceScreenPreview_Populated_Dark() {
     val sampleTree = VaultNode.FolderNode(
@@ -325,7 +374,13 @@ fun VaultWorkspaceScreenPreview_Populated_Dark() {
                 name = "Projects",
                 relativePath = "Projects",
                 children = listOf(
-                    VaultNode.FileNode("Roadmap.md", "Projects/Roadmap.md", "md", 2048, System.currentTimeMillis())
+                    VaultNode.FileNode(
+                        "Roadmap.md",
+                        "Projects/Roadmap.md",
+                        "md",
+                        2048,
+                        System.currentTimeMillis()
+                    )
                 )
             )
         )
@@ -333,7 +388,12 @@ fun VaultWorkspaceScreenPreview_Populated_Dark() {
 
     val sampleNotes = listOf(
         NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!"),
-        NoteItem("Projects/Roadmap.md", "Project Roadmap", "Projects", "Milestones for Q1 architecture and local vault sync.")
+        NoteItem(
+            "Projects/Roadmap.md",
+            "Project Roadmap",
+            "Projects",
+            "Milestones for Q1 architecture and local vault sync."
+        )
     )
 
     TodoListTheme(darkTheme = true) {
@@ -344,7 +404,11 @@ fun VaultWorkspaceScreenPreview_Populated_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Vault Workspace - Flat Light Design", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Vault Workspace - Flat Light Design",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun VaultWorkspaceScreenPreview_Populated_Light() {
     val sampleTree = VaultNode.FolderNode(

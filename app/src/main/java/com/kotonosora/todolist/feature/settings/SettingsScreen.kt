@@ -32,13 +32,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.navigation.appViewModel
@@ -59,7 +59,8 @@ fun SettingsScreen(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let {
-            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            val flags =
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             try {
                 context.contentResolver.takePersistableUriPermission(it, flags)
                 viewModel.setCustomStorageUri(it.toString())
@@ -137,7 +138,11 @@ fun SettingsScreenContent(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Default.Palette,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                             Spacer(Modifier.width(12.dp))
                             Text("Appearance & Theme", style = MaterialTheme.typography.titleMedium)
                         }
@@ -158,7 +163,12 @@ fun SettingsScreenContent(
                                 selected = themeMode == "dark",
                                 onClick = { onThemeModeChange("dark") },
                                 label = { Text("Dark") },
-                                leadingIcon = { Icon(Icons.Default.DarkMode, contentDescription = null) }
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.DarkMode,
+                                        contentDescription = null
+                                    )
+                                }
                             )
                             FilterChip(
                                 selected = themeMode == "light",
@@ -175,9 +185,16 @@ fun SettingsScreenContent(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                            Icon(
+                                Icons.Default.Folder,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
                             Spacer(Modifier.width(12.dp))
-                            Text("Vault Storage Location", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Vault Storage Location",
+                                style = MaterialTheme.typography.titleMedium
+                            )
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -205,9 +222,16 @@ fun SettingsScreenContent(
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Description, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Default.Description,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                             Spacer(Modifier.width(12.dp))
-                            Text("Default File Format", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "Default File Format",
+                                style = MaterialTheme.typography.titleMedium
+                            )
                         }
                         Spacer(Modifier.height(12.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -240,11 +264,22 @@ fun SettingsScreenContent(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.AutoMirrored.Filled.HelpOutline,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                             Spacer(Modifier.width(12.dp))
                             Column {
-                                Text("Feature Guide & Permissions", style = MaterialTheme.typography.titleMedium)
-                                Text("App overview and system permissions assistant", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    "Feature Guide & Permissions",
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Text(
+                                    "App overview and system permissions assistant",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                         Icon(Icons.Default.ChevronRight, contentDescription = null)
@@ -264,11 +299,22 @@ fun SettingsScreenContent(
                             .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Share, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                        Icon(
+                            Icons.Default.Share,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Export / Share Vault", style = MaterialTheme.typography.titleMedium)
-                            Text("Share notes and diary entries via system share sheet", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                "Export / Share Vault",
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                "Share notes and diary entries via system share sheet",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -281,7 +327,11 @@ fun SettingsScreenContent(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Settings Screen - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Settings Screen - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun SettingsScreenPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -293,7 +343,11 @@ fun SettingsScreenPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Settings Screen - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Settings Screen - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun SettingsScreenPreview_Light() {
     TodoListTheme(darkTheme = false) {

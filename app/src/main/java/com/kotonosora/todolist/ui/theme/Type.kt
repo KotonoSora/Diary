@@ -36,7 +36,11 @@ val FiraCodeFontFamily = FontFamily(
 )
 
 val MerriweatherFontFamily = FontFamily(
-    Font(googleFont = MerriweatherFont, fontProvider = GoogleFontProvider, weight = FontWeight.Normal),
+    Font(
+        googleFont = MerriweatherFont,
+        fontProvider = GoogleFontProvider,
+        weight = FontWeight.Normal
+    ),
     Font(googleFont = MerriweatherFont, fontProvider = GoogleFontProvider, weight = FontWeight.Bold)
 )
 

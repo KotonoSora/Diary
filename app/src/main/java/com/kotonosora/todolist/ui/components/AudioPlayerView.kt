@@ -74,7 +74,11 @@ fun AudioPlayerView(
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {}, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = MaterialTheme.colorScheme.primary)
+                        Icon(
+                            Icons.Default.PlayArrow,
+                            contentDescription = "Play",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     Slider(value = 0.3f, onValueChange = {}, modifier = Modifier.weight(1f))
                 }
@@ -273,7 +277,10 @@ fun AudioWaveformBars(
             LaunchedEffect(isPlaying) {
                 while (isPlaying) {
                     val newHeight = (6..28).random().toFloat()
-                    animatedHeight.animateTo(newHeight, animationSpec = tween(150 + (index % 5) * 20))
+                    animatedHeight.animateTo(
+                        newHeight,
+                        animationSpec = tween(150 + (index % 5) * 20)
+                    )
                 }
                 if (!isPlaying) {
                     animatedHeight.animateTo(height.toFloat(), animationSpec = tween(300))

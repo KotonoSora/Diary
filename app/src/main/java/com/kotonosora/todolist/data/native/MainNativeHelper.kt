@@ -2,9 +2,9 @@ package com.kotonosora.todolist.data.native
 
 /**
  * Kotlin JNI wrapper for native C++ performance helpers.
- * The "todolist" native library is loaded once via TodoApplication.
+ * The "todolist" native library is loaded once via MainApplication.
  */
-object TodoNativeHelper {
+object MainNativeHelper {
 
     /**
      * Sorts an array of strings alphabetically using C++ std::sort.

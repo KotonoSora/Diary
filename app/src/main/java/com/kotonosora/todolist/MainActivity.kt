@@ -30,7 +30,8 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
         }
 
-        val userPreferencesRepository = (application as TodoApplication).container.userPreferencesRepository
+        val userPreferencesRepository =
+            (application as MainApplication).container.userPreferencesRepository
 
         setContent {
             val themeMode by userPreferencesRepository.themeMode.collectAsState(initial = "system")
@@ -49,7 +50,11 @@ class MainActivity : ComponentActivity() {
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Main Activity - Flat Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Main Activity - Flat Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun MainActivityPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -57,7 +62,11 @@ fun MainActivityPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Main Activity - Flat Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Main Activity - Flat Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun MainActivityPreview_Light() {
     TodoListTheme(darkTheme = false) {

@@ -15,10 +15,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
-import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 @Composable
 fun FormattedTextPreview(
@@ -82,7 +82,11 @@ private fun MarkdownRenderer(text: String) {
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Formatted Preview - Markdown (Dark)", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Formatted Preview - Markdown (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun FormattedTextPreview_Markdown_Dark() {
     val markdown = """
@@ -105,7 +109,11 @@ fun FormattedTextPreview_Markdown_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Formatted Preview - Plain Text (Light)", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Formatted Preview - Plain Text (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun FormattedTextPreview_PlainText_Light() {
     val plainText = "Plain text notes formatted as raw monospace text."

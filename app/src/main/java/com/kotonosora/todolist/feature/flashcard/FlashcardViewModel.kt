@@ -56,30 +56,120 @@ class FlashcardViewModel(
     private fun generateDemoCards(deckId: String): Pair<String, List<Flashcard>> {
         return when (deckId) {
             "demo_basic" -> "Basic Vocabulary" to listOf(
-                Flashcard(word = "Student", definition = "A person who is studying at a school or college.", phonetic = "/ˈstjuː.dənt/", example = "She is a top student in her class."),
-                Flashcard(word = "School", definition = "An institution for educating children or adults.", phonetic = "/skuːl/", example = "They walk to school every morning."),
-                Flashcard(word = "Afternoon", definition = "The time from noon or lunchtime to evening.", phonetic = "/ˌɑːf.təˈnuːn/", example = "We had tea in the afternoon."),
-                Flashcard(word = "Teacher", definition = "A person who teaches, especially in a school.", phonetic = "/ˈtiː.tʃər/", example = "The teacher explained the lesson clearly."),
-                Flashcard(word = "Library", definition = "A building containing collections of books for reading or borrowing.", phonetic = "/ˈlaɪ.brər.i/", example = "Quiet studying is required in the library.")
+                Flashcard(
+                    word = "Student",
+                    definition = "A person who is studying at a school or college.",
+                    phonetic = "/ˈstjuː.dənt/",
+                    example = "She is a top student in her class."
+                ),
+                Flashcard(
+                    word = "School",
+                    definition = "An institution for educating children or adults.",
+                    phonetic = "/skuːl/",
+                    example = "They walk to school every morning."
+                ),
+                Flashcard(
+                    word = "Afternoon",
+                    definition = "The time from noon or lunchtime to evening.",
+                    phonetic = "/ˌɑːf.təˈnuːn/",
+                    example = "We had tea in the afternoon."
+                ),
+                Flashcard(
+                    word = "Teacher",
+                    definition = "A person who teaches, especially in a school.",
+                    phonetic = "/ˈtiː.tʃər/",
+                    example = "The teacher explained the lesson clearly."
+                ),
+                Flashcard(
+                    word = "Library",
+                    definition = "A building containing collections of books for reading or borrowing.",
+                    phonetic = "/ˈlaɪ.brər.i/",
+                    example = "Quiet studying is required in the library."
+                )
             )
+
             "demo_advanced" -> "Advanced Vocabulary" to listOf(
-                Flashcard(word = "Serendipity", definition = "The occurrence of events by chance in a happy or beneficial way.", phonetic = "/ˌser.ənˈdɪp.ə.ti/", example = "Finding the lost key was pure serendipity."),
-                Flashcard(word = "Ephemeral", definition = "Lasting for a very short time; fleeting.", phonetic = "/ɪˈfem.ər.əl/", example = "Fame in the digital age can be ephemeral."),
-                Flashcard(word = "Ubiquitous", definition = "Present, appearing, or found everywhere.", phonetic = "/juːˈbɪk.wɪ.təs/", example = "Smartphones have become ubiquitous in daily life."),
-                Flashcard(word = "Mellifluous", definition = "Sweet or musical; pleasant to hear.", phonetic = "/məˈlɪf.lu.əs/", example = "Her mellifluous voice relaxed the audience."),
-                Flashcard(word = "Ineffable", definition = "Too great or extreme to be expressed or described in words.", phonetic = "/ɪnˈef.ə.bəl/", example = "The beauty of the sunset was ineffable.")
+                Flashcard(
+                    word = "Serendipity",
+                    definition = "The occurrence of events by chance in a happy or beneficial way.",
+                    phonetic = "/ˌser.ənˈdɪp.ə.ti/",
+                    example = "Finding the lost key was pure serendipity."
+                ),
+                Flashcard(
+                    word = "Ephemeral",
+                    definition = "Lasting for a very short time; fleeting.",
+                    phonetic = "/ɪˈfem.ər.əl/",
+                    example = "Fame in the digital age can be ephemeral."
+                ),
+                Flashcard(
+                    word = "Ubiquitous",
+                    definition = "Present, appearing, or found everywhere.",
+                    phonetic = "/juːˈbɪk.wɪ.təs/",
+                    example = "Smartphones have become ubiquitous in daily life."
+                ),
+                Flashcard(
+                    word = "Mellifluous",
+                    definition = "Sweet or musical; pleasant to hear.",
+                    phonetic = "/məˈlɪf.lu.əs/",
+                    example = "Her mellifluous voice relaxed the audience."
+                ),
+                Flashcard(
+                    word = "Ineffable",
+                    definition = "Too great or extreme to be expressed or described in words.",
+                    phonetic = "/ɪnˈef.ə.bəl/",
+                    example = "The beauty of the sunset was ineffable."
+                )
             )
+
             "demo_tech" -> "Tech Terminology" to listOf(
-                Flashcard(word = "Algorithm", definition = "A process or set of rules to be followed in calculations or problem-solving.", phonetic = "/ˈæl.ɡə.rɪ.ðəm/", example = "Sorting algorithms optimize search times."),
-                Flashcard(word = "Database", definition = "An organized collection of structured information or data stored electronically.", phonetic = "/ˈdeɪ.tə.beɪs/", example = "Room SQLite database manages offline app state."),
-                Flashcard(word = "Encryption", definition = "The process of converting information or data into code to prevent unauthorized access.", phonetic = "/ɪnˈkrɪp.ʃən/", example = "End-to-end encryption keeps messages private."),
-                Flashcard(word = "Polymorphism", definition = "The condition of occurring in several different forms in OOP.", phonetic = "/ˌpɒl.iˈmɔː.fɪ.zəm/", example = "Method overriding demonstrates runtime polymorphism."),
-                Flashcard(word = "Recursion", definition = "A method where the solution depends on solutions to smaller instances of the same problem.", phonetic = "/rɪˈkɜː.ʃən/", example = "Factorial logic is cleanly solved using recursion.")
+                Flashcard(
+                    word = "Algorithm",
+                    definition = "A process or set of rules to be followed in calculations or problem-solving.",
+                    phonetic = "/ˈæl.ɡə.rɪ.ðəm/",
+                    example = "Sorting algorithms optimize search times."
+                ),
+                Flashcard(
+                    word = "Database",
+                    definition = "An organized collection of structured information or data stored electronically.",
+                    phonetic = "/ˈdeɪ.tə.beɪs/",
+                    example = "Room SQLite database manages offline app state."
+                ),
+                Flashcard(
+                    word = "Encryption",
+                    definition = "The process of converting information or data into code to prevent unauthorized access.",
+                    phonetic = "/ɪnˈkrɪp.ʃən/",
+                    example = "End-to-end encryption keeps messages private."
+                ),
+                Flashcard(
+                    word = "Polymorphism",
+                    definition = "The condition of occurring in several different forms in OOP.",
+                    phonetic = "/ˌpɒl.iˈmɔː.fɪ.zəm/",
+                    example = "Method overriding demonstrates runtime polymorphism."
+                ),
+                Flashcard(
+                    word = "Recursion",
+                    definition = "A method where the solution depends on solutions to smaller instances of the same problem.",
+                    phonetic = "/rɪˈkɜː.ʃən/",
+                    example = "Factorial logic is cleanly solved using recursion."
+                )
             )
+
             else -> "Sample Flashcards" to listOf(
-                Flashcard(word = "Apple", definition = "A round red or green fruit with firm white flesh.", phonetic = "/ˈæp.əl/"),
-                Flashcard(word = "Banana", definition = "A long curved fruit with a yellow skin.", phonetic = "/bəˈnɑː.nə/"),
-                Flashcard(word = "Cherry", definition = "A small, round, bright or dark red fruit.", phonetic = "/ˈtʃer.i/")
+                Flashcard(
+                    word = "Apple",
+                    definition = "A round red or green fruit with firm white flesh.",
+                    phonetic = "/ˈæp.əl/"
+                ),
+                Flashcard(
+                    word = "Banana",
+                    definition = "A long curved fruit with a yellow skin.",
+                    phonetic = "/bəˈnɑː.nə/"
+                ),
+                Flashcard(
+                    word = "Cherry",
+                    definition = "A small, round, bright or dark red fruit.",
+                    phonetic = "/ˈtʃer.i/"
+                )
             )
         }
     }
@@ -124,7 +214,8 @@ class FlashcardViewModel(
 
     fun restartDeck() {
         _uiState.update { currentState ->
-            val allCards = currentState.masteredCards + currentState.reviewCards + currentState.cards
+            val allCards =
+                currentState.masteredCards + currentState.reviewCards + currentState.cards
             currentState.copy(
                 cards = allCards,
                 totalCardsCount = allCards.size,

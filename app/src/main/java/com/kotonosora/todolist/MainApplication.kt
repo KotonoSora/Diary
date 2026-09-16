@@ -6,9 +6,9 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.kotonosora.todolist.data.sync.FileSyncWorker
 import com.kotonosora.todolist.di.AppContainer
-import com.kotonosora.todolist.notification.TodoNotificationManager
+import com.kotonosora.todolist.notification.AppNotificationManager
 
-class TodoApplication : Application() {
+class MainApplication : Application() {
 
     lateinit var container: AppContainer
         private set
@@ -20,7 +20,7 @@ class TodoApplication : Application() {
         // Load the native library once for the entire app lifecycle
         System.loadLibrary("todolist")
         // Create the notification channel
-        TodoNotificationManager.createNotificationChannel(this)
+        AppNotificationManager.createNotificationChannel(this)
         // Trigger a one-time bidirectional sync of .md files <-> Room DB on every launch.
         WorkManager.getInstance(this).enqueueUniqueWork(
             FileSyncWorker.WORK_NAME,

@@ -87,7 +87,11 @@ fun BacklinkPanel(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Backlink Panel With Links - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Backlink Panel With Links - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun BacklinkPanelPreview_WithLinks_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -98,7 +102,11 @@ fun BacklinkPanelPreview_WithLinks_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Backlink Panel Empty - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Backlink Panel Empty - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun BacklinkPanelPreview_Empty_Light() {
     TodoListTheme(darkTheme = false) {

@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(${CMAKE_PROJECT_NAME} SHARED
         native-lib.cpp
-        todo-native.cpp)
+        main-native.cpp)
 
 target_link_libraries(${CMAKE_PROJECT_NAME}
         android

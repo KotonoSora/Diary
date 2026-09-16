@@ -10,7 +10,7 @@ import java.util.UUID
     tableName = "media_attachments",
     foreignKeys = [
         ForeignKey(
-            entity = TodoEntity::class,
+            entity = TaskEntity::class,
             parentColumns = ["id"],
             childColumns = ["todoId"],
             onDelete = ForeignKey.CASCADE

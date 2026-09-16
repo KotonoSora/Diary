@@ -22,7 +22,8 @@ object ZettelTemplatePicker {
         val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date())
 
         val emotionYaml = emotion?.let { "emotion: ${it.name}\n" } ?: ""
-        val actionsYaml = if (actions.isNotEmpty()) "actions: [${actions.joinToString { it.name }}]\n" else ""
+        val actionsYaml =
+            if (actions.isNotEmpty()) "actions: [${actions.joinToString { it.name }}]\n" else ""
         val stampFrontmatter = "$emotionYaml$actionsYaml"
 
         return when (noteType) {

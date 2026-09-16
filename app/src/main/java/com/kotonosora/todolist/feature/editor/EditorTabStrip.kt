@@ -108,7 +108,11 @@ fun EditorTabStrip(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Editor Tab Strip - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Editor Tab Strip - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun EditorTabStripPreview_Dark() {
     val tabs = listOf(
@@ -128,7 +132,11 @@ fun EditorTabStripPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Editor Tab Strip - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Editor Tab Strip - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun EditorTabStripPreview_Light() {
     val tabs = listOf(

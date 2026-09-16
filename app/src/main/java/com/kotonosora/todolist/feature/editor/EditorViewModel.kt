@@ -60,7 +60,8 @@ class EditorViewModel(
     }
 
     fun onContentChange(newContent: String) {
-        val currentNote = _uiState.value.note.copy(content = newContent, updatedAt = System.currentTimeMillis())
+        val currentNote =
+            _uiState.value.note.copy(content = newContent, updatedAt = System.currentTimeMillis())
         _uiState.value = _uiState.value.copy(note = currentNote)
 
         // Check for WikiLink trigger [[
@@ -74,7 +75,8 @@ class EditorViewModel(
             if (!afterOpen.contains("]]") && !afterOpen.contains("\n")) {
                 val query = afterOpen.trim()
                 viewModelScope.launch {
-                    val searchResult = vaultRepository.searchNotes(query).firstOrNull() ?: emptyList()
+                    val searchResult =
+                        vaultRepository.searchNotes(query).firstOrNull() ?: emptyList()
                     val suggestions = searchResult.map { it.title }.filter { it.isNotBlank() }
                     _uiState.value = _uiState.value.copy(
                         suggestions = suggestions,
@@ -115,7 +117,8 @@ class EditorViewModel(
                 } else {
                     "$newTitle.${currentNote.fileFormat}"
                 }
-                val newNoteId = if (currentNote.relativePath.isBlank()) newFilename else "${currentNote.relativePath}/$newFilename"
+                val newNoteId =
+                    if (currentNote.relativePath.isBlank()) newFilename else "${currentNote.relativePath}/$newFilename"
                 loadNote(newNoteId)
                 onRenamed(newNoteId)
             }

@@ -3,9 +3,9 @@ package com.kotonosora.todolist.feature.calendar
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
-import com.kotonosora.todolist.domain.model.TodoItem
-import com.kotonosora.todolist.domain.usecase.TodoUseCases
+import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.usecase.TaskUseCases
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 
 class CalendarViewModel(
-    private val useCases: TodoUseCases,
+    private val useCases: TaskUseCases,
     private val vaultRepository: VaultRepository? = null
 ) : ViewModel() {
 
@@ -33,14 +33,14 @@ class CalendarViewModel(
     val currentMonth: StateFlow<Int> = _currentMonth.asStateFlow()  // 0-based
     val selectedDateMillis: StateFlow<Long> = _selectedDateMillis.asStateFlow()
 
-    val allTodos: StateFlow<List<TodoItem>> = useCases.getTodos()
+    val allTodos: StateFlow<List<TaskItem>> = useCases.getTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val allNotes: StateFlow<List<NoteItem>> = vaultRepository?.getAllNotes()
         ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
         ?: MutableStateFlow(emptyList())
 
-    val todosForSelectedDate: StateFlow<List<TodoItem>> = combine(
+    val todosForSelectedDate: StateFlow<List<TaskItem>> = combine(
         _selectedDateMillis, allTodos
     ) { dateMillis, todos ->
         val cal = Calendar.getInstance().apply {
@@ -97,9 +97,9 @@ class CalendarViewModel(
         _currentMonth.value = cal.get(Calendar.MONTH)
     }
 
-    fun toggleTodoStatus(todo: TodoItem) {
+    fun toggleTodoStatus(todo: TaskItem) {
         viewModelScope.launch {
-            useCases.updateTodo(todo.copy(isCompleted = !todo.isCompleted))
+            useCases.updateTask(todo.copy(isCompleted = !todo.isCompleted))
         }
     }
 }

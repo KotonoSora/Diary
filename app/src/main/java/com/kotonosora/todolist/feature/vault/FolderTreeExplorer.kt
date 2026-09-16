@@ -221,7 +221,11 @@ private fun RenderFolderNode(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Folder Tree Explorer - Flat Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Folder Tree Explorer - Flat Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun FolderTreeExplorerPreview_Dark() {
     val sampleTree = VaultNode.FolderNode(
@@ -233,7 +237,13 @@ fun FolderTreeExplorerPreview_Dark() {
                 name = "Projects",
                 relativePath = "Projects",
                 children = listOf(
-                    VaultNode.FileNode("Roadmap.md", "Projects/Roadmap.md", "md", 2048, System.currentTimeMillis())
+                    VaultNode.FileNode(
+                        "Roadmap.md",
+                        "Projects/Roadmap.md",
+                        "md",
+                        2048,
+                        System.currentTimeMillis()
+                    )
                 )
             )
         )
@@ -250,7 +260,11 @@ fun FolderTreeExplorerPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Folder Tree Explorer - Flat Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Folder Tree Explorer - Flat Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun FolderTreeExplorerPreview_Light() {
     val sampleTree = VaultNode.FolderNode(

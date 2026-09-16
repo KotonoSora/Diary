@@ -40,7 +40,7 @@ private:
  * Sorts an array of strings alphabetically using std::sort (C++ performance enhancement).
  */
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_kotonosora_todolist_data_native_TodoNativeHelper_sortStrings(
+Java_com_kotonosora_todolist_data_native_MainNativeHelper_sortStrings(
         JNIEnv *env,
         jobject /* this */,
         jobjectArray arr) {
@@ -73,7 +73,7 @@ Java_com_kotonosora_todolist_data_native_TodoNativeHelper_sortStrings(
  * Parses the title from a Markdown string (first "# " heading).
  */
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_kotonosora_todolist_data_native_TodoNativeHelper_parseMdTitle(
+Java_com_kotonosora_todolist_data_native_MainNativeHelper_parseMdTitle(
         JNIEnv *env,
         jobject /* this */,
         jstring mdContent) {
@@ -99,10 +99,10 @@ Java_com_kotonosora_todolist_data_native_TodoNativeHelper_parseMdTitle(
 }
 
 /**
- * Filters a list of todo titles by a prefix (case-insensitive) using C++ performance.
+ * Filters a list of titles by a prefix (case-insensitive) using C++ performance.
  */
 extern "C" JNIEXPORT jobjectArray JNICALL
-Java_com_kotonosora_todolist_data_native_TodoNativeHelper_filterByPrefix(
+Java_com_kotonosora_todolist_data_native_MainNativeHelper_filterByPrefix(
         JNIEnv *env,
         jobject /* this */,
         jobjectArray arr,

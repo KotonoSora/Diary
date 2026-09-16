@@ -1,4 +1,4 @@
-package com.kotonosora.todolist.feature.todo
+package com.kotonosora.todolist.feature.task
 
 import android.content.Intent
 import android.content.res.Configuration
@@ -57,7 +57,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.kotonosora.todolist.domain.model.TodoItem
+import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.navigation.NavRoute
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 import java.text.SimpleDateFormat
@@ -65,20 +65,21 @@ import java.util.Date
 import java.util.Locale
 
 @Composable
-fun TodoListScreen(
+fun TaskListScreen(
     navController: NavController,
-    viewModel: TodoViewModel = viewModel(),
+    viewModel: TaskViewModel = viewModel(),
     onOpenDrawer: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val todos by viewModel.todos.collectAsState()
+    val tasks by viewModel.tasks.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let {
-            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            val flags =
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
             try {
                 context.contentResolver.takePersistableUriPermission(it, flags)
                 viewModel.saveCustomFolderUri(it.toString())
@@ -88,28 +89,28 @@ fun TodoListScreen(
         }
     }
 
-    TodoListContent(
-        todos = todos,
+    TaskListContent(
+        tasks = tasks,
         searchQuery = searchQuery,
         onSearchQueryChange = { viewModel.setSearchQuery(it) },
-        onToggle = { viewModel.toggleTodo(it) },
-        onDelete = { viewModel.deleteTodo(it) },
-        onClickTodo = { id -> navController.navigate(NavRoute.AddEditTodo.createRoute(id)) },
-        onAddTodo = { navController.navigate(NavRoute.AddEditTodo.createRoute()) },
+        onToggle = { viewModel.toggleTask(it) },
+        onDelete = { viewModel.deleteTask(it) },
+        onClickTask = { id -> navController.navigate(NavRoute.AddEditTodo.createRoute(id)) },
+        onAddTask = { navController.navigate(NavRoute.AddEditTodo.createRoute()) },
         onConfigureFolder = { folderPickerLauncher.launch(null) },
         onOpenDrawer = onOpenDrawer
     )
 }
 
 @Composable
-fun TodoListContent(
-    todos: List<TodoItem>,
+fun TaskListContent(
+    tasks: List<TaskItem>,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit = {},
-    onToggle: (TodoItem) -> Unit = {},
-    onDelete: (TodoItem) -> Unit = {},
-    onClickTodo: (String) -> Unit = {},
-    onAddTodo: () -> Unit = {},
+    onToggle: (TaskItem) -> Unit = {},
+    onDelete: (TaskItem) -> Unit = {},
+    onClickTask: (String) -> Unit = {},
+    onAddTask: () -> Unit = {},
     onConfigureFolder: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null
 ) {
@@ -118,10 +119,10 @@ fun TodoListContent(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = onAddTodo,
+                onClick = onAddTask,
                 elevation = FloatingActionButtonDefaults.bottomAppBarFabElevation(0.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Todo")
+                Icon(Icons.Default.Add, contentDescription = "Add Task")
             }
         }
     ) { paddingValues ->
@@ -147,8 +148,12 @@ fun TodoListContent(
                 }
 
                 Row {
-                    IconButton(onClick = onAddTodo) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Todo", tint = MaterialTheme.colorScheme.primary)
+                    IconButton(onClick = onAddTask) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add Task",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                     IconButton(onClick = { showOptionsMenu = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Options")
@@ -179,19 +184,19 @@ fun TodoListContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 4.dp),
-                placeholder = { Text("Search todos…") },
+                placeholder = { Text("Search tasks…") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 singleLine = true,
                 shape = RoundedCornerShape(24.dp)
             )
 
-            if (todos.isEmpty()) {
+            if (tasks.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        if (searchQuery.isBlank()) "No todos yet.\nTap + to add one."
+                        if (searchQuery.isBlank()) "No tasks yet.\nTap + to add one."
                         else "No results for \"$searchQuery\".",
                         style = MaterialTheme.typography.bodyLarge
                     )
@@ -201,12 +206,12 @@ fun TodoListContent(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(vertical = 8.dp)
                 ) {
-                    items(todos, key = { it.id }) { todo ->
-                        TodoListItem(
-                            todo = todo,
-                            onToggle = { onToggle(todo) },
-                            onDelete = { onDelete(todo) },
-                            onClick = { onClickTodo(todo.id) }
+                    items(tasks, key = { it.id }) { task ->
+                        TaskListItem(
+                            task = task,
+                            onToggle = { onToggle(task) },
+                            onDelete = { onDelete(task) },
+                            onClick = { onClickTask(task.id) }
                         )
                     }
                 }
@@ -217,8 +222,8 @@ fun TodoListContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TodoListItem(
-    todo: TodoItem,
+fun TaskListItem(
+    task: TaskItem,
     onToggle: () -> Unit,
     onDelete: () -> Unit,
     onClick: () -> Unit
@@ -268,26 +273,26 @@ fun TodoListItem(
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Checkbox(checked = todo.isCompleted, onCheckedChange = { onToggle() })
+                Checkbox(checked = task.isCompleted, onCheckedChange = { onToggle() })
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = todo.title,
+                        text = task.title,
                         style = MaterialTheme.typography.titleMedium,
-                        textDecoration = if (todo.isCompleted) TextDecoration.LineThrough else null,
+                        textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    if (!todo.description.isNullOrBlank()) {
+                    if (!task.description.isNullOrBlank()) {
                         Text(
-                            text = todo.description,
+                            text = task.description,
                             style = MaterialTheme.typography.bodySmall,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    todo.dueDate?.let {
+                    task.dueDate?.let {
                         Text(
                             text = "Due: ${formatter.format(Date(it))}",
                             style = MaterialTheme.typography.labelSmall,
@@ -302,32 +307,61 @@ fun TodoListItem(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Todo List - Flat Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Task List - Flat Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
-fun TodoListScreenPreview_Populated_Dark() {
-    val sampleTodos = listOf(
-        TodoItem("1", "Buy groceries", "Milk, Eggs, Bread", System.currentTimeMillis() + 86400000L, null, false),
-        TodoItem("2", "Finish Diary UI Redesign", "Refactor screens and drawer", System.currentTimeMillis() + 172800000L, null, false)
+fun TaskListScreenPreview_Populated_Dark() {
+    val sampleTasks = listOf(
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        ),
+        TaskItem(
+            "2",
+            "Finish Task UI Redesign",
+            "Refactor screens and drawer",
+            System.currentTimeMillis() + 172800000L,
+            null,
+            false
+        )
     )
 
     TodoListTheme(darkTheme = true) {
-        TodoListContent(
-            todos = sampleTodos,
+        TaskListContent(
+            tasks = sampleTasks,
             searchQuery = ""
         )
     }
 }
 
-@Preview(showBackground = true, name = "2. Todo List - Flat Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Task List - Flat Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
-fun TodoListScreenPreview_Populated_Light() {
-    val sampleTodos = listOf(
-        TodoItem("1", "Buy groceries", "Milk, Eggs, Bread", System.currentTimeMillis() + 86400000L, null, false)
+fun TaskListScreenPreview_Populated_Light() {
+    val sampleTasks = listOf(
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        )
     )
 
     TodoListTheme(darkTheme = false) {
-        TodoListContent(
-            todos = sampleTodos,
+        TaskListContent(
+            tasks = sampleTasks,
             searchQuery = ""
         )
     }

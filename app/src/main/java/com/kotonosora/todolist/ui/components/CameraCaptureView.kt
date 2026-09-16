@@ -130,7 +130,10 @@ fun CameraCaptureView(
                     focusOffset = tapOffset
                     val meteringPointFactory = previewView.meteringPointFactory
                     val point = meteringPointFactory.createPoint(tapOffset.x, tapOffset.y)
-                    val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE)
+                    val action = FocusMeteringAction.Builder(
+                        point,
+                        FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE
+                    )
                         .setAutoCancelDuration(3, TimeUnit.SECONDS)
                         .build()
 
@@ -241,7 +244,11 @@ fun CameraCaptureView(
                     val location = mediaFileManager.createPhotoOutputLocation(customFolderUriStr)
 
                     val targetFile = when (location) {
-                        is MediaOutputLocation.DocumentFileUri -> File(context.cacheDir, "TEMP_${System.currentTimeMillis()}.jpg")
+                        is MediaOutputLocation.DocumentFileUri -> File(
+                            context.cacheDir,
+                            "TEMP_${System.currentTimeMillis()}.jpg"
+                        )
+
                         is MediaOutputLocation.LocalFile -> location.file
                     }
 
@@ -255,7 +262,10 @@ fun CameraCaptureView(
                                 val pathStr = when (location) {
                                     is MediaOutputLocation.DocumentFileUri -> {
                                         try {
-                                            context.contentResolver.openOutputStream(location.uri, "w")?.use { outStream ->
+                                            context.contentResolver.openOutputStream(
+                                                location.uri,
+                                                "w"
+                                            )?.use { outStream ->
                                                 targetFile.inputStream().use { inStream ->
                                                     inStream.copyTo(outStream)
                                                 }
@@ -267,6 +277,7 @@ fun CameraCaptureView(
                                         }
                                         location.pathString
                                     }
+
                                     is MediaOutputLocation.LocalFile -> location.file.absolutePath
                                 }
                                 onPhotoCaptured(pathStr)

@@ -80,35 +80,47 @@ fun OnboardingGuideScreen(
 
     var cameraGranted by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.CAMERA
+            ) == PackageManager.PERMISSION_GRANTED
         )
     }
 
     var micGranted by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
         )
     }
 
     var notifGranted by remember {
         mutableStateOf(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
             } else true
         )
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        cameraGranted = granted
-    }
+    val cameraLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            cameraGranted = granted
+        }
 
-    val micLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        micGranted = granted
-    }
+    val micLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            micGranted = granted
+        }
 
-    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        notifGranted = granted
-    }
+    val notifLauncher =
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            notifGranted = granted
+        }
 
     OnboardingGuideContent(
         cameraGranted = cameraGranted,
@@ -138,7 +150,8 @@ fun OnboardingGuideContent(
     onRequestNotif: () -> Unit = {},
     onBack: () -> Unit = {}
 ) {
-    val totalPages = 5 // 1. Second Brain Goal, 2. Zettelkasten Method, 3. Knowledge Graph, 4. Tasks & Media, 5. Permissions
+    val totalPages =
+        5 // 1. Second Brain Goal, 2. Zettelkasten Method, 3. Knowledge Graph, 4. Tasks & Media, 5. Permissions
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { totalPages })
     val scope = rememberCoroutineScope()
 
@@ -391,10 +404,25 @@ private fun GoalValueChip(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            Icon(
+                icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
             Spacer(Modifier.height(8.dp))
-            Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -443,7 +471,10 @@ private fun ZettelkastenMethodSlide() {
                 ZettelTypeRow("💡 Fleeting Notes", "Quick raw ideas captured on the go")
                 ZettelTypeRow("📚 Literature Notes", "Summaries & quotes from books/articles")
                 ZettelTypeRow("🧱 Permanent Notes", "Atomic, self-contained core concepts")
-                ZettelTypeRow("🗺️ MOC (Map of Content)", "Index hubs linking related topics together")
+                ZettelTypeRow(
+                    "🗺️ MOC (Map of Content)",
+                    "Index hubs linking related topics together"
+                )
             }
         }
     }
@@ -460,8 +491,17 @@ private fun ZettelTypeRow(title: String, description: String) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
-            Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                description,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -533,7 +573,11 @@ private fun GraphGuideSlide() {
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text("Note A", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Note A",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
 
@@ -550,7 +594,11 @@ private fun GraphGuideSlide() {
                         modifier = Modifier.size(48.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text("Note B", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Note B",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -601,13 +649,26 @@ private fun TasksMediaGuideSlide() {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                     Spacer(Modifier.width(10.dp))
-                    Text("Design Diary Mobile Theme", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text(
+                        "Design Diary Mobile Theme",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(20.dp))
+                    Icon(
+                        Icons.Default.DateRange,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(Modifier.width(10.dp))
                     Text("Due Today • Calendar Sync", style = MaterialTheme.typography.bodySmall)
                 }
@@ -624,7 +685,12 @@ private fun TasksMediaGuideSlide() {
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Mic, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                            Icon(
+                                Icons.Default.Mic,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(Modifier.width(4.dp))
                             Text("Voice Memo.aac", style = MaterialTheme.typography.labelSmall)
                         }
@@ -638,7 +704,12 @@ private fun TasksMediaGuideSlide() {
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(Icons.Default.Camera, contentDescription = null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(16.dp))
+                            Icon(
+                                Icons.Default.Camera,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(16.dp)
+                            )
                             Spacer(Modifier.width(4.dp))
                             Text("Diagram.png", style = MaterialTheme.typography.labelSmall)
                         }
@@ -814,7 +885,11 @@ private fun PermissionCard(
 
 // ── COMPREHENSIVE CASE-BY-CASE PREVIEWS (FOR ALL 5 SLIDES IN DARK & LIGHT) ──
 
-@Preview(showBackground = true, name = "Slide 1: App Goal - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Slide 1: App Goal - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun OnboardingGuide_Slide1_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -825,7 +900,11 @@ fun OnboardingGuide_Slide1_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 1: App Goal - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Slide 1: App Goal - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun OnboardingGuide_Slide1_Light() {
     TodoListTheme(darkTheme = false) {
@@ -836,7 +915,11 @@ fun OnboardingGuide_Slide1_Light() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 2: Zettelkasten - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Slide 2: Zettelkasten - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun OnboardingGuide_Slide2_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -847,7 +930,11 @@ fun OnboardingGuide_Slide2_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 2: Zettelkasten - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Slide 2: Zettelkasten - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun OnboardingGuide_Slide2_Light() {
     TodoListTheme(darkTheme = false) {
@@ -858,7 +945,11 @@ fun OnboardingGuide_Slide2_Light() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 3: Knowledge Web - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Slide 3: Knowledge Web - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun OnboardingGuide_Slide3_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -869,7 +960,11 @@ fun OnboardingGuide_Slide3_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 3: Knowledge Web - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Slide 3: Knowledge Web - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun OnboardingGuide_Slide3_Light() {
     TodoListTheme(darkTheme = false) {
@@ -880,7 +975,11 @@ fun OnboardingGuide_Slide3_Light() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 4: Tasks & Media - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Slide 4: Tasks & Media - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun OnboardingGuide_Slide4_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -891,7 +990,11 @@ fun OnboardingGuide_Slide4_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 4: Tasks & Media - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Slide 4: Tasks & Media - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun OnboardingGuide_Slide4_Light() {
     TodoListTheme(darkTheme = false) {
@@ -902,7 +1005,11 @@ fun OnboardingGuide_Slide4_Light() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 5: Permissions - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "Slide 5: Permissions - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun OnboardingGuide_Slide5_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -913,7 +1020,11 @@ fun OnboardingGuide_Slide5_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Slide 5: Permissions - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "Slide 5: Permissions - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun OnboardingGuide_Slide5_Light() {
     TodoListTheme(darkTheme = false) {

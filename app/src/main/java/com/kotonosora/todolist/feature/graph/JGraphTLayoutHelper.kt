@@ -27,7 +27,10 @@ object JGraphTLayoutHelper {
         // Add edges
         edges.forEach { edge ->
             val targetNote = notes.firstOrNull { it.title == edge.targetTitle }
-            if (targetNote != null && graph.containsVertex(edge.sourceId) && graph.containsVertex(targetNote.id)) {
+            if (targetNote != null && graph.containsVertex(edge.sourceId) && graph.containsVertex(
+                    targetNote.id
+                )
+            ) {
                 try {
                     graph.addEdge(edge.sourceId, targetNote.id)
                 } catch (e: Exception) {

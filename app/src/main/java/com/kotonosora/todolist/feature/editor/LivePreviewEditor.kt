@@ -50,11 +50,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.ui.components.MermaidDiagramView
+import com.kotonosora.todolist.ui.theme.TodoListTheme
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.m3.markdownColor
 import com.mikepenz.markdown.m3.markdownTypography
-import com.kotonosora.todolist.ui.components.MermaidDiagramView
-import com.kotonosora.todolist.ui.theme.TodoListTheme
 
 enum class EditorViewMode {
     EDITING,   // Live Source / Markdown Editing
@@ -139,7 +139,8 @@ fun LivePreviewEditor(
                         .align(Alignment.TopEnd)
                         .padding(top = 8.dp, end = 8.dp)
                         .clickable {
-                            viewMode = if (viewMode == EditorViewMode.EDITING) EditorViewMode.READING else EditorViewMode.EDITING
+                            viewMode =
+                                if (viewMode == EditorViewMode.EDITING) EditorViewMode.READING else EditorViewMode.EDITING
                         }
                 ) {
                     Row(
@@ -202,67 +203,109 @@ private fun MarkdownFormattingToolbar(
                 onClick = { onInsertSymbol("# ", "") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Title, contentDescription = "Header", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Title,
+                    contentDescription = "Header",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("**", "**") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.FormatBold, contentDescription = "Bold", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.FormatBold,
+                    contentDescription = "Bold",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("*", "*") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.FormatItalic, contentDescription = "Italic", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.FormatItalic,
+                    contentDescription = "Italic",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("~~", "~~") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.StrikethroughS, contentDescription = "Strikethrough", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.StrikethroughS,
+                    contentDescription = "Strikethrough",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("[[", "]]") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Link, contentDescription = "WikiLink", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Link,
+                    contentDescription = "WikiLink",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("- [ ] ", "") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.CheckBoxOutlineBlank, contentDescription = "Task Checkbox", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.CheckBoxOutlineBlank,
+                    contentDescription = "Task Checkbox",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("- ", "") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = "Bullet List", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.FormatListBulleted,
+                    contentDescription = "Bullet List",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("> ", "") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.FormatQuote, contentDescription = "Quote Block", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.FormatQuote,
+                    contentDescription = "Quote Block",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
                 onClick = { onInsertSymbol("`", "`") },
                 modifier = Modifier.size(36.dp)
             ) {
-                Icon(Icons.Default.Code, contentDescription = "Inline Code", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Default.Code,
+                    contentDescription = "Inline Code",
+                    modifier = Modifier.size(18.dp)
+                )
             }
 
             IconButton(
-                onClick = { onInsertSymbol("```mermaid\ngraph TD\n    A[Start] --> B[End]\n```", "") },
+                onClick = {
+                    onInsertSymbol(
+                        "```mermaid\ngraph TD\n    A[Start] --> B[End]\n```",
+                        ""
+                    )
+                },
                 modifier = Modifier.size(36.dp)
             ) {
                 Text(

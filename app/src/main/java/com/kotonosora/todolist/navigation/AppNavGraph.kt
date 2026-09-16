@@ -2,11 +2,8 @@ package com.kotonosora.todolist.navigation
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,7 +17,6 @@ import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
@@ -34,12 +30,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -51,10 +45,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.kotonosora.todolist.TodoApplication
+import com.kotonosora.todolist.MainApplication
 import com.kotonosora.todolist.di.AppContainer
 import com.kotonosora.todolist.domain.model.NoteItem
-import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.calendar.CalendarScreen
 import com.kotonosora.todolist.feature.calendar.CalendarScreenContent
 import com.kotonosora.todolist.feature.calendar.CalendarViewModel
@@ -78,11 +71,11 @@ import com.kotonosora.todolist.feature.settings.SettingsScreenContent
 import com.kotonosora.todolist.feature.settings.SettingsViewModel
 import com.kotonosora.todolist.feature.splash.SplashScreen
 import com.kotonosora.todolist.feature.splash.SplashScreenContent
-import com.kotonosora.todolist.feature.todo.AddEditTodoContent
-import com.kotonosora.todolist.feature.todo.AddEditTodoScreen
-import com.kotonosora.todolist.feature.todo.TodoListContent
-import com.kotonosora.todolist.feature.todo.TodoListScreen
-import com.kotonosora.todolist.feature.todo.TodoViewModel
+import com.kotonosora.todolist.feature.task.AddEditTaskContent
+import com.kotonosora.todolist.feature.task.AddEditTaskScreen
+import com.kotonosora.todolist.feature.task.TaskListContent
+import com.kotonosora.todolist.feature.task.TaskListScreen
+import com.kotonosora.todolist.feature.task.TaskViewModel
 import com.kotonosora.todolist.feature.vault.VaultUiState
 import com.kotonosora.todolist.feature.vault.VaultViewModel
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceContent
@@ -99,7 +92,7 @@ inline fun <reified T : ViewModel> appViewModel(
     crossinline creator: (AppContainer) -> T
 ): T {
     val context = LocalContext.current
-    val app = context.applicationContext as TodoApplication
+    val app = context.applicationContext as MainApplication
     return viewModel(
         factory = ViewModelFactory { creator(app.container) }
     )
@@ -143,13 +136,17 @@ private data class DrawerNavItem(
 
 private val drawerNavItems = listOf(
     DrawerNavItem("Vault Workspace", Icons.Default.Folder, NavRoute.VaultWorkspace.route),
-    DrawerNavItem("Todos", Icons.AutoMirrored.Filled.List, NavRoute.TodoList.route),
+    DrawerNavItem("Tasks", Icons.AutoMirrored.Filled.List, NavRoute.TodoList.route),
     DrawerNavItem("Flashcards", Icons.Default.Style, NavRoute.FlashcardDecks.route),
     DrawerNavItem("Calendar", Icons.Default.DateRange, NavRoute.Calendar.route),
     DrawerNavItem("Media & Captures", Icons.Default.PermMedia, NavRoute.Media.route),
     DrawerNavItem("Knowledge Graph", Icons.Default.Hub, NavRoute.KnowledgeGraph.route),
     DrawerNavItem("Settings", Icons.Default.Settings, NavRoute.Settings.route),
-    DrawerNavItem("Feature Guide", Icons.AutoMirrored.Filled.HelpOutline, NavRoute.OnboardingGuide.route)
+    DrawerNavItem(
+        "Feature Guide",
+        Icons.AutoMirrored.Filled.HelpOutline,
+        NavRoute.OnboardingGuide.route
+    )
 )
 
 @Composable
@@ -256,14 +253,20 @@ fun AppNavGraph() {
                     if (LocalInspectionMode.current) {
                         EditorContent(
                             uiState = EditorUiState(
-                                note = NoteItem("preview.md", "Preview Note", "", "Preview content...")
+                                note = NoteItem(
+                                    "preview.md",
+                                    "Preview Note",
+                                    "",
+                                    "Preview content..."
+                                )
                             ),
                             onBack = {},
                             onSave = {}
                         )
                     } else {
                         val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
-                        val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
+                        val noteId =
+                            URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
                         val editorViewModel = appViewModel { container ->
                             EditorViewModel(container.vaultRepository)
                         }
@@ -272,7 +275,11 @@ fun AppNavGraph() {
                             viewModel = editorViewModel,
                             onBack = { navController.popBackStack() },
                             onNavigateToNote = { targetNoteId ->
-                                navController.navigate(NavRoute.MarkdownEditor.createRoute(targetNoteId))
+                                navController.navigate(
+                                    NavRoute.MarkdownEditor.createRoute(
+                                        targetNoteId
+                                    )
+                                )
                             },
                             onLearnFlashcards = {
                                 navController.navigate(NavRoute.Flashcards.createRoute(noteId))
@@ -291,7 +298,7 @@ fun AppNavGraph() {
                     val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
                     val isDemo = backStackEntry.arguments?.getBoolean("isDemo") ?: false
                     val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
-                    
+
                     val viewModel = appViewModel { container ->
                         FlashcardViewModel(container.vaultRepository)
                     }
@@ -310,25 +317,34 @@ fun AppNavGraph() {
                     FlashcardDeckSelectionScreen(
                         onOpenDrawer = { scope.launch { drawerState.open() } },
                         onDeckSelected = { deckId ->
-                            navController.navigate(NavRoute.Flashcards.createRoute(noteId = deckId, isDemo = true))
+                            navController.navigate(
+                                NavRoute.Flashcards.createRoute(
+                                    noteId = deckId,
+                                    isDemo = true
+                                )
+                            )
                         }
                     )
                 }
 
                 composable(NavRoute.TodoList.route) {
                     if (LocalInspectionMode.current) {
-                        TodoListContent(
-                            todos = emptyList(),
+                        TaskListContent(
+                            tasks = emptyList(),
                             searchQuery = "",
                             onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     } else {
-                        val todoViewModel = appViewModel { container ->
-                            TodoViewModel(container.todoUseCases, container.workManager, container.userPreferencesRepository)
+                        val taskViewModel = appViewModel { container ->
+                            TaskViewModel(
+                                container.taskUseCases,
+                                container.workManager,
+                                container.userPreferencesRepository
+                            )
                         }
-                        TodoListScreen(
+                        TaskListScreen(
                             navController = navController,
-                            viewModel = todoViewModel,
+                            viewModel = taskViewModel,
                             onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     }
@@ -342,21 +358,25 @@ fun AppNavGraph() {
                     })
                 ) { backStackEntry ->
                     if (LocalInspectionMode.current) {
-                        AddEditTodoContent(
-                            existingTodo = null,
+                        AddEditTaskContent(
+                            existingTask = null,
                             customFolderUri = null,
-                            onSaveTodo = {},
+                            onSaveTask = {},
                             onBack = {}
                         )
                     } else {
                         val todoId = backStackEntry.arguments?.getString("todoId")
-                        val todoViewModel = appViewModel { container ->
-                            TodoViewModel(container.todoUseCases, container.workManager, container.userPreferencesRepository)
+                        val taskViewModel = appViewModel { container ->
+                            TaskViewModel(
+                                container.taskUseCases,
+                                container.workManager,
+                                container.userPreferencesRepository
+                            )
                         }
-                        AddEditTodoScreen(
+                        AddEditTaskScreen(
                             navController = navController,
-                            todoId = todoId,
-                            viewModel = todoViewModel
+                            taskId = todoId,
+                            viewModel = taskViewModel
                         )
                     }
                 }
@@ -373,7 +393,7 @@ fun AppNavGraph() {
                         )
                     } else {
                         val calendarViewModel = appViewModel { container ->
-                            CalendarViewModel(container.todoUseCases, container.vaultRepository)
+                            CalendarViewModel(container.taskUseCases, container.vaultRepository)
                         }
                         CalendarScreen(
                             viewModel = calendarViewModel,
@@ -468,7 +488,9 @@ fun AppNavDrawerSheet(
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.primary,
                         selectedTextColor = MaterialTheme.colorScheme.primary,
-                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(
+                            alpha = 0.4f
+                        ),
                         unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                         unselectedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
@@ -482,7 +504,11 @@ fun AppNavDrawerSheet(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Navigation Drawer Sheet - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Navigation Drawer Sheet - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun AppNavDrawerPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -490,7 +516,11 @@ fun AppNavDrawerPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Navigation Drawer Sheet - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Navigation Drawer Sheet - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun AppNavDrawerPreview_Light() {
     TodoListTheme(darkTheme = false) {

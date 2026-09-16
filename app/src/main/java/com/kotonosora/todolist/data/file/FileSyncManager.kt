@@ -4,10 +4,10 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
-import com.kotonosora.todolist.data.database.TodoDao
-import com.kotonosora.todolist.data.database.TodoEntity
+import com.kotonosora.todolist.data.database.TaskDao
+import com.kotonosora.todolist.data.database.TaskEntity
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
-import com.kotonosora.todolist.domain.model.TodoItem
+import com.kotonosora.todolist.domain.model.TaskItem
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
 import java.text.SimpleDateFormat
@@ -18,7 +18,7 @@ import java.util.Locale
  */
 class FileSyncManager(
     private val context: Context,
-    private val todoDao: TodoDao,
+    private val taskDao: TaskDao,
     private val userPreferencesRepository: UserPreferencesRepository? = null
 ) {
 
@@ -49,10 +49,14 @@ class FileSyncManager(
                 if (treeFile != null && treeFile.canRead()) {
                     treeFile.listFiles().forEach { doc ->
                         val name = doc.name ?: ""
-                        if (name.endsWith(".md", ignoreCase = true) || name.endsWith(".txt", ignoreCase = true)) {
+                        if (name.endsWith(".md", ignoreCase = true) || name.endsWith(
+                                ".txt",
+                                ignoreCase = true
+                            )
+                        ) {
                             val todoId = name.substringBeforeLast(".")
                             val extension = name.substringAfterLast(".", "md")
-                            val existing = todoDao.getTodoById(todoId)
+                            val existing = taskDao.getTaskById(todoId)
                             if (existing == null) {
                                 val text = context.contentResolver.openInputStream(doc.uri)
                                     ?.bufferedReader()?.readText() ?: ""
@@ -61,7 +65,7 @@ class FileSyncManager(
                                 } else {
                                     parseMdText(text, todoId, doc.uri.toString())
                                 }
-                                todoDao.insertTodo(parsed)
+                                taskDao.insertTask(parsed)
                             }
                         }
                     }
@@ -78,10 +82,14 @@ class FileSyncManager(
 
         for (file in textFiles) {
             val todoId = file.nameWithoutExtension
-            val existing = todoDao.getTodoById(todoId)
+            val existing = taskDao.getTaskById(todoId)
             if (existing == null) {
-                val parsed = if (file.extension == "txt") parseTxtFile(file, todoId) else parseMdFile(file, todoId)
-                todoDao.insertTodo(parsed)
+                val parsed =
+                    if (file.extension == "txt") parseTxtFile(file, todoId) else parseMdFile(
+                        file,
+                        todoId
+                    )
+                taskDao.insertTask(parsed)
             }
         }
     }
@@ -89,7 +97,7 @@ class FileSyncManager(
     /**
      * Writes a file (.md or .txt) for every DB entity whose backing file is missing.
      */
-    suspend fun syncDbToFiles(fileManager: TodoFileManager, customFolderUri: Uri? = null) {
+    suspend fun syncDbToFiles(fileManager: AppFileManager, customFolderUri: Uri? = null) {
         val resolvedUri = resolveCustomFolderUri(customFolderUri)
         val existingFiles = mutableSetOf<String>()
 
@@ -106,11 +114,11 @@ class FileSyncManager(
                 ?.mapTo(existingFiles) { it.name }
         }
 
-        val allEntities = todoDao.getAllTodosOnce()
+        val allEntities = taskDao.getAllTasksOnce()
         for (entity in allEntities) {
             val expectedFileName = "${entity.id}.${entity.fileFormat}"
             if (expectedFileName !in existingFiles) {
-                val domainItem = TodoItem(
+                val domainItem = TaskItem(
                     id = entity.id,
                     title = entity.title,
                     description = entity.description,
@@ -120,18 +128,18 @@ class FileSyncManager(
                     reminderTime = entity.reminderTime,
                     fileFormat = entity.fileFormat
                 )
-                fileManager.saveTodoToFile(domainItem, resolvedUri)
+                fileManager.saveTaskToFile(domainItem, resolvedUri)
             }
         }
     }
 
     // ── Simple markdown parser ────────────────────────────────────────────────
 
-    private fun parseMdFile(file: File, id: String): TodoEntity {
+    private fun parseMdFile(file: File, id: String): TaskEntity {
         return parseMdText(file.readText(), id, file.absolutePath)
     }
 
-    private fun parseMdText(text: String, id: String, absolutePath: String): TodoEntity {
+    private fun parseMdText(text: String, id: String, absolutePath: String): TaskEntity {
         var title = id
         var isCompleted = false
         var dueDate: Long? = null
@@ -151,10 +159,12 @@ class FileSyncManager(
                     val dateStr = line.substringAfter("**Due Date**: ").trim()
                     dueDate = parseDateString(dateStr)
                 }
+
                 line.contains("**Reminder**: ") -> {
                     val dateStr = line.substringAfter("**Reminder**: ").trim()
                     reminderTime = parseDateString(dateStr)
                 }
+
                 line.contains("**Media**: ") -> {
                     mediaPath = line.substringAfter("**Media**: ").trim().ifBlank { null }
                 }
@@ -163,7 +173,7 @@ class FileSyncManager(
 
         val description = descriptionLines.joinToString("\n").trim().ifBlank { null }
 
-        return TodoEntity(
+        return TaskEntity(
             id = id,
             title = title,
             description = description,
@@ -177,11 +187,11 @@ class FileSyncManager(
 
     // ── Simple plain text parser ──────────────────────────────────────────────
 
-    private fun parseTxtFile(file: File, id: String): TodoEntity {
+    private fun parseTxtFile(file: File, id: String): TaskEntity {
         return parseTxtText(file.readText(), id, file.absolutePath)
     }
 
-    private fun parseTxtText(text: String, id: String, absolutePath: String): TodoEntity {
+    private fun parseTxtText(text: String, id: String, absolutePath: String): TaskEntity {
         var title = id
         var isCompleted = false
         var dueDate: Long? = null
@@ -200,10 +210,12 @@ class FileSyncManager(
                     val dateStr = line.removePrefix("DUE DATE: ").trim()
                     dueDate = parseDateString(dateStr)
                 }
+
                 line.startsWith("REMINDER: ") -> {
                     val dateStr = line.removePrefix("REMINDER: ").trim()
                     reminderTime = parseDateString(dateStr)
                 }
+
                 line.startsWith("MEDIA: ") -> {
                     mediaPath = line.removePrefix("MEDIA: ").trim().ifBlank { null }
                 }
@@ -212,7 +224,7 @@ class FileSyncManager(
 
         val description = descriptionLines.joinToString("\n").trim().ifBlank { null }
 
-        return TodoEntity(
+        return TaskEntity(
             id = id,
             title = title,
             description = description,

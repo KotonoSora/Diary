@@ -355,7 +355,11 @@ private fun generateMermaidHtml(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Mermaid Flowchart Diagram - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Mermaid Flowchart Diagram - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun MermaidDiagramViewPreview_Flowchart_Dark() {
     val flowchartCode = """
@@ -374,7 +378,11 @@ fun MermaidDiagramViewPreview_Flowchart_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Mermaid UML Sequence Diagram - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Mermaid UML Sequence Diagram - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun MermaidDiagramViewPreview_Sequence_Light() {
     val sequenceCode = """

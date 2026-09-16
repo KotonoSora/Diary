@@ -164,7 +164,9 @@ fun QuickCaptureSheetContent(
                             .clickable { selectedType = type },
                         shape = compactShape,
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(
+                                alpha = 0.4f
+                            )
                         )
                     ) {
                         Column(
@@ -202,7 +204,12 @@ fun QuickCaptureSheetContent(
                 value = title,
                 onValueChange = { title = it.take(100) },
                 label = { Text("Note Title", style = MaterialTheme.typography.labelSmall) },
-                placeholder = { Text("Enter title...", style = MaterialTheme.typography.bodyMedium) },
+                placeholder = {
+                    Text(
+                        "Enter title...",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                },
                 singleLine = true,
                 shape = compactShape,
                 colors = TextFieldDefaults.colors(
@@ -219,14 +226,21 @@ fun QuickCaptureSheetContent(
                 TextField(
                     value = author,
                     onValueChange = { author = it.take(100) },
-                    placeholder = { Text("Author / Reporter", style = MaterialTheme.typography.bodyMedium) },
+                    placeholder = {
+                        Text(
+                            "Author / Reporter",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
                     singleLine = true,
                     shape = compactShape,
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.2f
+                        )
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -237,14 +251,21 @@ fun QuickCaptureSheetContent(
                 TextField(
                     value = url,
                     onValueChange = { url = it.take(200) },
-                    placeholder = { Text("Reference URL", style = MaterialTheme.typography.bodyMedium) },
+                    placeholder = {
+                        Text(
+                            "Reference URL",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    },
                     singleLine = true,
                     shape = compactShape,
                     colors = TextFieldDefaults.colors(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.2f
+                        )
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -300,7 +321,11 @@ fun QuickCaptureSheetContent(
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 ) {
-                    Text("Create from Template", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Create from Template",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -311,7 +336,11 @@ fun QuickCaptureSheetContent(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Quick Capture Sheet - Templates Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Quick Capture Sheet - Templates Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun QuickCaptureDialogPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -319,7 +348,11 @@ fun QuickCaptureDialogPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Quick Capture Sheet - Templates Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Quick Capture Sheet - Templates Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun QuickCaptureDialogPreview_Light() {
     TodoListTheme(darkTheme = false) {
