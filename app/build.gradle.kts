@@ -30,6 +30,7 @@ configure<ApplicationExtension> {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -47,6 +48,7 @@ configure<ApplicationExtension> {
 }
 
 dependencies {
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
@@ -61,6 +63,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.ui.text.google.fonts)
     implementation(libs.work.runtime.ktx)
     implementation(libs.navigation.compose)
     debugImplementation(libs.androidx.ui.tooling)
@@ -78,9 +81,16 @@ dependencies {
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
 
-    // DataStore Preferences & DocumentFile
+    // DataStore Preferences & DocumentFile & Serialization
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.documentfile)
+    implementation(libs.kotlinx.serialization.json)
+
+    // Kizitonwose Compose Calendar
+    implementation(libs.kizitonwose.calendar.compose)
+
+    // MikePenz Multiplatform Markdown Renderer M3
+    implementation(libs.markdown.renderer)
 
     // JGraphT Graph & Force Layout Core
     implementation(libs.jgrapht.core)

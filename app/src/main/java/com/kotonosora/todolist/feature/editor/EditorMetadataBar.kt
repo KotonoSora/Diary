@@ -20,6 +20,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
+import com.kotonosora.todolist.data.native.MdNativeHelper
 import com.kotonosora.todolist.domain.model.NoteType
 
 @Composable
@@ -29,9 +31,19 @@ fun EditorMetadataBar(
     modifier: Modifier = Modifier,
     noteType: NoteType = NoteType.PERMANENT
 ) {
-    val wordCount = if (content.isBlank()) 0 else content.trim().split("\\s+".toRegex()).size
-    val charCount = content.length
-    val readingTimeMinutes = (wordCount / 200).coerceAtLeast(1)
+    val stats = remember(content) {
+        try {
+            MdNativeHelper.calculateTextStatsNative(content)
+        } catch (_: Throwable) {
+            val wc = if (content.isBlank()) 0 else content.trim().split("\\s+".toRegex()).size
+            val cc = content.length
+            val rt = (wc / 200).coerceAtLeast(1)
+            intArrayOf(wc, cc, 0, rt)
+        }
+    }
+    val wordCount = stats[0]
+    val charCount = stats[1]
+    val readingTimeMinutes = stats[3]
 
     val noteColor = when (noteType) {
         NoteType.FLEETING -> Color(0xFFFFC107)    // Yellow

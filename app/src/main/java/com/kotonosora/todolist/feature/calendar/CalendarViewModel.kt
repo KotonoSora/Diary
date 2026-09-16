@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -50,6 +51,19 @@ class CalendarViewModel @Inject constructor(
 
     fun selectDate(dateMillis: Long) {
         _selectedDateMillis.value = dateMillis
+        val cal = Calendar.getInstance().apply { timeInMillis = dateMillis }
+        _currentYear.value = cal.get(Calendar.YEAR)
+        _currentMonth.value = cal.get(Calendar.MONTH)
+    }
+
+    fun selectToday() {
+        val todayCal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        _selectedDateMillis.value = todayCal.timeInMillis
+        _currentYear.value = todayCal.get(Calendar.YEAR)
+        _currentMonth.value = todayCal.get(Calendar.MONTH)
     }
 
     fun previousMonth() {
@@ -64,5 +78,11 @@ class CalendarViewModel @Inject constructor(
         cal.add(Calendar.MONTH, 1)
         _currentYear.value = cal.get(Calendar.YEAR)
         _currentMonth.value = cal.get(Calendar.MONTH)
+    }
+
+    fun toggleTodoStatus(todo: TodoItem) {
+        viewModelScope.launch {
+            useCases.updateTodo(todo.copy(isCompleted = !todo.isCompleted))
+        }
     }
 }

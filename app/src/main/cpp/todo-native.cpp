@@ -4,6 +4,37 @@
 #include <algorithm>
 #include <sstream>
 #include <regex>
+#include <unordered_map>
+#include <cctype>
+
+/**
+ * RAII Guard helper for JNI string UTF chars management.
+ * Automatically releases GetStringUTFChars memory on destruction.
+ */
+class JniStringGuard {
+public:
+    JniStringGuard(JNIEnv *env, jstring jstr) : env_(env), jstr_(jstr) {
+        if (jstr != nullptr) {
+            chars_ = env_->GetStringUTFChars(jstr_, nullptr);
+        } else {
+            chars_ = nullptr;
+        }
+    }
+
+    ~JniStringGuard() {
+        if (chars_ != nullptr && jstr_ != nullptr) {
+            env_->ReleaseStringUTFChars(jstr_, chars_);
+        }
+    }
+
+    const char* c_str() const { return chars_ ? chars_ : ""; }
+    bool valid() const { return chars_ != nullptr; }
+
+private:
+    JNIEnv *env_;
+    jstring jstr_;
+    const char *chars_;
+};
 
 /**
  * Sorts an array of strings alphabetically using std::sort (C++ performance enhancement).
@@ -19,11 +50,8 @@ Java_com_kotonosora_todolist_data_native_TodoNativeHelper_sortStrings(
 
     for (jsize i = 0; i < len; i++) {
         auto jStr = (jstring) env->GetObjectArrayElement(arr, i);
-        const char *chars = env->GetStringUTFChars(jStr, nullptr);
-        if (chars != nullptr) {
-            strings[i] = chars;
-            env->ReleaseStringUTFChars(jStr, chars);
-        }
+        JniStringGuard guard(env, jStr);
+        strings[i] = guard.c_str();
         env->DeleteLocalRef(jStr);
     }
 
@@ -43,7 +71,6 @@ Java_com_kotonosora_todolist_data_native_TodoNativeHelper_sortStrings(
 
 /**
  * Parses the title from a Markdown string (first "# " heading).
- * Returns an empty string if no heading is found.
  */
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_kotonosora_todolist_data_native_TodoNativeHelper_parseMdTitle(
@@ -51,11 +78,11 @@ Java_com_kotonosora_todolist_data_native_TodoNativeHelper_parseMdTitle(
         jobject /* this */,
         jstring mdContent) {
 
-    const char *content = env->GetStringUTFChars(mdContent, nullptr);
-    if (content == nullptr) return env->NewStringUTF("");
+    JniStringGuard guard(env, mdContent);
+    if (!guard.valid()) return env->NewStringUTF("");
 
     std::string result;
-    std::istringstream stream(content);
+    std::istringstream stream(guard.c_str());
     std::string line;
 
     while (std::getline(stream, line)) {
@@ -68,7 +95,6 @@ Java_com_kotonosora_todolist_data_native_TodoNativeHelper_parseMdTitle(
         }
     }
 
-    env->ReleaseStringUTFChars(mdContent, content);
     return env->NewStringUTF(result.c_str());
 }
 
@@ -82,25 +108,21 @@ Java_com_kotonosora_todolist_data_native_TodoNativeHelper_filterByPrefix(
         jobjectArray arr,
         jstring jPrefix) {
 
-    const char *prefix = env->GetStringUTFChars(jPrefix, nullptr);
-    std::string prefixLower(prefix ? prefix : "");
+    JniStringGuard prefixGuard(env, jPrefix);
+    std::string prefixLower(prefixGuard.c_str());
     std::transform(prefixLower.begin(), prefixLower.end(), prefixLower.begin(), ::tolower);
-    if (prefix) env->ReleaseStringUTFChars(jPrefix, prefix);
 
     jsize len = env->GetArrayLength(arr);
     std::vector<std::string> matched;
 
     for (jsize i = 0; i < len; i++) {
         auto jStr = (jstring) env->GetObjectArrayElement(arr, i);
-        const char *chars = env->GetStringUTFChars(jStr, nullptr);
-        if (chars) {
-            std::string s(chars);
-            std::string sLower = s;
-            std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
-            if (prefixLower.empty() || sLower.find(prefixLower) == 0) {
-                matched.push_back(s);
-            }
-            env->ReleaseStringUTFChars(jStr, chars);
+        JniStringGuard guard(env, jStr);
+        std::string s(guard.c_str());
+        std::string sLower = s;
+        std::transform(sLower.begin(), sLower.end(), sLower.begin(), ::tolower);
+        if (prefixLower.empty() || sLower.find(prefixLower) == 0) {
+            matched.push_back(s);
         }
         env->DeleteLocalRef(jStr);
     }
@@ -128,11 +150,11 @@ Java_com_kotonosora_todolist_data_native_MdNativeHelper_extractWikiLinks(
         jobject /* this */,
         jstring mdContent) {
 
-    const char *content = env->GetStringUTFChars(mdContent, nullptr);
+    JniStringGuard guard(env, mdContent);
     std::vector<std::string> links;
 
-    if (content != nullptr) {
-        std::string text(content);
+    if (guard.valid()) {
+        std::string text(guard.c_str());
         std::regex wikiLinkRegex(R"(\[\[([^\|\]]+)(?:\|([^\]]+))?\]\])");
         auto words_begin = std::sregex_iterator(text.begin(), text.end(), wikiLinkRegex);
         auto words_end = std::sregex_iterator();
@@ -141,7 +163,6 @@ Java_com_kotonosora_todolist_data_native_MdNativeHelper_extractWikiLinks(
             std::smatch match = *i;
             if (match.size() > 1) {
                 std::string target = match[1].str();
-                // Trim whitespace
                 target.erase(0, target.find_first_not_of(" \t\r\n"));
                 target.erase(target.find_last_not_of(" \t\r\n") + 1);
                 if (!target.empty()) {
@@ -149,7 +170,6 @@ Java_com_kotonosora_todolist_data_native_MdNativeHelper_extractWikiLinks(
                 }
             }
         }
-        env->ReleaseStringUTFChars(mdContent, content);
     }
 
     jclass stringClass = env->FindClass("java/lang/String");
@@ -173,12 +193,11 @@ Java_com_kotonosora_todolist_data_native_MdNativeHelper_extractTags(
         jobject /* this */,
         jstring mdContent) {
 
-    const char *content = env->GetStringUTFChars(mdContent, nullptr);
+    JniStringGuard guard(env, mdContent);
     std::vector<std::string> tags;
 
-    if (content != nullptr) {
-        std::string text(content);
-        // Regex matches #tag where tag starts with letter or underscore and contains alphanumeric/underscore/dash
+    if (guard.valid()) {
+        std::string text(guard.c_str());
         std::regex tagRegex(R"((?:^|\s)#([a-zA-Z_][a-zA-Z0-9_\-]*))");
         auto words_begin = std::sregex_iterator(text.begin(), text.end(), tagRegex);
         auto words_end = std::sregex_iterator();
@@ -192,7 +211,6 @@ Java_com_kotonosora_todolist_data_native_MdNativeHelper_extractTags(
                 }
             }
         }
-        env->ReleaseStringUTFChars(mdContent, content);
     }
 
     jclass stringClass = env->FindClass("java/lang/String");
@@ -216,13 +234,12 @@ Java_com_kotonosora_todolist_data_native_MdNativeHelper_parseTitle(
         jobject /* this */,
         jstring mdContent) {
 
-    const char *content = env->GetStringUTFChars(mdContent, nullptr);
-    if (content == nullptr) return env->NewStringUTF("");
+    JniStringGuard guard(env, mdContent);
+    if (!guard.valid()) return env->NewStringUTF("");
 
-    std::string text(content);
+    std::string text(guard.c_str());
     std::string title = "";
 
-    // Check for YAML frontmatter title: "title: My Note"
     std::regex titleRegex(R"(^title:\s*["']?([^"'\n\r]+)["']?)", std::regex_constants::icase);
     std::istringstream stream(text);
     std::string line;
@@ -256,6 +273,52 @@ Java_com_kotonosora_todolist_data_native_MdNativeHelper_parseTitle(
         }
     }
 
-    env->ReleaseStringUTFChars(mdContent, content);
     return env->NewStringUTF(title.c_str());
+}
+
+/**
+ * High-performance Native C++ Text Stats Analytics (word count, char count, line count).
+ * Returns int array: [wordCount, charCount, lineCount, readingTimeMinutes].
+ */
+extern "C" JNIEXPORT jintArray JNICALL
+Java_com_kotonosora_todolist_data_native_MdNativeHelper_calculateTextStatsNative(
+        JNIEnv *env,
+        jobject /* this */,
+        jstring mdContent) {
+
+    JniStringGuard guard(env, mdContent);
+    if (!guard.valid()) {
+        jintArray emptyResult = env->NewIntArray(4);
+        return emptyResult;
+    }
+
+    std::string text(guard.c_str());
+    int charCount = (int)text.length();
+    int wordCount = 0;
+    int lineCount = 0;
+    bool inWord = false;
+
+    for (char c : text) {
+        if (c == '\n') {
+            lineCount++;
+        }
+        if (std::isspace(static_cast<unsigned char>(c))) {
+            if (inWord) {
+                wordCount++;
+                inWord = false;
+            }
+        } else {
+            inWord = true;
+        }
+    }
+    if (inWord) wordCount++;
+    if (!text.empty()) lineCount++;
+
+    int readingTimeMinutes = std::max(1, wordCount / 200);
+
+    jintArray result = env->NewIntArray(4);
+    jint stats[4] = {wordCount, charCount, lineCount, readingTimeMinutes};
+    env->SetIntArrayRegion(result, 0, 4, stats);
+
+    return result;
 }
