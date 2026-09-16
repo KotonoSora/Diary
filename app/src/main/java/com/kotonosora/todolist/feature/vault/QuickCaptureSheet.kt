@@ -1,22 +1,38 @@
 package com.kotonosora.todolist.feature.vault
 
 import android.content.res.Configuration
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.Checklist
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
@@ -26,6 +42,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +54,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.domain.model.NoteType
+import com.kotonosora.todolist.domain.model.defaultTitlePrefix
+import com.kotonosora.todolist.domain.model.description
 import com.kotonosora.todolist.domain.model.displayName
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 
@@ -67,12 +86,19 @@ fun QuickCaptureSheetContent(
     onDismiss: () -> Unit = {},
     onConfirm: (title: String, noteType: NoteType, author: String?, url: String?) -> Unit = { _, _, _, _ -> }
 ) {
-    var title by remember { mutableStateOf("") }
     var selectedType by remember { mutableStateOf(NoteType.FLEETING) }
+    var title by remember { mutableStateOf(selectedType.defaultTitlePrefix) }
     var author by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
 
-    val compactShape = RoundedCornerShape(6.dp)
+    val compactShape = RoundedCornerShape(8.dp)
+
+    // Update title when switching type if title matches default prefix pattern
+    LaunchedEffect(selectedType) {
+        if (title.isBlank() || NoteType.entries.any { title == it.defaultTitlePrefix }) {
+            title = selectedType.defaultTitlePrefix
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -83,41 +109,98 @@ fun QuickCaptureSheetContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Text(
-                text = "New Note",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(Modifier.height(8.dp))
-
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                NoteType.entries.forEach { type ->
-                    FilterChip(
-                        selected = selectedType == type,
-                        onClick = { selectedType = type },
-                        label = { Text(type.displayName, style = MaterialTheme.typography.labelSmall) },
-                        shape = compactShape,
-                        border = null,
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        )
+                Text(
+                    text = "New Note from Template",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        text = selectedType.displayName,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            // Borderless Title Input capped at 100 characters
+            // Template selection scrollable row
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(NoteType.entries.toTypedArray()) { type ->
+                    val isSelected = selectedType == type
+                    val icon = when (type) {
+                        NoteType.FLEETING -> Icons.Default.EditNote
+                        NoteType.LITERATURE -> Icons.Default.Book
+                        NoteType.PERMANENT -> Icons.Default.AutoAwesome
+                        NoteType.MOC -> Icons.Default.Hub
+                        NoteType.DIARY -> Icons.Default.Book
+                        NoteType.DAILY -> Icons.Default.Event
+                        NoteType.REPORT -> Icons.AutoMirrored.Filled.Assignment
+                        NoteType.TODO -> Icons.Default.Checklist
+                        NoteType.FLASHCARD -> Icons.Default.Style
+                    }
+
+                    Card(
+                        modifier = Modifier
+                            .width(130.dp)
+                            .clickable { selectedType = type },
+                        shape = compactShape,
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        ),
+                        border = if (isSelected) null else null
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                text = type.displayName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = type.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Title Input
             TextField(
                 value = title,
                 onValueChange = { title = it.take(100) },
-                placeholder = { Text("Title (${title.length}/100)", style = MaterialTheme.typography.bodyMedium) },
+                label = { Text("Note Title", style = MaterialTheme.typography.labelSmall) },
+                placeholder = { Text("Enter title...", style = MaterialTheme.typography.bodyMedium) },
                 singleLine = true,
                 shape = compactShape,
                 colors = TextFieldDefaults.colors(
@@ -129,12 +212,12 @@ fun QuickCaptureSheetContent(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            if (selectedType == NoteType.LITERATURE) {
+            if (selectedType == NoteType.LITERATURE || selectedType == NoteType.REPORT) {
                 Spacer(Modifier.height(6.dp))
                 TextField(
                     value = author,
                     onValueChange = { author = it.take(100) },
-                    placeholder = { Text("Author / Source", style = MaterialTheme.typography.bodyMedium) },
+                    placeholder = { Text("Author / Reporter", style = MaterialTheme.typography.bodyMedium) },
                     singleLine = true,
                     shape = compactShape,
                     colors = TextFieldDefaults.colors(
@@ -145,6 +228,9 @@ fun QuickCaptureSheetContent(
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+
+            if (selectedType == NoteType.LITERATURE) {
                 Spacer(Modifier.height(6.dp))
                 TextField(
                     value = url,
@@ -194,7 +280,7 @@ fun QuickCaptureSheetContent(
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 ) {
-                    Text("Create Note", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text("Create from Template", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -205,7 +291,7 @@ fun QuickCaptureSheetContent(
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "1. Quick Capture Sheet - Compact Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true, name = "1. Quick Capture Sheet - Templates Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun QuickCaptureDialogPreview_Dark() {
     TodoListTheme(darkTheme = true) {
@@ -213,7 +299,7 @@ fun QuickCaptureDialogPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Quick Capture Sheet - Compact Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(showBackground = true, name = "2. Quick Capture Sheet - Templates Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable
 fun QuickCaptureDialogPreview_Light() {
     TodoListTheme(darkTheme = false) {

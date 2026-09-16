@@ -38,6 +38,11 @@ fun EditorMetadataBar(
         NoteType.LITERATURE -> Color(0xFF2196F3)  // Blue
         NoteType.PERMANENT -> Color(0xFF4CAF50)   // Green
         NoteType.MOC -> Color(0xFF9C27B0)         // Purple
+        NoteType.DIARY -> Color(0xFFE91E63)       // Pink
+        NoteType.DAILY -> Color(0xFF00BCD4)       // Cyan
+        NoteType.REPORT -> Color(0xFFFF5722)      // Deep Orange
+        NoteType.TODO -> Color(0xFF8BC34A)        // Light Green
+        NoteType.FLASHCARD -> Color(0xFF673AB7)   // Deep Purple
     }
 
     Surface(

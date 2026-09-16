@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Style
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -30,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -78,6 +80,9 @@ import com.kotonosora.todolist.feature.vault.VaultUiState
 import com.kotonosora.todolist.feature.vault.VaultViewModel
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceContent
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceScreen
+import com.kotonosora.todolist.feature.flashcard.FlashcardScreen
+import com.kotonosora.todolist.feature.flashcard.FlashcardDeckSelectionScreen
+import com.kotonosora.todolist.feature.flashcard.FlashcardViewModel
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
@@ -92,6 +97,14 @@ sealed class NavRoute(val route: String) {
         fun createRoute(noteId: String): String {
             val encodedNoteId = URLEncoder.encode(noteId, StandardCharsets.UTF_8.toString())
             return "markdown_editor/$encodedNoteId"
+        }
+    }
+
+    object FlashcardDecks : NavRoute("flashcard_decks")
+    object Flashcards : NavRoute("flashcards/{noteId}?isDemo={isDemo}") {
+        fun createRoute(noteId: String, isDemo: Boolean = false): String {
+            val encodedNoteId = URLEncoder.encode(noteId, StandardCharsets.UTF_8.toString())
+            return "flashcards/$encodedNoteId?isDemo=$isDemo"
         }
     }
 
@@ -115,6 +128,7 @@ private data class DrawerNavItem(
 private val drawerNavItems = listOf(
     DrawerNavItem("Vault Workspace", Icons.Default.Folder, NavRoute.VaultWorkspace.route),
     DrawerNavItem("Todos", Icons.AutoMirrored.Filled.List, NavRoute.TodoList.route),
+    DrawerNavItem("Flashcards", Icons.Default.Style, NavRoute.FlashcardDecks.route),
     DrawerNavItem("Calendar", Icons.Default.DateRange, NavRoute.Calendar.route),
     DrawerNavItem("Media & Captures", Icons.Default.PermMedia, NavRoute.Media.route),
     DrawerNavItem("Knowledge Graph", Icons.Default.Hub, NavRoute.KnowledgeGraph.route),
@@ -237,9 +251,44 @@ fun AppNavGraph() {
                             onBack = { navController.popBackStack() },
                             onNavigateToNote = { targetNoteId ->
                                 navController.navigate(NavRoute.MarkdownEditor.createRoute(targetNoteId))
+                            },
+                            onLearnFlashcards = {
+                                navController.navigate(NavRoute.Flashcards.createRoute(noteId))
                             }
                         )
                     }
+                }
+
+                composable(
+                    route = NavRoute.Flashcards.route,
+                    arguments = listOf(
+                        navArgument("noteId") { type = NavType.StringType },
+                        navArgument("isDemo") { type = NavType.BoolType; defaultValue = false }
+                    )
+                ) { backStackEntry ->
+                    val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
+                    val isDemo = backStackEntry.arguments?.getBoolean("isDemo") ?: false
+                    val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
+                    
+                    val viewModel = hiltViewModel<FlashcardViewModel>()
+                    LaunchedEffect(noteId) {
+                        viewModel.loadNote(noteId, isDemo = isDemo)
+                    }
+
+                    FlashcardScreen(
+                        noteId = noteId,
+                        onNavigateBack = { navController.popBackStack() },
+                        viewModel = viewModel
+                    )
+                }
+
+                composable(NavRoute.FlashcardDecks.route) {
+                    FlashcardDeckSelectionScreen(
+                        onOpenDrawer = { scope.launch { drawerState.open() } },
+                        onDeckSelected = { deckId ->
+                            navController.navigate(NavRoute.Flashcards.createRoute(noteId = deckId, isDemo = true))
+                        }
+                    )
                 }
 
                 composable(NavRoute.TodoList.route) {

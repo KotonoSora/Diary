@@ -2,6 +2,9 @@ package com.kotonosora.todolist.feature.editor
 
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.ZettelUidGenerator
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object ZettelTemplatePicker {
 
@@ -12,13 +15,15 @@ object ZettelTemplatePicker {
         sourceUrl: String? = null
     ): String {
         val uid = ZettelUidGenerator.generateUid()
+        val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date())
+
         return when (noteType) {
             NoteType.FLEETING -> {
                 """
                 ---
                 uid: $uid
                 type: fleeting
-                date: ${System.currentTimeMillis()}
+                date: $formattedDate
                 ---
                 # $title
 
@@ -33,7 +38,7 @@ object ZettelTemplatePicker {
                 type: literature
                 author: ${author ?: "Unknown"}
                 url: ${sourceUrl ?: ""}
-                date: ${System.currentTimeMillis()}
+                date: $formattedDate
                 ---
                 # $title
 
@@ -54,7 +59,7 @@ object ZettelTemplatePicker {
                 ---
                 uid: $uid
                 type: permanent
-                date: ${System.currentTimeMillis()}
+                date: $formattedDate
                 ---
                 # $title
 
@@ -74,7 +79,7 @@ object ZettelTemplatePicker {
                 ---
                 uid: $uid
                 type: moc
-                date: ${System.currentTimeMillis()}
+                date: $formattedDate
                 ---
                 # MOC: $title
 
@@ -84,6 +89,124 @@ object ZettelTemplatePicker {
                 ## Core Topics
                 - [[Atomic Note 1]]
                 - [[Atomic Note 2]]
+                """.trimIndent()
+            }
+
+            NoteType.DIARY -> {
+                """
+                ---
+                uid: $uid
+                type: diary
+                date: $formattedDate
+                tags: [diary, journal]
+                ---
+                # Diary: $title
+
+                ## Mood & Energy
+                - **Mood**: 😊 Great / 😐 Neutral / 😔 Tired
+                - **Energy Level**: ⚡⚡⚡⚡ (4/5)
+
+                ## Highlights of the Day
+                - What went well today?
+                - Key accomplishments and memorable moments.
+
+                ## Daily Reflection
+                - What am I grateful for today?
+                - What did I learn or want to improve tomorrow?
+                """.trimIndent()
+            }
+
+            NoteType.DAILY -> {
+                """
+                ---
+                uid: $uid
+                type: daily
+                date: $formattedDate
+                tags: [daily, planner]
+                ---
+                # Daily Note: $title
+
+                ## Top Priorities Today
+                - [ ] Priority Task 1
+                - [ ] Priority Task 2
+                - [ ] Priority Task 3
+
+                ## Schedule & Meetings
+                - 09:00 AM - Morning Standup
+                - 02:00 PM - Focus Time
+
+                ## Quick Log
+                - Note down thoughts, links, and ideas during the day.
+                """.trimIndent()
+            }
+
+            NoteType.REPORT -> {
+                """
+                ---
+                uid: $uid
+                type: report
+                date: $formattedDate
+                author: ${author ?: "Author"}
+                tags: [report, meeting]
+                ---
+                # Work Report: $title
+
+                ## Executive Summary
+                High-level overview of the meeting, project status, or research findings.
+
+                ## Discussion Points & Notes
+                - **Topic 1**: Key observations and data points.
+                - **Topic 2**: Decisions made during discussion.
+
+                ## Action Items & Next Steps
+                - [ ] @assignee: Action item 1 (Due: YYYY-MM-DD)
+                - [ ] @assignee: Action item 2
+                """.trimIndent()
+            }
+
+            NoteType.TODO -> {
+                """
+                ---
+                uid: $uid
+                type: todo
+                date: $formattedDate
+                tags: [todo, tasks]
+                ---
+                # Todo List: $title
+
+                ## High Priority
+                - [ ] Important task 1
+                - [ ] Important task 2
+
+                ## Regular Tasks
+                - [ ] Standard task 1
+                - [ ] Standard task 2
+
+                ## Completed
+                - [x] Initial setup completed
+                """.trimIndent()
+            }
+
+            NoteType.FLASHCARD -> {
+                """
+                ---
+                uid: $uid
+                type: flashcard
+                date: $formattedDate
+                tags: [flashcard, vocabulary]
+                ---
+                # Flashcards: $title
+
+                ## Vocabulary List
+                - Serendipity (/ˌser.ənˈdɪp.ə.ti/): Finding valuable things by chance (e.g. Finding the key was pure serendipity)
+                - Ephemeral (/ɪˈfem.ər.əl/): Lasting for a very short time
+                - Ubiquitous (/juːˈbɪk.wɪ.təs/): Present or appearing everywhere
+
+                ## Terminology Table
+                | Term | Definition | Example |
+                | --- | --- | --- |
+                | Algorithm | Step-by-step problem solving rule | Sorting algorithm |
+                | Database | Organized collection of data | SQLite database |
                 """.trimIndent()
             }
         }
