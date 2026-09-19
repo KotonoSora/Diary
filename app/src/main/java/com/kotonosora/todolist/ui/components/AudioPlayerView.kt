@@ -51,9 +51,9 @@ import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.kotonosora.todolist.common.AppConstants
 import kotlinx.coroutines.delay
 import java.io.File
-import java.util.Locale
 
 @OptIn(UnstableApi::class)
 @Composable
@@ -305,5 +305,5 @@ private fun formatTime(millis: Long): String {
     val totalSeconds = (millis / 1000).coerceAtLeast(0)
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
+    return String.format(AppConstants.APP_LOCALE, "%02d:%02d", minutes, seconds)
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
@@ -41,7 +42,8 @@ fun FileActionsBottomSheet(
     onOpenNote: () -> Unit,
     onRenameNote: () -> Unit,
     onShareNote: () -> Unit,
-    onDeleteNote: () -> Unit
+    onDeleteNote: () -> Unit,
+    onMoveNote: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState()
 
@@ -58,7 +60,8 @@ fun FileActionsBottomSheet(
             onOpenNote = onOpenNote,
             onRenameNote = onRenameNote,
             onShareNote = onShareNote,
-            onDeleteNote = onDeleteNote
+            onDeleteNote = onDeleteNote,
+            onMoveNote = onMoveNote
         )
     }
 }
@@ -71,7 +74,8 @@ fun FileActionsSheetContent(
     onOpenNote: () -> Unit = {},
     onRenameNote: () -> Unit = {},
     onShareNote: () -> Unit = {},
-    onDeleteNote: () -> Unit = {}
+    onDeleteNote: () -> Unit = {},
+    onMoveNote: (() -> Unit)? = null
 ) {
     val compactShape = RoundedCornerShape(6.dp)
 
@@ -167,6 +171,40 @@ fun FileActionsSheetContent(
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Bold
                     )
+                }
+            }
+
+            // Move
+            if (onMoveNote != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+                    shape = compactShape,
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.35f
+                        )
+                    ),
+                    onClick = { onDismiss(); onMoveNote() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.DriveFileMove,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            "Move File",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

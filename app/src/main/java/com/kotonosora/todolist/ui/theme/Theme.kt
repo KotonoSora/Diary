@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.theme
 
+import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -8,35 +9,55 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DiaryPurple,
-    secondary = DiaryBlue,
-    tertiary = DiaryTeal,
+    primary = SagePrimaryDark,
+    onPrimary = SageOnPrimaryDark,
+    primaryContainer = SagePrimaryContainerDark,
+    onPrimaryContainer = SageOnPrimaryContainerDark,
+    secondary = CoralSecondaryDark,
+    onSecondary = CoralOnSecondaryDark,
+    secondaryContainer = CoralSecondaryContainerDark,
+    onSecondaryContainer = CoralOnSecondaryContainerDark,
+    tertiary = SlateTertiaryDark,
+    onTertiary = SlateOnTertiaryDark,
+    tertiaryContainer = SlateTertiaryContainerDark,
+    onTertiaryContainer = SlateOnTertiaryContainerDark,
     background = DarkDiaryBg,
+    onBackground = DarkOnBackground,
     surface = DarkDiarySurface,
+    onSurface = DarkOnSurface,
     surfaceVariant = DarkDiaryVariant,
-    onPrimary = Color(0xFF11111B),
-    onSecondary = Color(0xFF11111B),
-    onBackground = Color(0xFFCDD6F4),
-    onSurface = Color(0xFFCDD6F4),
-    onSurfaceVariant = Color(0xFFA6ADC8),
-    outline = DarkDiaryBorder
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF673AB7),
-    secondary = Color(0xFF009688),
-    tertiary = Color(0xFF3F51B5),
+    primary = SagePrimaryLight,
+    onPrimary = SageOnPrimaryLight,
+    primaryContainer = SagePrimaryContainerLight,
+    onPrimaryContainer = SageOnPrimaryContainerLight,
+    secondary = CoralSecondaryLight,
+    onSecondary = CoralOnSecondaryLight,
+    secondaryContainer = CoralSecondaryContainerLight,
+    onSecondaryContainer = CoralOnSecondaryContainerLight,
+    tertiary = SlateTertiaryLight,
+    onTertiary = SlateOnTertiaryLight,
+    tertiaryContainer = SlateTertiaryContainerLight,
+    onTertiaryContainer = SlateOnTertiaryContainerLight,
     background = LightBackground,
+    onBackground = LightOnBackground,
     surface = LightSurface,
+    onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
-    onPrimary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    onSurfaceVariant = Color(0xFF49454F)
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightOutline,
+    outlineVariant = LightOutlineVariant
 )
 
 @Composable
@@ -46,6 +67,20 @@ fun TodoListTheme(
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
+
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window
+            if (window != null) {
+                WindowCompat.getInsetsController(window, view).apply {
+                    isAppearanceLightStatusBars = !darkTheme
+                    isAppearanceLightNavigationBars = !darkTheme
+                }
+            }
+        }
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)

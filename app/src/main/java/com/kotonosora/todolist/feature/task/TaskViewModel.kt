@@ -11,9 +11,11 @@ import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.domain.usecase.TaskUseCases
 import com.kotonosora.todolist.notification.AppReminderWorker
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -35,6 +37,9 @@ class TaskViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     /** Filtered list of tasks based on prefix search using C++ native helper. */
     val tasks: StateFlow<List<TaskItem>> = combine(allTasks, _searchQuery) { tasks, query ->
         if (query.isBlank()) {
@@ -52,6 +57,17 @@ class TaskViewModel(
 
     fun saveCustomFolderUri(uriStr: String?) = viewModelScope.launch {
         userPreferencesRepository.saveCustomStorageFolderUri(uriStr)
+    }
+
+    fun syncTasks() = viewModelScope.launch {
+        _isLoading.value = true
+        val startTime = System.currentTimeMillis()
+        useCases.syncTasks?.invoke()
+        val elapsedTime = System.currentTimeMillis() - startTime
+        if (elapsedTime < 600) {
+            delay(600 - elapsedTime)
+        }
+        _isLoading.value = false
     }
 
     fun addTask(task: TaskItem) = viewModelScope.launch {

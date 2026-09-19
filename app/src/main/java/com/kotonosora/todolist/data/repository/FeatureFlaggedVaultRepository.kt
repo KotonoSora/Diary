@@ -47,6 +47,10 @@ class FeatureFlaggedVaultRepository(
         activeRepository.syncVaultFilesToDb(overrideUri)
     }
 
+    override suspend fun createFolder(folderPath: String, overrideUri: Uri?): Boolean {
+        return activeRepository.createFolder(folderPath, overrideUri)
+    }
+
     override suspend fun saveNote(note: NoteItem, overrideUri: Uri?): Boolean {
         return activeRepository.saveNote(note, overrideUri)
     }
@@ -59,8 +63,28 @@ class FeatureFlaggedVaultRepository(
         return activeRepository.renameNote(oldNoteId, newTitle, overrideUri)
     }
 
+    override suspend fun moveNote(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri?
+    ): Boolean {
+        return activeRepository.moveNote(oldRelativePath, destFolderPath, overrideUri)
+    }
+
+    override suspend fun moveFolder(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri?
+    ): Boolean {
+        return activeRepository.moveFolder(oldRelativePath, destFolderPath, overrideUri)
+    }
+
     override suspend fun deleteNote(relativePath: String, overrideUri: Uri?): Boolean {
         return activeRepository.deleteNote(relativePath, overrideUri)
+    }
+
+    override suspend fun deleteFolder(folderPath: String, overrideUri: Uri?): Boolean {
+        return activeRepository.deleteFolder(folderPath, overrideUri)
     }
 
     override suspend fun searchNotes(query: String): Flow<List<NoteItem>> {

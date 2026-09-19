@@ -4,10 +4,10 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
+import com.kotonosora.todolist.common.AppConstants
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 sealed class MediaOutputLocation {
     data class LocalFile(val file: File) : MediaOutputLocation()
@@ -23,7 +23,7 @@ class MediaFileManager(
 ) {
 
     private fun generateTimestamp(): String {
-        return SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        return SimpleDateFormat("yyyyMMdd_HHmmss", AppConstants.APP_LOCALE).format(Date())
     }
 
     fun createPhotoOutputLocation(customFolderUriStr: String?): MediaOutputLocation {

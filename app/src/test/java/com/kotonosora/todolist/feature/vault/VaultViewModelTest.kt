@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.vault
 
+import android.net.Uri
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.domain.repository.VaultRepository
@@ -64,5 +65,28 @@ class VaultViewModelTest {
         assertTrue(createdPath.startsWith("Projects/"))
         assertTrue(createdPath.endsWith("-Roadmap.md"))
         coVerify { vaultRepository.saveNote(any()) }
+    }
+
+    @Test
+    fun `loadVault with custom uri persists uri for subsequent reloads`() = runTest {
+        val customUri = mockk<Uri>()
+        viewModel.loadVault(customUri)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { vaultRepository.syncVaultFilesToDb(customUri) }
+
+        viewModel.loadVault()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify(exactly = 2) { vaultRepository.syncVaultFilesToDb(customUri) }
+    }
+
+    @Test
+    fun `deleteFolder calls repository deleteFolder and reloads vault`() = runTest {
+        coEvery { vaultRepository.deleteFolder("Projects", any()) } returns true
+        viewModel.deleteFolder("Projects")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { vaultRepository.deleteFolder("Projects", any()) }
     }
 }

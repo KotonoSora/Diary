@@ -1,12 +1,12 @@
 package com.kotonosora.todolist.feature.editor
 
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.ActionStamp
 import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.ZettelUidGenerator
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 object ZettelTemplatePicker {
 
@@ -19,7 +19,8 @@ object ZettelTemplatePicker {
         actions: List<ActionStamp> = emptyList()
     ): String {
         val uid = ZettelUidGenerator.generateUid()
-        val formattedDate = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US).format(Date())
+        val formattedDate =
+            SimpleDateFormat("yyyy-MM-dd HH:mm", AppConstants.APP_LOCALE).format(Date())
 
         val emotionYaml = emotion?.let { "emotion: ${it.name}\n" } ?: ""
         val actionsYaml =

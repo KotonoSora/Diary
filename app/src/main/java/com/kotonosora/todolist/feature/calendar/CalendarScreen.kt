@@ -63,6 +63,7 @@ import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.WeekDay
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.ui.theme.TodoListTheme
 import kotlinx.coroutines.launch
@@ -74,7 +75,6 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Date
-import java.util.Locale
 
 enum class CalendarViewMode {
     MONTH,
@@ -165,7 +165,7 @@ fun CalendarScreenContent(
     }
 
     val selectedDateText = remember(selectedDateMillis) {
-        val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
+        val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", AppConstants.APP_LOCALE)
         sdf.format(Date(selectedDateMillis))
     }
 
@@ -202,7 +202,7 @@ fun CalendarScreenContent(
                         text = "${
                             currentMonth.month.getDisplayName(
                                 TextStyle.FULL,
-                                Locale.getDefault()
+                                AppConstants.APP_LOCALE
                             )
                         } $year",
                         style = MaterialTheme.typography.titleMedium,
@@ -402,7 +402,7 @@ private fun DaysOfWeekHeader(firstDayOfWeek: DayOfWeek) {
         for (dayOfWeek in daysOfWeek) {
             Text(
                 modifier = Modifier.weight(1f),
-                text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                text = dayOfWeek.getDisplayName(TextStyle.SHORT, AppConstants.APP_LOCALE),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

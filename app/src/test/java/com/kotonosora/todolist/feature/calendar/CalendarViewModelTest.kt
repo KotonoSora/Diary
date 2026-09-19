@@ -1,16 +1,24 @@
 package com.kotonosora.todolist.feature.calendar
 
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.kotonosora.todolist.domain.model.TodoItem
-import com.kotonosora.todolist.domain.repository.TodoRepository
-import com.kotonosora.todolist.domain.usecase.*
-import io.mockk.*
+import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.repository.TaskRepository
+import com.kotonosora.todolist.domain.usecase.AddTaskUseCase
+import com.kotonosora.todolist.domain.usecase.DeleteTaskUseCase
+import com.kotonosora.todolist.domain.usecase.GetTasksByDateUseCase
+import com.kotonosora.todolist.domain.usecase.GetTasksUseCase
+import com.kotonosora.todolist.domain.usecase.TaskUseCases
+import com.kotonosora.todolist.domain.usecase.UpdateTaskUseCase
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.*
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -22,22 +30,22 @@ class CalendarViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
 
-    private lateinit var repository: TodoRepository
-    private lateinit var useCases: TodoUseCases
+    private lateinit var repository: TaskRepository
+    private lateinit var useCases: TaskUseCases
     private lateinit var viewModel: CalendarViewModel
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         repository = mockk()
-        useCases = TodoUseCases(
-            getTodos = GetTodosUseCase(repository),
-            getTodosByDate = GetTodosByDateUseCase(repository),
-            addTodo = AddTodoUseCase(repository),
-            updateTodo = UpdateTodoUseCase(repository),
-            deleteTodo = DeleteTodoUseCase(repository)
+        useCases = TaskUseCases(
+            getTasks = GetTasksUseCase(repository),
+            getTasksByDate = GetTasksByDateUseCase(repository),
+            addTask = AddTaskUseCase(repository),
+            updateTask = UpdateTaskUseCase(repository),
+            deleteTask = DeleteTaskUseCase(repository)
         )
-        every { repository.getAllTodos() } returns flowOf(emptyList())
+        every { repository.getAllTasks() } returns flowOf(emptyList())
         viewModel = CalendarViewModel(useCases)
     }
 
@@ -90,10 +98,10 @@ class CalendarViewModelTest {
             set(2026, Calendar.MAY, 5, 12, 0, 0)
             set(Calendar.MILLISECOND, 0)
         }
-        val todoDueToday = TodoItem("1", "Task today", null, cal.timeInMillis, null, false)
-        val todoDueTomorrow = TodoItem("2", "Task tomorrow", null, cal.timeInMillis + 86_400_000L, null, false)
+        val taskDueToday = TaskItem("1", "Task today", null, cal.timeInMillis, null, false)
+        val taskDueTomorrow = TaskItem("2", "Task tomorrow", null, cal.timeInMillis + 86_400_000L, null, false)
 
-        every { repository.getAllTodos() } returns flowOf(listOf(todoDueToday, todoDueTomorrow))
+        every { repository.getAllTasks() } returns flowOf(listOf(taskDueToday, taskDueTomorrow))
         viewModel = CalendarViewModel(useCases)
 
         // Subscribe so WhileSubscribed starts collecting the upstream combine
@@ -113,4 +121,3 @@ class CalendarViewModelTest {
         assertEquals("Task today", todosForDate[0].title)
     }
 }
-

@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.data.database.TaskDao
 import com.kotonosora.todolist.data.database.TaskEntity
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
@@ -11,7 +12,6 @@ import com.kotonosora.todolist.domain.model.TaskItem
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.Locale
 
 /**
  * Bidirectional sync between .md and .txt files in Documents (or custom folder) and the SQLite database.
@@ -39,10 +39,12 @@ class FileSyncManager(
 
     /**
      * Reads all .md and .txt files from storage directory (or custom folder) and upserts any
-     * IDs not currently in the database.
+     * IDs not currently in the database, purging DB tasks whose files no longer exist.
      */
     suspend fun syncFilesToDb(customFolderUri: Uri? = null) {
         val resolvedUri = resolveCustomFolderUri(customFolderUri)
+        val validTaskIds = mutableSetOf<String>()
+
         if (resolvedUri != null) {
             try {
                 val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
@@ -55,6 +57,7 @@ class FileSyncManager(
                             )
                         ) {
                             val todoId = name.substringBeforeLast(".")
+                            validTaskIds.add(todoId)
                             val extension = name.substringAfterLast(".", "md")
                             val existing = taskDao.getTaskById(todoId)
                             if (existing == null) {
@@ -67,6 +70,14 @@ class FileSyncManager(
                                 }
                                 taskDao.insertTask(parsed)
                             }
+                        }
+                    }
+
+                    // Purge orphan DB tasks
+                    val allTasks = taskDao.getAllTasksOnce()
+                    for (task in allTasks) {
+                        if (task.id !in validTaskIds) {
+                            taskDao.deleteTaskById(task.id)
                         }
                     }
                     return
@@ -82,6 +93,7 @@ class FileSyncManager(
 
         for (file in textFiles) {
             val todoId = file.nameWithoutExtension
+            validTaskIds.add(todoId)
             val existing = taskDao.getTaskById(todoId)
             if (existing == null) {
                 val parsed =
@@ -90,6 +102,13 @@ class FileSyncManager(
                         todoId
                     )
                 taskDao.insertTask(parsed)
+            }
+        }
+
+        val allTasks = taskDao.getAllTasksOnce()
+        for (task in allTasks) {
+            if (task.id !in validTaskIds) {
+                taskDao.deleteTaskById(task.id)
             }
         }
     }
@@ -238,7 +257,7 @@ class FileSyncManager(
 
     private fun parseDateString(dateStr: String): Long? {
         return try {
-            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", AppConstants.APP_LOCALE)
             sdf.parse(dateStr)?.time
         } catch (e: Exception) {
             null

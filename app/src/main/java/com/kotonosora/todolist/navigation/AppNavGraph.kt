@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,7 +24,6 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -176,287 +176,288 @@ fun AppNavGraph() {
             )
         }
     ) {
-        Scaffold { innerPadding ->
-            NavHost(
-                navController = navController,
-                startDestination = NavRoute.Splash.route,
-                modifier = Modifier.padding(innerPadding)
-            ) {
-                composable(NavRoute.Splash.route) {
-                    if (LocalInspectionMode.current) {
-                        SplashScreenContent()
-                    } else {
-                        SplashScreen(
-                            onSplashFinished = {
-                                navController.navigate(NavRoute.VaultWorkspace.route) {
-                                    popUpTo(NavRoute.Splash.route) { inclusive = true }
-                                }
+        NavHost(
+            navController = navController,
+            startDestination = NavRoute.Splash.route,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            composable(NavRoute.Splash.route) {
+                if (LocalInspectionMode.current) {
+                    SplashScreenContent()
+                } else {
+                    SplashScreen(
+                        onSplashFinished = {
+                            navController.navigate(NavRoute.VaultWorkspace.route) {
+                                popUpTo(NavRoute.Splash.route) { inclusive = true }
                             }
-                        )
-                    }
-                }
-
-                composable(NavRoute.VaultWorkspace.route) {
-                    if (LocalInspectionMode.current) {
-                        VaultWorkspaceContent(
-                            uiState = VaultUiState(),
-                            onNoteSelect = {},
-                            onOpenGraph = {},
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
-                        )
-                    } else {
-                        val vaultViewModel = appViewModel { container ->
-                            VaultViewModel(container.vaultRepository)
                         }
-                        VaultWorkspaceScreen(
-                            viewModel = vaultViewModel,
-                            onNoteSelect = { noteId ->
-                                navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
-                            },
-                            onOpenGraph = {
-                                navController.navigate(NavRoute.KnowledgeGraph.route)
-                            },
-                            onOpenDrawer = {
-                                scope.launch { drawerState.open() }
-                            }
-                        )
-                    }
-                }
-
-                composable(NavRoute.KnowledgeGraph.route) {
-                    if (LocalInspectionMode.current) {
-                        KnowledgeGraphContent(
-                            uiState = GraphUiState(),
-                            onBack = {},
-                            onNoteClick = {}
-                        )
-                    } else {
-                        val graphViewModel = appViewModel { container ->
-                            GraphViewModel(container.vaultRepository)
-                        }
-                        KnowledgeGraphScreen(
-                            viewModel = graphViewModel,
-                            onBack = { navController.popBackStack() },
-                            onNoteClick = { noteId ->
-                                navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
-                            }
-                        )
-                    }
-                }
-
-                composable(
-                    route = NavRoute.MarkdownEditor.route,
-                    arguments = listOf(navArgument("noteId") {
-                        type = NavType.StringType
-                    })
-                ) { backStackEntry ->
-                    if (LocalInspectionMode.current) {
-                        EditorContent(
-                            uiState = EditorUiState(
-                                note = NoteItem(
-                                    "preview.md",
-                                    "Preview Note",
-                                    "",
-                                    "Preview content..."
-                                )
-                            ),
-                            onBack = {},
-                            onSave = {}
-                        )
-                    } else {
-                        val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
-                        val noteId =
-                            URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
-                        val editorViewModel = appViewModel { container ->
-                            EditorViewModel(container.vaultRepository)
-                        }
-                        EditorScreen(
-                            noteId = noteId,
-                            viewModel = editorViewModel,
-                            onBack = { navController.popBackStack() },
-                            onNavigateToNote = { targetNoteId ->
-                                navController.navigate(
-                                    NavRoute.MarkdownEditor.createRoute(
-                                        targetNoteId
-                                    )
-                                )
-                            },
-                            onLearnFlashcards = {
-                                navController.navigate(NavRoute.Flashcards.createRoute(noteId))
-                            }
-                        )
-                    }
-                }
-
-                composable(
-                    route = NavRoute.Flashcards.route,
-                    arguments = listOf(
-                        navArgument("noteId") { type = NavType.StringType },
-                        navArgument("isDemo") { type = NavType.BoolType; defaultValue = false }
                     )
-                ) { backStackEntry ->
+                }
+            }
+
+            composable(NavRoute.VaultWorkspace.route) {
+                if (LocalInspectionMode.current) {
+                    VaultWorkspaceContent(
+                        uiState = VaultUiState(),
+                        onNoteSelect = {},
+                        onOpenGraph = {},
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                } else {
+                    val vaultViewModel = appViewModel { container ->
+                        VaultViewModel(
+                            container.vaultRepository,
+                            container.userPreferencesRepository
+                        )
+                    }
+                    VaultWorkspaceScreen(
+                        viewModel = vaultViewModel,
+                        onNoteSelect = { noteId ->
+                            navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                        },
+                        onOpenGraph = {
+                            navController.navigate(NavRoute.KnowledgeGraph.route)
+                        },
+                        onOpenDrawer = {
+                            scope.launch { drawerState.open() }
+                        }
+                    )
+                }
+            }
+
+            composable(NavRoute.KnowledgeGraph.route) {
+                if (LocalInspectionMode.current) {
+                    KnowledgeGraphContent(
+                        uiState = GraphUiState(),
+                        onBack = {},
+                        onNoteClick = {}
+                    )
+                } else {
+                    val graphViewModel = appViewModel { container ->
+                        GraphViewModel(container.vaultRepository)
+                    }
+                    KnowledgeGraphScreen(
+                        viewModel = graphViewModel,
+                        onBack = { navController.popBackStack() },
+                        onNoteClick = { noteId ->
+                            navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                        }
+                    )
+                }
+            }
+
+            composable(
+                route = NavRoute.MarkdownEditor.route,
+                arguments = listOf(navArgument("noteId") {
+                    type = NavType.StringType
+                })
+            ) { backStackEntry ->
+                if (LocalInspectionMode.current) {
+                    EditorContent(
+                        uiState = EditorUiState(
+                            note = NoteItem(
+                                "preview.md",
+                                "Preview Note",
+                                "",
+                                "Preview content..."
+                            )
+                        ),
+                        onBack = {},
+                        onSave = {}
+                    )
+                } else {
                     val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
-                    val isDemo = backStackEntry.arguments?.getBoolean("isDemo") ?: false
-                    val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
-
-                    val viewModel = appViewModel { container ->
-                        FlashcardViewModel(container.vaultRepository)
+                    val noteId =
+                        URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
+                    val editorViewModel = appViewModel { container ->
+                        EditorViewModel(container.vaultRepository)
                     }
-                    LaunchedEffect(noteId) {
-                        viewModel.loadNote(noteId, isDemo = isDemo)
-                    }
-
-                    FlashcardScreen(
+                    EditorScreen(
                         noteId = noteId,
-                        onNavigateBack = { navController.popBackStack() },
-                        viewModel = viewModel
-                    )
-                }
-
-                composable(NavRoute.FlashcardDecks.route) {
-                    FlashcardDeckSelectionScreen(
-                        onOpenDrawer = { scope.launch { drawerState.open() } },
-                        onDeckSelected = { deckId ->
+                        viewModel = editorViewModel,
+                        onBack = { navController.popBackStack() },
+                        onNavigateToNote = { targetNoteId ->
                             navController.navigate(
-                                NavRoute.Flashcards.createRoute(
-                                    noteId = deckId,
-                                    isDemo = true
+                                NavRoute.MarkdownEditor.createRoute(
+                                    targetNoteId
                                 )
                             )
+                        },
+                        onLearnFlashcards = {
+                            navController.navigate(NavRoute.Flashcards.createRoute(noteId))
                         }
                     )
                 }
+            }
 
-                composable(NavRoute.TodoList.route) {
-                    if (LocalInspectionMode.current) {
-                        TaskListContent(
-                            tasks = emptyList(),
-                            searchQuery = "",
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
-                        )
-                    } else {
-                        val taskViewModel = appViewModel { container ->
-                            TaskViewModel(
-                                container.taskUseCases,
-                                container.workManager,
-                                container.userPreferencesRepository
+            composable(
+                route = NavRoute.Flashcards.route,
+                arguments = listOf(
+                    navArgument("noteId") { type = NavType.StringType },
+                    navArgument("isDemo") { type = NavType.BoolType; defaultValue = false }
+                )
+            ) { backStackEntry ->
+                val encodedNoteId = backStackEntry.arguments?.getString("noteId") ?: ""
+                val isDemo = backStackEntry.arguments?.getBoolean("isDemo") ?: false
+                val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
+
+                val viewModel = appViewModel { container ->
+                    FlashcardViewModel(container.vaultRepository)
+                }
+                LaunchedEffect(noteId) {
+                    viewModel.loadNote(noteId, isDemo = isDemo)
+                }
+
+                FlashcardScreen(
+                    noteId = noteId,
+                    onNavigateBack = { navController.popBackStack() },
+                    viewModel = viewModel
+                )
+            }
+
+            composable(NavRoute.FlashcardDecks.route) {
+                FlashcardDeckSelectionScreen(
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onDeckSelected = { deckId ->
+                        navController.navigate(
+                            NavRoute.Flashcards.createRoute(
+                                noteId = deckId,
+                                isDemo = true
                             )
-                        }
-                        TaskListScreen(
-                            navController = navController,
-                            viewModel = taskViewModel,
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
                         )
                     }
-                }
+                )
+            }
 
-                composable(
-                    route = NavRoute.AddEditTodo.route,
-                    arguments = listOf(navArgument("todoId") {
-                        type = NavType.StringType
-                        defaultValue = "new"
-                    })
-                ) { backStackEntry ->
-                    if (LocalInspectionMode.current) {
-                        AddEditTaskContent(
-                            existingTask = null,
-                            customFolderUri = null,
-                            onSaveTask = {},
-                            onBack = {}
-                        )
-                    } else {
-                        val todoId = backStackEntry.arguments?.getString("todoId")
-                        val taskViewModel = appViewModel { container ->
-                            TaskViewModel(
-                                container.taskUseCases,
-                                container.workManager,
-                                container.userPreferencesRepository
-                            )
-                        }
-                        AddEditTaskScreen(
-                            navController = navController,
-                            taskId = todoId,
-                            viewModel = taskViewModel
+            composable(NavRoute.TodoList.route) {
+                if (LocalInspectionMode.current) {
+                    TaskListContent(
+                        tasks = emptyList(),
+                        searchQuery = "",
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                } else {
+                    val taskViewModel = appViewModel { container ->
+                        TaskViewModel(
+                            container.taskUseCases,
+                            container.workManager,
+                            container.userPreferencesRepository
                         )
                     }
-                }
-
-                composable(NavRoute.Calendar.route) {
-                    if (LocalInspectionMode.current) {
-                        CalendarScreenContent(
-                            year = 2025,
-                            month = 1,
-                            selectedDateMillis = System.currentTimeMillis(),
-                            allTodos = emptyList(),
-                            todosForDate = emptyList(),
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
-                        )
-                    } else {
-                        val calendarViewModel = appViewModel { container ->
-                            CalendarViewModel(container.taskUseCases, container.vaultRepository)
-                        }
-                        CalendarScreen(
-                            viewModel = calendarViewModel,
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
-                        )
-                    }
-                }
-
-                composable(NavRoute.Media.route) {
-                    val context = LocalContext.current
-                    if (LocalInspectionMode.current) {
-                        MediaScreenContent(
-                            capturedPhotos = emptyList(),
-                            recordedAudios = emptyList(),
-                            isRecording = false,
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
-                        )
-                    } else {
-                        val mediaViewModel = appViewModel { container ->
-                            MediaViewModel(
-                                context = context.applicationContext,
-                                mediaDao = container.mediaDao,
-                                userPreferencesRepository = container.userPreferencesRepository,
-                                mediaFileManager = container.mediaFileManager
-                            )
-                        }
-                        MediaScreen(
-                            viewModel = mediaViewModel,
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
-                        )
-                    }
-                }
-
-                composable(NavRoute.Settings.route) {
-                    if (LocalInspectionMode.current) {
-                        SettingsScreenContent(
-                            themeMode = "system",
-                            customStorageUri = null,
-                            defaultNoteFormat = "markdown",
-                            onNavigateToGuide = {},
-                            onOpenDrawer = { scope.launch { drawerState.open() } }
-                        )
-                    } else {
-                        val settingsViewModel = appViewModel { container ->
-                            SettingsViewModel(container.userPreferencesRepository)
-                        }
-                        SettingsScreen(
-                            viewModel = settingsViewModel,
-                            onNavigateToGuide = {
-                                navController.navigate(NavRoute.OnboardingGuide.route)
-                            },
-                            onOpenDrawer = {
-                                scope.launch { drawerState.open() }
-                            }
-                        )
-                    }
-                }
-
-                composable(NavRoute.OnboardingGuide.route) {
-                    OnboardingGuideScreen(
-                        onBack = { navController.popBackStack() }
+                    TaskListScreen(
+                        navController = navController,
+                        viewModel = taskViewModel,
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
                     )
                 }
+            }
+
+            composable(
+                route = NavRoute.AddEditTodo.route,
+                arguments = listOf(navArgument("todoId") {
+                    type = NavType.StringType
+                    defaultValue = "new"
+                })
+            ) { backStackEntry ->
+                if (LocalInspectionMode.current) {
+                    AddEditTaskContent(
+                        existingTask = null,
+                        customFolderUri = null,
+                        onSaveTask = {},
+                        onBack = {}
+                    )
+                } else {
+                    val todoId = backStackEntry.arguments?.getString("todoId")
+                    val taskViewModel = appViewModel { container ->
+                        TaskViewModel(
+                            container.taskUseCases,
+                            container.workManager,
+                            container.userPreferencesRepository
+                        )
+                    }
+                    AddEditTaskScreen(
+                        navController = navController,
+                        taskId = todoId,
+                        viewModel = taskViewModel
+                    )
+                }
+            }
+
+            composable(NavRoute.Calendar.route) {
+                if (LocalInspectionMode.current) {
+                    CalendarScreenContent(
+                        year = 2025,
+                        month = 1,
+                        selectedDateMillis = System.currentTimeMillis(),
+                        allTodos = emptyList(),
+                        todosForDate = emptyList(),
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                } else {
+                    val calendarViewModel = appViewModel { container ->
+                        CalendarViewModel(container.taskUseCases, container.vaultRepository)
+                    }
+                    CalendarScreen(
+                        viewModel = calendarViewModel,
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                }
+            }
+
+            composable(NavRoute.Media.route) {
+                val context = LocalContext.current
+                if (LocalInspectionMode.current) {
+                    MediaScreenContent(
+                        capturedPhotos = emptyList(),
+                        recordedAudios = emptyList(),
+                        isRecording = false,
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                } else {
+                    val mediaViewModel = appViewModel { container ->
+                        MediaViewModel(
+                            context = context.applicationContext,
+                            mediaDao = container.mediaDao,
+                            userPreferencesRepository = container.userPreferencesRepository,
+                            mediaFileManager = container.mediaFileManager
+                        )
+                    }
+                    MediaScreen(
+                        viewModel = mediaViewModel,
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                }
+            }
+
+            composable(NavRoute.Settings.route) {
+                if (LocalInspectionMode.current) {
+                    SettingsScreenContent(
+                        themeMode = "system",
+                        customStorageUri = null,
+                        defaultNoteFormat = "markdown",
+                        onNavigateToGuide = {},
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                } else {
+                    val settingsViewModel = appViewModel { container ->
+                        SettingsViewModel(container.userPreferencesRepository)
+                    }
+                    SettingsScreen(
+                        viewModel = settingsViewModel,
+                        onNavigateToGuide = {
+                            navController.navigate(NavRoute.OnboardingGuide.route)
+                        },
+                        onOpenDrawer = {
+                            scope.launch { drawerState.open() }
+                        }
+                    )
+                }
+            }
+
+            composable(NavRoute.OnboardingGuide.route) {
+                OnboardingGuideScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }
@@ -476,6 +477,7 @@ fun AppNavDrawerSheet(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(12.dp)
         ) {
             drawerNavItems.forEach { item ->

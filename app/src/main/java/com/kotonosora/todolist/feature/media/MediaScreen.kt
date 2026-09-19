@@ -56,6 +56,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.ui.components.AudioPlayerView
 import com.kotonosora.todolist.ui.components.AudioWaveformBars
 import com.kotonosora.todolist.ui.components.CameraCaptureView
@@ -64,7 +65,6 @@ import com.kotonosora.todolist.ui.theme.TodoListTheme
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -369,7 +369,7 @@ fun MediaScreenContent(
 private fun formatRecordingTimer(seconds: Int): String {
     val mins = seconds / 60
     val secs = seconds % 60
-    return String.format(Locale.getDefault(), "%02d:%02d", mins, secs)
+    return String.format(AppConstants.APP_LOCALE, "%02d:%02d", mins, secs)
 }
 
 fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
@@ -399,8 +399,8 @@ fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
 
         if (rawTime.contains("_")) {
             try {
-                val inputFormat = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault())
-                val outputFormat = SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.getDefault())
+                val inputFormat = SimpleDateFormat("yyyyMMdd_HHmmss", AppConstants.APP_LOCALE)
+                val outputFormat = SimpleDateFormat("MMM d, yyyy, h:mm a", AppConstants.APP_LOCALE)
                 val date = inputFormat.parse(rawTime)
                 if (date != null) {
                     return "$typeLabel - ${outputFormat.format(date)}"
@@ -411,7 +411,8 @@ fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
         } else {
             rawTime.toLongOrNull()?.let { millis ->
                 try {
-                    val outputFormat = SimpleDateFormat("MMM d, yyyy, h:mm a", Locale.getDefault())
+                    val outputFormat =
+                        SimpleDateFormat("MMM d, yyyy, h:mm a", AppConstants.APP_LOCALE)
                     return "$typeLabel - ${outputFormat.format(Date(millis))}"
                 } catch (e: Exception) {
                     // ignore

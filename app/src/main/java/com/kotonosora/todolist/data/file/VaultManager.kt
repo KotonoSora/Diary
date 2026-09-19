@@ -301,6 +301,7 @@ class VaultManager(
      */
     suspend fun deleteNote(relativePath: String, overrideUri: Uri? = null): Boolean =
         withContext(Dispatchers.IO) {
+            var deleted = false
             val resolvedUri = resolveVaultUri(overrideUri)
 
             if (resolvedUri != null) {
@@ -308,16 +309,263 @@ class VaultManager(
                     val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
                     if (rootDocument != null) {
                         val targetFile = findDocumentByRelativePath(rootDocument, relativePath)
-                        return@withContext targetFile?.delete() ?: false
+                        if (targetFile != null && targetFile.exists()) {
+                            deleted = targetFile.delete()
+                        }
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
             }
 
-            val file = File(getDefaultStorageDir(), relativePath)
-            return@withContext if (file.exists()) file.delete() else false
+            val localFile = File(getDefaultStorageDir(), relativePath)
+            if (localFile.exists()) {
+                val localDeleted = localFile.delete()
+                deleted = deleted || localDeleted
+            }
+
+            return@withContext deleted
         }
+
+    /**
+     * Deletes a folder directory recursively.
+     */
+    suspend fun deleteFolder(folderPath: String, overrideUri: Uri? = null): Boolean =
+        withContext(Dispatchers.IO) {
+            if (folderPath.isBlank()) return@withContext false
+            var deleted = false
+
+            val resolvedUri = resolveVaultUri(overrideUri)
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    if (rootDocument != null) {
+                        val targetDir = findDocumentByRelativePath(rootDocument, folderPath)
+                        if (targetDir != null && targetDir.isDirectory) {
+                            deleted = targetDir.delete()
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            try {
+                val localDir = File(getDefaultStorageDir(), folderPath)
+                if (localDir.exists() && localDir.isDirectory) {
+                    val localDeleted = localDir.deleteRecursively()
+                    deleted = deleted || localDeleted
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            return@withContext deleted
+        }
+
+    /**
+     * Creates a folder directory in local storage or custom SAF vault.
+     */
+    suspend fun createFolder(folderPath: String, overrideUri: Uri? = null): Boolean =
+        withContext(Dispatchers.IO) {
+            val resolvedUri = resolveVaultUri(overrideUri)
+
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    if (rootDocument != null) {
+                        val created = findOrCreateDirByRelativePath(rootDocument, folderPath)
+                        return@withContext created != null
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
+            try {
+                val dir = File(getDefaultStorageDir(), folderPath)
+                return@withContext dir.mkdirs() || dir.exists()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                return@withContext false
+            }
+        }
+
+    /**
+     * Moves a file to a new destination folder.
+     */
+    suspend fun moveFile(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        val fileName = oldRelativePath.substringAfterLast("/")
+        val newRelativePath =
+            if (destFolderPath.isBlank()) fileName else "$destFolderPath/$fileName"
+        if (oldRelativePath == newRelativePath) return@withContext true
+
+        val resolvedUri = resolveVaultUri(overrideUri)
+        if (resolvedUri != null) {
+            try {
+                val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                if (rootDocument != null) {
+                    val srcFile = findDocumentByRelativePath(rootDocument, oldRelativePath)
+                    if (srcFile != null) {
+                        val destDir =
+                            if (destFolderPath.isBlank()) rootDocument else findOrCreateDirByRelativePath(
+                                rootDocument,
+                                destFolderPath
+                            )
+                        if (destDir != null) {
+                            val existingTarget = destDir.findFile(fileName)
+                            if (existingTarget != null && existingTarget.isFile) {
+                                existingTarget.delete()
+                            }
+                            val mimeType =
+                                if (fileName.endsWith(
+                                        ".txt",
+                                        ignoreCase = true
+                                    )
+                                ) "text/plain" else "text/markdown"
+                            val newDoc = destDir.createFile(mimeType, fileName)
+                            if (newDoc != null) {
+                                context.contentResolver.openInputStream(srcFile.uri)?.use { input ->
+                                    context.contentResolver.openOutputStream(newDoc.uri, "wt")
+                                        ?.use { output ->
+                                            input.copyTo(output)
+                                        }
+                                }
+                                srcFile.delete()
+                                return@withContext true
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        try {
+            val srcFile = File(getDefaultStorageDir(), oldRelativePath)
+            val destFile = File(getDefaultStorageDir(), newRelativePath)
+            if (srcFile.exists()) {
+                destFile.parentFile?.mkdirs()
+                return@withContext srcFile.renameTo(destFile)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return@withContext false
+    }
+
+    /**
+     * Moves a folder directory to a new destination folder.
+     */
+    suspend fun moveFolder(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (oldRelativePath.isBlank()) return@withContext false
+        if (destFolderPath == oldRelativePath || destFolderPath.startsWith("$oldRelativePath/")) {
+            return@withContext false
+        }
+
+        val folderName = oldRelativePath.substringAfterLast("/")
+        val newRelativePath =
+            if (destFolderPath.isBlank()) folderName else "$destFolderPath/$folderName"
+        if (oldRelativePath == newRelativePath) return@withContext true
+
+        val resolvedUri = resolveVaultUri(overrideUri)
+        if (resolvedUri != null) {
+            try {
+                val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                if (rootDocument != null) {
+                    val srcDir = findDocumentByRelativePath(rootDocument, oldRelativePath)
+                    if (srcDir != null) {
+                        val targetParent =
+                            if (destFolderPath.isBlank()) rootDocument else findOrCreateDirByRelativePath(
+                                rootDocument,
+                                destFolderPath
+                            )
+                        if (targetParent != null) {
+                            return@withContext moveDocumentDirectoryRecursively(
+                                srcDir,
+                                targetParent,
+                                folderName
+                            )
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        try {
+            val srcDir = File(getDefaultStorageDir(), oldRelativePath)
+            val destDir = File(getDefaultStorageDir(), newRelativePath)
+            if (srcDir.exists() && srcDir.isDirectory) {
+                destDir.parentFile?.mkdirs()
+                return@withContext srcDir.renameTo(destDir)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return@withContext false
+    }
+
+    private fun findOrCreateDirByRelativePath(
+        root: DocumentFile,
+        relativePath: String
+    ): DocumentFile? {
+        if (relativePath.isBlank()) return root
+        val segments = relativePath.split("/").filter { it.isNotBlank() }
+        var currentDir = root
+
+        for (segment in segments) {
+            val subDir = currentDir.findFile(segment)
+            currentDir = if (subDir != null && subDir.isDirectory) {
+                subDir
+            } else {
+                currentDir.createDirectory(segment) ?: return null
+            }
+        }
+        return currentDir
+    }
+
+    private fun moveDocumentDirectoryRecursively(
+        srcDir: DocumentFile,
+        targetParentDir: DocumentFile,
+        newFolderName: String
+    ): Boolean {
+        val existing = targetParentDir.findFile(newFolderName)
+        val destDir =
+            if (existing != null && existing.isDirectory) existing else targetParentDir.createDirectory(
+                newFolderName
+            ) ?: return false
+
+        for (file in srcDir.listFiles()) {
+            val name = file.name ?: continue
+            if (file.isDirectory) {
+                moveDocumentDirectoryRecursively(file, destDir, name)
+            } else {
+                val mimeType = file.type ?: "text/markdown"
+                val newFile = destDir.createFile(mimeType, name)
+                if (newFile != null) {
+                    context.contentResolver.openInputStream(file.uri)?.use { input ->
+                        context.contentResolver.openOutputStream(newFile.uri, "wt")?.use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            }
+            file.delete()
+        }
+        srcDir.delete()
+        return true
+    }
 
     private fun findOrCreateDocumentByRelativePath(
         root: DocumentFile,

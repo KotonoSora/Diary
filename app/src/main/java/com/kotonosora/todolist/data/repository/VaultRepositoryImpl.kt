@@ -63,10 +63,27 @@ class VaultRepositoryImpl(
 
     override suspend fun syncVaultFilesToDb(overrideUri: Uri?) = withContext(Dispatchers.IO) {
         val notesFromFiles = vaultManager.readAllNotes(overrideUri)
+        val validIds = notesFromFiles.map { it.id }.toSet()
+
+        val allDbNotes = noteDao.getAllNotesOnce()
+        for (dbNote in allDbNotes) {
+            if (dbNote.id !in validIds) {
+                noteDao.deleteNoteById(dbNote.id)
+                linkDao.deleteLinksForSource(dbNote.id)
+                tagDao.deleteTagsForNote(dbNote.id)
+                zettelMetadataDao.deleteMetadataForNote(dbNote.id)
+            }
+        }
+
         for (note in notesFromFiles) {
             indexNoteToDb(note)
         }
     }
+
+    override suspend fun createFolder(folderPath: String, overrideUri: Uri?): Boolean =
+        withContext(Dispatchers.IO) {
+            vaultManager.createFolder(folderPath, overrideUri)
+        }
 
     override suspend fun saveNote(note: NoteItem, overrideUri: Uri?): Boolean =
         withContext(Dispatchers.IO) {
@@ -143,16 +160,78 @@ class VaultRepositoryImpl(
         return@withContext false
     }
 
+    override suspend fun moveNote(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri?
+    ): Boolean = withContext(Dispatchers.IO) {
+        val fileName = oldRelativePath.substringAfterLast("/")
+        val newRelativePath =
+            if (destFolderPath.isBlank()) fileName else "$destFolderPath/$fileName"
+
+        val noteEntity = noteDao.getNoteById(oldRelativePath)
+        val movedOnDisk = vaultManager.moveFile(oldRelativePath, destFolderPath, overrideUri)
+
+        if (movedOnDisk && noteEntity != null) {
+            noteDao.deleteNoteById(oldRelativePath)
+            linkDao.deleteLinksForSource(oldRelativePath)
+            tagDao.deleteTagsForNote(oldRelativePath)
+            zettelMetadataDao.deleteMetadataForNote(oldRelativePath)
+
+            val updatedNote = entityToDomain(noteEntity).copy(
+                id = newRelativePath,
+                relativePath = destFolderPath,
+                updatedAt = System.currentTimeMillis()
+            )
+            indexNoteToDb(updatedNote)
+            return@withContext true
+        }
+        return@withContext movedOnDisk
+    }
+
+    override suspend fun moveFolder(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri?
+    ): Boolean = withContext(Dispatchers.IO) {
+        val movedOnDisk = vaultManager.moveFolder(oldRelativePath, destFolderPath, overrideUri)
+        if (movedOnDisk) {
+            syncVaultFilesToDb(overrideUri)
+        }
+        movedOnDisk
+    }
+
     override suspend fun deleteNote(relativePath: String, overrideUri: Uri?): Boolean =
         withContext(Dispatchers.IO) {
             val success = vaultManager.deleteNote(relativePath, overrideUri)
-            if (success) {
-                noteDao.deleteNoteById(relativePath)
-                linkDao.deleteLinksForSource(relativePath)
-                tagDao.deleteTagsForNote(relativePath)
-                zettelMetadataDao.deleteMetadataForNote(relativePath)
+            noteDao.deleteNoteById(relativePath)
+            linkDao.deleteLinksForSource(relativePath)
+            tagDao.deleteTagsForNote(relativePath)
+            zettelMetadataDao.deleteMetadataForNote(relativePath)
+            syncVaultFilesToDb(overrideUri)
+            return@withContext success
+        }
+
+    override suspend fun deleteFolder(folderPath: String, overrideUri: Uri?): Boolean =
+        withContext(Dispatchers.IO) {
+            if (folderPath.isBlank()) return@withContext false
+            val success = vaultManager.deleteFolder(folderPath, overrideUri)
+
+            val allDbNotes = noteDao.getAllNotesOnce()
+            for (dbNote in allDbNotes) {
+                if (dbNote.relativePath == folderPath ||
+                    dbNote.relativePath.startsWith("$folderPath/") ||
+                    dbNote.id.startsWith("$folderPath/")
+                ) {
+                    noteDao.deleteNoteById(dbNote.id)
+                    linkDao.deleteLinksForSource(dbNote.id)
+                    tagDao.deleteTagsForNote(dbNote.id)
+                    zettelMetadataDao.deleteMetadataForNote(dbNote.id)
+                }
             }
-            success
+
+            syncVaultFilesToDb(overrideUri)
+            return@withContext success
         }
 
     override suspend fun searchNotes(query: String): Flow<List<NoteItem>> {

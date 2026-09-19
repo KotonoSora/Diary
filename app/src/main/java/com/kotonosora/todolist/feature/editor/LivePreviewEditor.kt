@@ -3,33 +3,33 @@ package com.kotonosora.todolist.feature.editor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CheckBoxOutlineBlank
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatItalic
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.StrikethroughS
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Title
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,10 +39,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -70,11 +67,14 @@ fun LivePreviewEditor(
     content: String,
     onContentChange: (String) -> Unit,
     onWikiLinkClick: (String) -> Unit,
+    viewMode: EditorViewMode = EditorViewMode.EDITING,
     modifier: Modifier = Modifier
 ) {
-    var viewMode by remember { mutableStateOf(EditorViewMode.EDITING) }
-
-    Box(modifier = modifier.fillMaxSize()) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .imePadding()
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
@@ -87,9 +87,7 @@ fun LivePreviewEditor(
                         OutlinedTextField(
                             value = content,
                             onValueChange = onContentChange,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(end = 4.dp),
+                            modifier = Modifier.fillMaxSize(),
                             placeholder = {
                                 Text(
                                     text = "Start typing your note in Markdown...",
@@ -116,7 +114,7 @@ fun LivePreviewEditor(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .verticalScroll(rememberScrollState())
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .padding(horizontal = 4.dp, vertical = 4.dp)
                         ) {
                             MarkdownContentRenderer(
                                 text = content,
@@ -127,39 +125,6 @@ fun LivePreviewEditor(
                                 }
                             )
                         }
-                    }
-                }
-
-                // Obsidian-style Floating Mode Toggle Chip (Top Right)
-                Surface(
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(20.dp),
-                    shadowElevation = 3.dp,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(top = 8.dp, end = 8.dp)
-                        .clickable {
-                            viewMode =
-                                if (viewMode == EditorViewMode.EDITING) EditorViewMode.READING else EditorViewMode.EDITING
-                        }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (viewMode == EditorViewMode.EDITING) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.Edit,
-                            contentDescription = if (viewMode == EditorViewMode.EDITING) "Switch to Reading View" else "Switch to Live Edit",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = if (viewMode == EditorViewMode.EDITING) "Reading" else "Editing",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
                     }
                 }
             }
@@ -319,6 +284,120 @@ private fun MarkdownFormattingToolbar(
     }
 }
 
+private data class FrontmatterParsedResult(
+    val metadata: Map<String, String>,
+    val body: String
+)
+
+private fun parseFrontmatterAndBody(text: String): FrontmatterParsedResult {
+    val trimmed = text.trimStart()
+    if (!trimmed.startsWith("---")) {
+        return FrontmatterParsedResult(emptyMap(), text)
+    }
+    val closingIndex = trimmed.indexOf("---", startIndex = 3)
+    if (closingIndex == -1) {
+        return FrontmatterParsedResult(emptyMap(), text)
+    }
+    val yamlSection = trimmed.substring(3, closingIndex).trim()
+    val bodyText = trimmed.substring(closingIndex + 3).trimStart()
+
+    val metaMap = mutableMapOf<String, String>()
+    yamlSection.lines().forEach { line ->
+        val parts = line.split(":", limit = 2)
+        if (parts.size == 2) {
+            val key = parts[0].trim()
+            val value = parts[1].trim().removeSurrounding("\"", "\"").removeSurrounding("'", "'")
+            if (key.isNotEmpty() && value.isNotEmpty()) {
+                metaMap[key] = value
+            }
+        }
+    }
+    return FrontmatterParsedResult(metaMap, bodyText)
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FrontmatterMetadataHeader(
+    metadata: Map<String, String>,
+    modifier: Modifier = Modifier
+) {
+    if (metadata.isEmpty()) return
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Tag,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Note Metadata",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                metadata.forEach { (key, value) ->
+                    val chipColor = when (key.lowercase()) {
+                        "type" -> MaterialTheme.colorScheme.primaryContainer
+                        "date", "created" -> MaterialTheme.colorScheme.secondaryContainer
+                        "uid" -> MaterialTheme.colorScheme.tertiaryContainer
+                        else -> MaterialTheme.colorScheme.surface
+                    }
+                    val textColor = when (key.lowercase()) {
+                        "type" -> MaterialTheme.colorScheme.onPrimaryContainer
+                        "date", "created" -> MaterialTheme.colorScheme.onSecondaryContainer
+                        "uid" -> MaterialTheme.colorScheme.onTertiaryContainer
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+
+                    Surface(
+                        color = chipColor,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${key.uppercase()}: ",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = textColor.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = value,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textColor
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun MarkdownContentRenderer(
     text: String,
@@ -334,10 +413,19 @@ private fun MarkdownContentRenderer(
         return
     }
 
+    val parsed = remember(text) { parseFrontmatterAndBody(text) }
+
+    // Render Frontmatter Metadata Card if tags / metadata exist
+    if (parsed.metadata.isNotEmpty()) {
+        FrontmatterMetadataHeader(metadata = parsed.metadata)
+    }
+
+    val bodyText = parsed.body
+
     // Extract Mermaid code blocks (```mermaid ... ```) for diagram rendering
-    val mermaidBlocks = remember(text) {
+    val mermaidBlocks = remember(bodyText) {
         val regex = Regex("""```mermaid\s*\n([\s\S]*?)\n```""", RegexOption.IGNORE_CASE)
-        regex.findAll(text).map { it.groupValues[1].trim() }.toList()
+        regex.findAll(bodyText).map { it.groupValues[1].trim() }.toList()
     }
 
     if (mermaidBlocks.isNotEmpty()) {
@@ -353,8 +441,8 @@ private fun MarkdownContentRenderer(
     }
 
     // Convert WikiLinks [[Target]] into standard Markdown links [Target](wikilink://Target) for AST rendering
-    val processedText = remember(text) {
-        text.replace(Regex("""\[\[([^|\]]+)(?:\|([^\]]+))?\]\]""")) { matchResult ->
+    val processedText = remember(bodyText) {
+        bodyText.replace(Regex("""\[\[([^|\]]+)(?:\|([^\]]+))?\]\]""")) { matchResult ->
             val target = matchResult.groupValues[1].trim()
             val alias = matchResult.groupValues.getOrNull(2)?.trim()?.ifBlank { null } ?: target
             "[$alias](wikilink://$target)"

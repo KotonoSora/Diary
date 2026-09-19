@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -192,6 +194,7 @@ fun KnowledgeGraphContent(
         Card(
             modifier = Modifier
                 .align(Alignment.BottomStart)
+                .navigationBarsPadding()
                 .padding(16.dp),
             elevation = CardDefaults.cardElevation(0.dp),
             colors = CardDefaults.cardColors(
@@ -218,6 +221,7 @@ fun KnowledgeGraphContent(
             color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.85f),
             shadowElevation = 4.dp,
             modifier = Modifier
+                .statusBarsPadding()
                 .padding(16.dp)
                 .align(Alignment.TopStart)
         ) {

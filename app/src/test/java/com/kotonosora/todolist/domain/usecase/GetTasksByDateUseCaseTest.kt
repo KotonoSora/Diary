@@ -1,7 +1,7 @@
 package com.kotonosora.todolist.domain.usecase
 
-import com.kotonosora.todolist.domain.model.TodoItem
-import com.kotonosora.todolist.domain.repository.TodoRepository
+import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.repository.TaskRepository
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -12,19 +12,19 @@ import org.junit.Before
 import org.junit.Test
 import java.util.Calendar
 
-class GetTodosByDateUseCaseTest {
+class GetTasksByDateUseCaseTest {
 
-    private lateinit var repository: TodoRepository
-    private lateinit var useCase: GetTodosByDateUseCase
+    private lateinit var repository: TaskRepository
+    private lateinit var useCase: GetTasksByDateUseCase
 
     @Before
     fun setup() {
         repository = mockk()
-        useCase = GetTodosByDateUseCase(repository)
+        useCase = GetTasksByDateUseCase(repository)
     }
 
     @Test
-    fun `invoke should call repository getTodosByDate with correct day boundaries`() = runTest {
+    fun `invoke should call repository getTasksByDate with correct day boundaries`() = runTest {
         val cal = Calendar.getInstance().apply {
             set(Calendar.YEAR, 2026)
             set(Calendar.MONTH, Calendar.MAY)
@@ -37,15 +37,15 @@ class GetTodosByDateUseCaseTest {
         val startOfDay = cal.timeInMillis
         val endOfDay = startOfDay + 86_400_000L - 1
 
-        every { repository.getTodosByDate(startOfDay, endOfDay) } returns flowOf(emptyList())
+        every { repository.getTasksByDate(startOfDay, endOfDay) } returns flowOf(emptyList())
 
         useCase(startOfDay)
 
-        verify { repository.getTodosByDate(startOfDay, endOfDay) }
+        verify { repository.getTasksByDate(startOfDay, endOfDay) }
     }
 
     @Test
-    fun `invoke should return todos filtered for date`() = runTest {
+    fun `invoke should return tasks filtered for date`() = runTest {
         val cal = Calendar.getInstance().apply {
             set(2026, Calendar.MAY, 5, 0, 0, 0)
             set(Calendar.MILLISECOND, 0)
@@ -53,15 +53,14 @@ class GetTodosByDateUseCaseTest {
         val startOfDay = cal.timeInMillis
         val endOfDay = startOfDay + 86_400_000L - 1
 
-        val expectedTodos = listOf(
-            TodoItem("1", "Task on May 5", null, startOfDay + 3600_000L, null, false)
+        val expectedTasks = listOf(
+            TaskItem("1", "Task on May 5", null, startOfDay + 3600_000L, null, false)
         )
-        every { repository.getTodosByDate(startOfDay, endOfDay) } returns flowOf(expectedTodos)
+        every { repository.getTasksByDate(startOfDay, endOfDay) } returns flowOf(expectedTasks)
 
-        useCase(startOfDay).collect { todos ->
-            assertEquals(1, todos.size)
-            assertEquals("Task on May 5", todos[0].title)
+        useCase(startOfDay).collect { tasks ->
+            assertEquals(1, tasks.size)
+            assertEquals("Task on May 5", tasks[0].title)
         }
     }
 }
-
