@@ -21,3 +21,18 @@ data class NoteItem(
     val emotion: EmotionStamp? = null,
     val actions: List<ActionStamp> = emptyList()
 )
+
+/**
+ * Builds the vault-relative id a note gets after being renamed to [newTitle].
+ * Single source of truth for the rename filename policy (previously
+ * duplicated in the repository and the editor ViewModel, which could drift).
+ */
+fun NoteItem.renamedId(newTitle: String): String {
+    val newFilename = if (id.contains("-")) {
+        val prefix = id.substringAfterLast("/").substringBefore("-")
+        "$prefix-$newTitle.$fileFormat"
+    } else {
+        "$newTitle.$fileFormat"
+    }
+    return if (relativePath.isBlank()) newFilename else "$relativePath/$newFilename"
+}

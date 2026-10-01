@@ -27,17 +27,20 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun linkDao(): LinkDao
     abstract fun tagDao(): TagDao
     abstract fun zettelMetadataDao(): ZettelMetadataDao
+    abstract fun noteFtsDao(): NoteFtsDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+
+        private const val DB_NAME = "app_database"
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "todolist_database"
+                    DB_NAME
                 )
                     .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                     .addCallback(object : Callback() {

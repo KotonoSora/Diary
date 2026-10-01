@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 data class FlashcardDeck(
     val id: String,
@@ -193,7 +193,7 @@ fun FlashcardDeckSelectionScreen(
 @Preview(showBackground = true, name = "1. Deck Selection - Dark")
 @Composable
 fun FlashcardDeckSelectionPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FlashcardDeckSelectionScreen(onOpenDrawer = {}, onDeckSelected = {})
     }
 }
@@ -201,7 +201,7 @@ fun FlashcardDeckSelectionPreview_Dark() {
 @Preview(showBackground = true, name = "2. Deck Selection - Light")
 @Composable
 fun FlashcardDeckSelectionPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FlashcardDeckSelectionScreen(onOpenDrawer = {}, onDeckSelected = {})
     }
 }

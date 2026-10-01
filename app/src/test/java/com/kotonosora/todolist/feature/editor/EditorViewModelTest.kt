@@ -89,4 +89,57 @@ class EditorViewModelTest {
 
         coVerify { vaultRepository.saveNote(any()) }
     }
+
+    @Test
+    fun `loadCustomTemplates populates template names`() = runTest {
+        coEvery { vaultRepository.getCustomTemplateNames() } returns listOf("Standup")
+
+        viewModel.loadCustomTemplates()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(listOf("Standup"), viewModel.uiState.value.customTemplates)
+    }
+
+    @Test
+    fun `applyCustomTemplate substitutes title placeholder`() = runTest {
+        val note = NoteItem(id = "Sprint.md", title = "Sprint 12", relativePath = "", content = "")
+        coEvery { vaultRepository.getNoteById("Sprint.md") } returns note
+        coEvery { vaultRepository.getCustomTemplateContent("Standup") } returns "# {{title}}\n\n- Item"
+
+        viewModel.loadNote("Sprint.md")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.applyCustomTemplate("Standup")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals("# Sprint 12\n\n- Item", viewModel.uiState.value.note.content)
+    }
+
+    @Test
+    fun `saveCurrentNoteAsTemplate persists and refreshes list`() = runTest {
+        val note = NoteItem(id = "Sprint.md", title = "Sprint", relativePath = "", content = "# Body")
+        coEvery { vaultRepository.getNoteById("Sprint.md") } returns note
+        coEvery { vaultRepository.saveCustomTemplate(any(), any()) } returns true
+        coEvery { vaultRepository.getCustomTemplateNames() } returns listOf("SprintTpl")
+
+        viewModel.loadNote("Sprint.md")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.saveCurrentNoteAsTemplate("SprintTpl")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { vaultRepository.saveCustomTemplate("SprintTpl", "# Body") }
+        assertEquals(listOf("SprintTpl"), viewModel.uiState.value.customTemplates)
+    }
+
+    @Test
+    fun `deleteCustomTemplate refreshes list`() = runTest {
+        coEvery { vaultRepository.getCustomTemplateNames() } returns emptyList()
+
+        viewModel.deleteCustomTemplate("Old")
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        coVerify { vaultRepository.deleteCustomTemplate("Old") }
+        assertEquals(emptyList<String>(), viewModel.uiState.value.customTemplates)
+    }
 }

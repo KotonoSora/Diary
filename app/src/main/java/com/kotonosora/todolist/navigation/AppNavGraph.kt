@@ -14,6 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Hub
+import androidx.compose.material.icons.filled.Mood
 import androidx.compose.material.icons.filled.PermMedia
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Style
@@ -66,6 +67,9 @@ import com.kotonosora.todolist.feature.guide.OnboardingGuideScreen
 import com.kotonosora.todolist.feature.media.MediaScreen
 import com.kotonosora.todolist.feature.media.MediaScreenContent
 import com.kotonosora.todolist.feature.media.MediaViewModel
+import com.kotonosora.todolist.feature.mood.MoodTimelineContent
+import com.kotonosora.todolist.feature.mood.MoodTimelineScreen
+import com.kotonosora.todolist.feature.mood.MoodTimelineViewModel
 import com.kotonosora.todolist.feature.settings.SettingsScreen
 import com.kotonosora.todolist.feature.settings.SettingsScreenContent
 import com.kotonosora.todolist.feature.settings.SettingsViewModel
@@ -81,7 +85,7 @@ import com.kotonosora.todolist.feature.vault.VaultViewModel
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceContent
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceScreen
 import com.kotonosora.todolist.ui.ViewModelFactory
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -117,12 +121,13 @@ sealed class NavRoute(val route: String) {
         }
     }
 
-    object TodoList : NavRoute("todo_list")
+    object TaskList : NavRoute("task_list")
     object AddEditTodo : NavRoute("add_edit_todo/{todoId}") {
         fun createRoute(todoId: String = "new") = "add_edit_todo/$todoId"
     }
 
     object Calendar : NavRoute("calendar")
+    object MoodTimeline : NavRoute("mood_timeline")
     object Media : NavRoute("media")
     object Settings : NavRoute("settings")
     object OnboardingGuide : NavRoute("onboarding_guide")
@@ -136,9 +141,10 @@ private data class DrawerNavItem(
 
 private val drawerNavItems = listOf(
     DrawerNavItem("Vault Workspace", Icons.Default.Folder, NavRoute.VaultWorkspace.route),
-    DrawerNavItem("Tasks", Icons.AutoMirrored.Filled.List, NavRoute.TodoList.route),
+    DrawerNavItem("Tasks", Icons.AutoMirrored.Filled.List, NavRoute.TaskList.route),
     DrawerNavItem("Flashcards", Icons.Default.Style, NavRoute.FlashcardDecks.route),
     DrawerNavItem("Calendar", Icons.Default.DateRange, NavRoute.Calendar.route),
+    DrawerNavItem("Mood Timeline", Icons.Default.Mood, NavRoute.MoodTimeline.route),
     DrawerNavItem("Media & Captures", Icons.Default.PermMedia, NavRoute.Media.route),
     DrawerNavItem("Knowledge Graph", Icons.Default.Hub, NavRoute.KnowledgeGraph.route),
     DrawerNavItem("Settings", Icons.Default.Settings, NavRoute.Settings.route),
@@ -329,7 +335,7 @@ fun AppNavGraph() {
                 )
             }
 
-            composable(NavRoute.TodoList.route) {
+            composable(NavRoute.TaskList.route) {
                 if (LocalInspectionMode.current) {
                     TaskListContent(
                         tasks = emptyList(),
@@ -399,6 +405,23 @@ fun AppNavGraph() {
                     }
                     CalendarScreen(
                         viewModel = calendarViewModel,
+                        onOpenDrawer = { scope.launch { drawerState.open() } }
+                    )
+                }
+            }
+
+            composable(NavRoute.MoodTimeline.route) {
+                if (LocalInspectionMode.current) {
+                    MoodTimelineContent(days = emptyList())
+                } else {
+                    val moodViewModel = appViewModel { container ->
+                        MoodTimelineViewModel(container.vaultRepository)
+                    }
+                    MoodTimelineScreen(
+                        viewModel = moodViewModel,
+                        onNoteClick = { noteId ->
+                            navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                        },
                         onOpenDrawer = { scope.launch { drawerState.open() } }
                     )
                 }
@@ -513,7 +536,7 @@ fun AppNavDrawerSheet(
 )
 @Composable
 fun AppNavDrawerPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         AppNavDrawerSheet(currentRoute = NavRoute.VaultWorkspace.route)
     }
 }
@@ -525,7 +548,7 @@ fun AppNavDrawerPreview_Dark() {
 )
 @Composable
 fun AppNavDrawerPreview_Light() {
-    TodoListTheme(darkTheme = false) {
-        AppNavDrawerSheet(currentRoute = NavRoute.TodoList.route)
+    AppTheme(darkTheme = false) {
+        AppNavDrawerSheet(currentRoute = NavRoute.TaskList.route)
     }
 }

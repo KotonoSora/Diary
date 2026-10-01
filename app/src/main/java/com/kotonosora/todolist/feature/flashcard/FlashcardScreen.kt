@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun FlashcardScreen(
@@ -417,7 +417,7 @@ fun FlashcardScreenPreview_Active_Dark() {
             definition = "Lasting for a very short time."
         )
     )
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FlashcardScreenContent(
             uiState = FlashcardUiState(
                 deckTitle = "Basic Vocabulary",
@@ -433,7 +433,7 @@ fun FlashcardScreenPreview_Active_Dark() {
 @Preview(showBackground = true, name = "2. Completed Summary (Light)")
 @Composable
 fun FlashcardScreenPreview_Summary_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FlashcardScreenContent(
             uiState = FlashcardUiState(
                 deckTitle = "Tech Terminology",

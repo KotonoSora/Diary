@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -92,14 +93,26 @@ fun AudioPlayerView(
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(1L) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    var playbackError by remember(filePath) { mutableStateOf<String?>(null) }
 
-    val exoPlayer = remember(filePath) {
+    val audioMissing = remember(filePath) {
+        !filePath.startsWith("content://") && !File(filePath).exists()
+    }
+
+    val exoPlayer = remember(filePath, audioMissing) {
+        if (audioMissing) {
+            null
+        } else {
         ExoPlayer.Builder(context).build().apply {
-            val file = File(filePath)
-            if (file.exists()) {
-                setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
-                prepare()
+            val mediaItem = if (filePath.startsWith("content://")) {
+                MediaItem.fromUri(Uri.parse(filePath))
+            } else {
+                val file = File(filePath)
+                if (!file.exists()) return@apply
+                MediaItem.fromUri(Uri.fromFile(file))
             }
+            setMediaItem(mediaItem)
+            prepare()
             addListener(object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
@@ -108,26 +121,51 @@ fun AudioPlayerView(
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     if (playbackState == Player.STATE_READY) {
                         duration = this@apply.duration.coerceAtLeast(1L)
+                        playbackError = null
                     } else if (playbackState == Player.STATE_ENDED) {
                         isPlaying = false
                         seekTo(0)
                         pause()
                     }
                 }
+
+                override fun onPlayerError(error: PlaybackException) {
+                    playbackError = error.message ?: "Unsupported audio format"
+                }
             })
+        }
         }
     }
 
     DisposableEffect(filePath) {
         onDispose {
-            exoPlayer.release()
+            exoPlayer?.release()
         }
     }
 
+    if (audioMissing) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            )
+        ) {
+            Text(
+                text = "Couldn't play this audio — file not found.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
+        return
+    }
+
+    val player = exoPlayer ?: return
+
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
-            currentPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-            duration = exoPlayer.duration.coerceAtLeast(1L)
+            currentPosition = player.currentPosition.coerceAtLeast(0L)
+            duration = player.duration.coerceAtLeast(1L)
             delay(200)
         }
     }
@@ -143,6 +181,16 @@ fun AudioPlayerView(
                 .fillMaxWidth()
                 .padding(8.dp)
         ) {
+            val error = playbackError
+            if (error != null) {
+                Text(
+                    text = "Couldn't play this audio ($error).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+
             AudioWaveformBars(isPlaying = isPlaying)
 
             Spacer(Modifier.height(6.dp))
@@ -153,8 +201,8 @@ fun AudioPlayerView(
             ) {
                 IconButton(
                     onClick = {
-                        val target = (exoPlayer.currentPosition - 10000L).coerceAtLeast(0L)
-                        exoPlayer.seekTo(target)
+                        val target = (player.currentPosition - 10000L).coerceAtLeast(0L)
+                        player.seekTo(target)
                         currentPosition = target
                     },
                     modifier = Modifier.size(32.dp)
@@ -169,9 +217,9 @@ fun AudioPlayerView(
                 IconButton(
                     onClick = {
                         if (isPlaying) {
-                            exoPlayer.pause()
+                            player.pause()
                         } else {
-                            exoPlayer.play()
+                            player.play()
                         }
                     },
                     modifier = Modifier.size(40.dp)
@@ -186,8 +234,8 @@ fun AudioPlayerView(
 
                 IconButton(
                     onClick = {
-                        val target = (exoPlayer.currentPosition + 10000L).coerceAtMost(duration)
-                        exoPlayer.seekTo(target)
+                        val target = (player.currentPosition + 10000L).coerceAtMost(duration)
+                        player.seekTo(target)
                         currentPosition = target
                     },
                     modifier = Modifier.size(32.dp)
@@ -205,7 +253,7 @@ fun AudioPlayerView(
                     value = currentPosition.toFloat().coerceIn(0f, duration.toFloat()),
                     onValueChange = { newValue ->
                         currentPosition = newValue.toLong()
-                        exoPlayer.seekTo(currentPosition)
+                        player.seekTo(currentPosition)
                     },
                     valueRange = 0f..duration.toFloat(),
                     modifier = Modifier.weight(1f)
@@ -222,7 +270,7 @@ fun AudioPlayerView(
                             1.5f -> 2.0f
                             else -> 1.0f
                         }
-                        exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed)
+                        player.playbackParameters = PlaybackParameters(playbackSpeed)
                     }
                 ) {
                     Text(

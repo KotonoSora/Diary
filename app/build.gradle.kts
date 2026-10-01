@@ -123,6 +123,8 @@ dependencies {
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
     implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
+    implementation(libs.coil.gif)
 
     // Media3 ExoPlayer Audio Playback
     implementation(libs.media3.exoplayer)
@@ -138,6 +140,8 @@ dependencies {
 
     // MikePenz Multiplatform Markdown Renderer M3
     implementation(libs.markdown.renderer)
+    implementation(libs.markdown.code)
+    implementation(libs.markdown.coil3)
 
     // JGraphT Graph & Force Layout Core
     implementation(libs.jgrapht.core)

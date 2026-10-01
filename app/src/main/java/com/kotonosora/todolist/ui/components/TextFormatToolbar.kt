@@ -40,8 +40,9 @@ fun TextFormatToolbar(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(8.dp)
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(8.dp),
+        tonalElevation = 2.dp
     ) {
         Row(
             modifier = Modifier

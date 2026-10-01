@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
@@ -65,13 +66,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.data.native.MdNativeHelper
+import com.kotonosora.todolist.domain.model.ActionStamp
+import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.description
 import com.kotonosora.todolist.domain.model.displayName
 import com.kotonosora.todolist.feature.flashcard.MarkdownParser
 import com.kotonosora.todolist.feature.vault.formatCleanDisplayName
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
+import java.util.Locale
 
 @Composable
 fun EditorScreen(
@@ -98,7 +102,12 @@ fun EditorScreen(
         onContentChange = { viewModel.onContentChange(it) },
         onWikiLinkClick = { targetTitle -> onNavigateToNote("$targetTitle.md") },
         onSuggestionSelected = { viewModel.onSuggestionSelected(it) },
-        onLearnFlashcards = onLearnFlashcards
+        onLearnFlashcards = onLearnFlashcards,
+        customTemplates = uiState.customTemplates,
+        onLoadCustomTemplates = { viewModel.loadCustomTemplates() },
+        onApplyCustomTemplate = { viewModel.applyCustomTemplate(it) },
+        onSaveCurrentNoteAsTemplate = { viewModel.saveCurrentNoteAsTemplate(it) },
+        onDeleteCustomTemplate = { viewModel.deleteCustomTemplate(it) }
     )
 }
 
@@ -115,7 +124,12 @@ fun EditorContent(
     onContentChange: (String) -> Unit = {},
     onWikiLinkClick: (String) -> Unit = {},
     onSuggestionSelected: (String) -> Unit = {},
-    onLearnFlashcards: () -> Unit = {}
+    onLearnFlashcards: () -> Unit = {},
+    customTemplates: List<String> = emptyList(),
+    onLoadCustomTemplates: () -> Unit = {},
+    onApplyCustomTemplate: (String) -> Unit = {},
+    onSaveCurrentNoteAsTemplate: (String) -> Unit = {},
+    onDeleteCustomTemplate: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showRenameSheet by remember { mutableStateOf(false) }
@@ -128,6 +142,25 @@ fun EditorContent(
 
     val flashcardCount = remember(uiState.note.content) {
         MarkdownParser.parseMarkdownFlashcards(uiState.note.content).size
+    }
+
+    // Mood stamps parsed live from frontmatter so the metadata bar updates as you type.
+    val liveEmotion = remember(uiState.note.content) {
+        try {
+            MdNativeHelper.parseEmotionName(uiState.note.content)
+                ?.let { EmotionStamp.valueOf(it.uppercase(Locale.ROOT)) }
+        } catch (_: Exception) {
+            null
+        }
+    }
+    val liveActions = remember(uiState.note.content) {
+        MdNativeHelper.parseActionNames(uiState.note.content).mapNotNull {
+            try {
+                ActionStamp.valueOf(it.uppercase(Locale.ROOT))
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     var noteTitleInput by remember(uiState.note.title) {
@@ -330,6 +363,17 @@ fun EditorContent(
                 }
             }
 
+            EditorMetadataBar(
+                relativePath = uiState.note.relativePath,
+                content = uiState.note.content,
+                noteType = uiState.note.noteType,
+                flashcardCount = flashcardCount,
+                onLearnFlashcards = onLearnFlashcards,
+                emotion = liveEmotion,
+                actions = liveActions,
+                modifier = Modifier.padding(horizontal = 8.dp)
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -339,6 +383,7 @@ fun EditorContent(
                     onContentChange = onContentChange,
                     onWikiLinkClick = onWikiLinkClick,
                     viewMode = viewMode,
+                    noteDir = uiState.note.relativePath,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 8.dp)
@@ -358,6 +403,8 @@ fun EditorContent(
 
             if (showTemplateSheet) {
                 val sheetState = rememberModalBottomSheetState()
+                var templateNameInput by remember { mutableStateOf("") }
+                LaunchedEffect(Unit) { onLoadCustomTemplates() }
                 ModalBottomSheet(
                     onDismissRequest = { showTemplateSheet = false },
                     sheetState = sheetState
@@ -385,6 +432,14 @@ fun EditorContent(
                                 .height(320.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
+                            item {
+                                Text(
+                                    text = "Built-in",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             items(NoteType.entries.toTypedArray()) { type ->
                                 Card(
                                     modifier = Modifier
@@ -417,6 +472,95 @@ fun EditorContent(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                    }
+                                }
+                            }
+
+                            item {
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    text = "My Templates",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "Use {{title}} in a template to insert the note title on apply.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (customTemplates.isEmpty()) {
+                                item {
+                                    Text(
+                                        text = "No custom templates yet — name and save the current note below.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            } else {
+                                items(customTemplates) { name ->
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                alpha = 0.5f
+                                            )
+                                        )
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    onApplyCustomTemplate(name)
+                                                    showTemplateSheet = false
+                                                }
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = name,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(
+                                                onClick = { onDeleteCustomTemplate(name) }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = "Delete template $name",
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            item {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = templateNameInput,
+                                        onValueChange = {
+                                            templateNameInput = it.take(100)
+                                        },
+                                        label = { Text("New template name") },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    OutlinedButton(
+                                        onClick = {
+                                            onSaveCurrentNoteAsTemplate(templateNameInput)
+                                            templateNameInput = ""
+                                        },
+                                        enabled = templateNameInput.isNotBlank()
+                                    ) {
+                                        Text("Save")
                                     }
                                 }
                             }
@@ -712,7 +856,7 @@ fun EditorScreenPreview_NormalMode_Dark() {
         EditorTabItem("Projects/Vocabulary.md", "Japanese Vocabulary")
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         EditorContent(
             uiState = EditorUiState(note = sampleNote, openTabs = sampleTabs, isFocusMode = false),
             onBack = {},
@@ -735,7 +879,7 @@ fun EditorScreenPreview_FocusMode_Dark() {
         content = "# Project Roadmap\n\nFocus mode hides top bars and headers for distraction-free writing."
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         EditorContent(
             uiState = EditorUiState(note = sampleNote, openTabs = emptyList(), isFocusMode = true),
             onBack = {},

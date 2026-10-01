@@ -33,7 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.delay
 
 @Composable
@@ -148,7 +148,7 @@ fun SplashScreenContent(
 )
 @Composable
 fun SplashScreenPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         SplashScreenContent()
     }
 }
@@ -160,7 +160,7 @@ fun SplashScreenPreview_Dark() {
 )
 @Composable
 fun SplashScreenPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         SplashScreenContent()
     }
 }

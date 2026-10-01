@@ -32,4 +32,13 @@ interface VaultRepository {
     suspend fun deleteNote(relativePath: String, overrideUri: Uri? = null): Boolean
     suspend fun deleteFolder(folderPath: String, overrideUri: Uri? = null): Boolean
     suspend fun searchNotes(query: String): Flow<List<NoteItem>>
+
+    suspend fun getCustomTemplateNames(overrideUri: Uri? = null): List<String>
+    suspend fun getCustomTemplateContent(name: String, overrideUri: Uri? = null): String?
+    suspend fun saveCustomTemplate(
+        name: String,
+        content: String,
+        overrideUri: Uri? = null
+    ): Boolean
+    suspend fun deleteCustomTemplate(name: String, overrideUri: Uri? = null): Boolean
 }

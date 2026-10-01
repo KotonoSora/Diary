@@ -44,7 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -332,7 +332,7 @@ fun SwipeableCard(
 @Preview(showBackground = true, name = "1. SwipeableCard - Front (Dark)")
 @Composable
 fun SwipeableCardPreview_Front_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -356,7 +356,7 @@ fun SwipeableCardPreview_Front_Dark() {
 @Preview(showBackground = true, name = "2. SwipeableCard - Back (Light)")
 @Composable
 fun SwipeableCardPreview_Back_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         Box(
             modifier = Modifier
                 .fillMaxSize()

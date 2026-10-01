@@ -53,7 +53,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.domain.model.VaultNode
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 fun formatCleanDisplayName(rawName: String): String {
     return rawName.replace(Regex("""^\d{8,14}-?"""), "").ifBlank { rawName }
@@ -731,7 +731,7 @@ fun FolderTreeExplorerPreview_Dark() {
         )
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FolderTreeExplorer(
             rootNode = sampleTree,
             onNoteSelect = {},
@@ -758,7 +758,7 @@ fun FolderTreeExplorerPreview_Light() {
         )
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FolderTreeExplorer(
             rootNode = sampleTree,
             onNoteSelect = {},

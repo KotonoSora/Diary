@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun BacklinkPanel(
@@ -133,7 +133,7 @@ fun BacklinkPanel(
 )
 @Composable
 fun BacklinkPanelPreview_WithLinks_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         BacklinkPanel(
             incomingLinks = listOf("Projects/Roadmap.md", "Ideas/Concepts.md", "Work/Meeting.md"),
             onNoteClick = {}
@@ -148,7 +148,7 @@ fun BacklinkPanelPreview_WithLinks_Dark() {
 )
 @Composable
 fun BacklinkPanelPreview_Empty_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         BacklinkPanel(
             incomingLinks = emptyList(),
             onNoteClick = {}

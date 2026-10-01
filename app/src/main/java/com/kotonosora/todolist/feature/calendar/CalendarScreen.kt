@@ -65,7 +65,7 @@ import com.kizitonwose.calendar.core.WeekDay
 import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.TaskItem
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
@@ -538,7 +538,7 @@ fun CalendarScreenPreview_Dark() {
         TaskItem("2", "Review PR #42", "Check unit test coverage", sampleDate, null, true)
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         CalendarScreenContent(
             year = 2026,
             month = 2,
@@ -568,7 +568,7 @@ fun CalendarScreenPreview_Light() {
         )
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         CalendarScreenContent(
             year = 2026,
             month = 2,

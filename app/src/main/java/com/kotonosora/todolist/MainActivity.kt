@@ -13,7 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.kotonosora.todolist.navigation.AppNavGraph
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
                 else -> isSystemInDarkTheme()
             }
 
-            TodoListTheme(darkTheme = isDark) {
+            AppTheme(darkTheme = isDark) {
                 AppNavGraph()
             }
         }
@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
 )
 @Composable
 fun MainActivityPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         AppNavGraph()
     }
 }
@@ -69,7 +69,7 @@ fun MainActivityPreview_Dark() {
 )
 @Composable
 fun MainActivityPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         AppNavGraph()
     }
 }

@@ -19,6 +19,9 @@ interface MediaDao {
     @Delete
     suspend fun deleteMedia(media: MediaEntity)
 
+    @Query("DELETE FROM media_attachments WHERE filePath = :path")
+    suspend fun deleteByPath(path: String)
+
     @Query("DELETE FROM media_attachments WHERE todoId = :todoId")
     suspend fun deleteAllMediaForTodo(todoId: String)
 

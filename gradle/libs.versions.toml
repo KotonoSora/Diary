@@ -3,7 +3,7 @@ composeBom = "2026.09.00"
 activityCompose = "1.13.0"
 lifecycleViewmodelCompose = "2.11.0"
 agp = "9.4.0"
-coreKtx = "1.19.0"
+coreKtx = "1.19.1"
 coreSplashscreen = "1.2.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -12,17 +12,17 @@ appcompat = "1.8.0"
 material = "1.14.0"
 constraintlayout = "2.2.2"
 room = "2.8.5"
-ksp = "2.3.10"
+ksp = "2.3.12"
 composeCompiler = "2.4.20"
 mockk = "1.14.11"
 coroutinesTest = "1.11.0"
-workManager = "2.11.2"
-navigationCompose = "2.10.1"
+workManager = "2.12.0"
+navigationCompose = "2.10.2"
 androidxStartup = "1.2.0"
 materialIcons = "1.7.8"
-richeditorCompose = "1.2.0"
+richeditorCompose = "1.2.1"
 camerax = "1.6.2"
-coil = "3.6.2"
+coil = "3.6.3"
 media3 = "1.11.1"
 kizitonwoseCalendar = "2.10.1"
 datastore = "1.2.1"
@@ -66,6 +66,8 @@ camerax-camera2 = { group = "androidx.camera", name = "camera-camera2", version.
 camerax-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 camerax-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-svg = { group = "io.coil-kt.coil3", name = "coil-svg", version.ref = "coil" }
+coil-gif = { group = "io.coil-kt.coil3", name = "coil-gif", version.ref = "coil" }
 media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3" }
 media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 kizitonwose-calendar-compose = { group = "com.kizitonwose.calendar", name = "compose", version.ref = "kizitonwoseCalendar" }
@@ -75,6 +77,8 @@ jgrapht-core = { group = "org.jgrapht", name = "jgrapht-core", version.ref = "jg
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 markdown-renderer = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-m3", version.ref = "mikepenzMarkdown" }
+markdown-code = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-code", version.ref = "mikepenzMarkdown" }
+markdown-coil3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-coil3", version.ref = "mikepenzMarkdown" }
 androidx-ui-text-google-fonts = { group = "androidx.compose.ui", name = "ui-text-google-fonts", version.ref = "composeGoogleFonts" }
 
 [plugins]

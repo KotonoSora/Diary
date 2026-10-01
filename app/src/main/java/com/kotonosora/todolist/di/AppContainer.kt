@@ -7,6 +7,7 @@ import com.kotonosora.todolist.data.database.AppDatabase
 import com.kotonosora.todolist.data.database.LinkDao
 import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.NoteDao
+import com.kotonosora.todolist.data.database.NoteFtsDao
 import com.kotonosora.todolist.data.database.TagDao
 import com.kotonosora.todolist.data.database.TaskDao
 import com.kotonosora.todolist.data.database.ZettelMetadataDao
@@ -44,6 +45,7 @@ class AppContainer(private val applicationContext: Context) {
     val linkDao: LinkDao by lazy { appDatabase.linkDao() }
     val tagDao: TagDao by lazy { appDatabase.tagDao() }
     val zettelMetadataDao: ZettelMetadataDao by lazy { appDatabase.zettelMetadataDao() }
+    val noteFtsDao: NoteFtsDao by lazy { appDatabase.noteFtsDao() }
 
     val userPreferencesRepository: UserPreferencesRepository by lazy {
         UserPreferencesRepository(applicationContext)
@@ -74,7 +76,7 @@ class AppContainer(private val applicationContext: Context) {
     }
 
     val vaultRepository: VaultRepository by lazy {
-        VaultRepositoryImpl(vaultManager, noteDao, linkDao, tagDao, zettelMetadataDao)
+        VaultRepositoryImpl(vaultManager, noteDao, linkDao, tagDao, zettelMetadataDao, noteFtsDao)
     }
 
     val taskRepository: TaskRepository by lazy {

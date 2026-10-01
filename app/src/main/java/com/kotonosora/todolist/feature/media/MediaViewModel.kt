@@ -13,6 +13,8 @@ import com.kotonosora.todolist.data.factory.MediaRecorderFactory
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.MediaOutputLocation
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class MediaViewModel(
@@ -29,7 +32,8 @@ class MediaViewModel(
     private val mediaDao: MediaDao,
     private val userPreferencesRepository: UserPreferencesRepository? = null,
     private val mediaFileManager: MediaFileManager? = null,
-    private val mediaRecorderFactory: MediaRecorderFactory? = null
+    private val mediaRecorderFactory: MediaRecorderFactory? = null,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
     private val _capturedPhotoPaths = MutableStateFlow<List<String>>(emptyList())
@@ -37,6 +41,9 @@ class MediaViewModel(
 
     private val _recordedAudioPaths = MutableStateFlow<List<String>>(emptyList())
     val recordedAudioPaths: StateFlow<List<String>> = _recordedAudioPaths.asStateFlow()
+
+    private val _pdfDocumentPaths = MutableStateFlow<List<String>>(emptyList())
+    val pdfDocumentPaths: StateFlow<List<String>> = _pdfDocumentPaths.asStateFlow()
 
     private val _isRecording = MutableStateFlow(false)
     val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
@@ -46,6 +53,9 @@ class MediaViewModel(
 
     private val _recordingDurationSeconds = MutableStateFlow(0)
     val recordingDurationSeconds: StateFlow<Int> = _recordingDurationSeconds.asStateFlow()
+
+    private val _importError = MutableStateFlow<String?>(null)
+    val importError: StateFlow<String?> = _importError.asStateFlow()
 
     private val _currentAmplitude = MutableStateFlow(0)
     val currentAmplitude: StateFlow<Int> = _currentAmplitude.asStateFlow()
@@ -76,12 +86,16 @@ class MediaViewModel(
             _recordedAudioPaths.value = entities
                 .filter { it.type == "audio" }
                 .map { it.filePath }
+            _pdfDocumentPaths.value = entities
+                .filter { it.type == "pdf" }
+                .map { it.filePath }
         }
     }
 
     fun onPhotoCaptured(path: String) = viewModelScope.launch {
         val entity = MediaEntity(todoId = null, type = "photo", filePath = path)
         mediaDao.insertMedia(entity)
+        mediaEntityCache[path] = entity
     }
 
     fun startRecording() = viewModelScope.launch {
@@ -192,6 +206,7 @@ class MediaViewModel(
             viewModelScope.launch {
                 val entity = MediaEntity(todoId = null, type = "audio", filePath = path)
                 mediaDao.insertMedia(entity)
+                mediaEntityCache[path] = entity
             }
         }
         currentAudioPath = null
@@ -202,19 +217,74 @@ class MediaViewModel(
     }
 
     fun deletePhoto(path: String) = viewModelScope.launch {
+        withContext(ioDispatcher) { deleteMediaFile(path) }
+        mediaEntityCache.remove(path)
         try {
-            if (path.startsWith("content://")) {
-                context.contentResolver.delete(Uri.parse(path), null, null)
-            } else {
-                File(path).delete()
-            }
+            mediaDao.deleteByPath(path)
         } catch (e: Exception) {
             e.printStackTrace()
+            mediaEntityCache[path]?.let { mediaDao.deleteMedia(it) }
         }
-        mediaEntityCache[path]?.let { mediaDao.deleteMedia(it) }
     }
 
     fun deleteAudio(path: String) = viewModelScope.launch {
+        withContext(ioDispatcher) { deleteMediaFile(path) }
+        mediaEntityCache.remove(path)
+        try {
+            mediaDao.deleteByPath(path)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            mediaEntityCache[path]?.let { mediaDao.deleteMedia(it) }
+        }
+    }
+
+    fun importPdf(sourceUri: Uri, onImported: () -> Unit = {}, onError: (String) -> Unit = {}) {
+        viewModelScope.launch {
+            _importError.value = null
+            val location = try {
+                withContext(ioDispatcher) {
+                    val customFolderUriStr =
+                        userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
+                    val manager = mediaFileManager ?: MediaFileManager(context)
+                    // Display-name lookup is a ContentResolver query (IPC) — keep it
+                    // off Main along with the file copy.
+                    val displayName = queryDisplayName(sourceUri)
+                    manager.importPdfDocument(sourceUri, displayName, customFolderUriStr)
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+            val storedPath = when (location) {
+                is MediaOutputLocation.DocumentFileUri -> location.pathString
+                is MediaOutputLocation.LocalFile -> location.file.absolutePath
+                null -> null
+            }
+            if (storedPath != null) {
+                val entity = MediaEntity(todoId = null, type = "pdf", filePath = storedPath)
+                mediaDao.insertMedia(entity)
+                mediaEntityCache[storedPath] = entity
+                onImported()
+            } else {
+                val message = "Couldn't import this PDF — copy failed."
+                _importError.value = message
+                onError(message)
+            }
+        }
+    }
+
+    fun deletePdf(path: String) = viewModelScope.launch {
+        withContext(ioDispatcher) { deleteMediaFile(path) }
+        mediaEntityCache.remove(path)
+        try {
+            mediaDao.deleteByPath(path)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            mediaEntityCache[path]?.let { mediaDao.deleteMedia(it) }
+        }
+    }
+
+    private fun deleteMediaFile(path: String) {
         try {
             if (path.startsWith("content://")) {
                 context.contentResolver.delete(Uri.parse(path), null, null)
@@ -224,7 +294,18 @@ class MediaViewModel(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        mediaEntityCache[path]?.let { mediaDao.deleteMedia(it) }
+    }
+
+    private fun queryDisplayName(uri: Uri): String? {
+        return try {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val nameIndex =
+                    cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (nameIndex != -1 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 
     override fun onCleared() {

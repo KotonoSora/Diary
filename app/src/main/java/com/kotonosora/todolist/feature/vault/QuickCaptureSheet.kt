@@ -57,7 +57,7 @@ import com.kotonosora.todolist.domain.model.defaultTitlePrefix
 import com.kotonosora.todolist.domain.model.description
 import com.kotonosora.todolist.domain.model.displayName
 import com.kotonosora.todolist.ui.components.StampPickerSheet
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -343,7 +343,7 @@ fun QuickCaptureSheetContent(
 )
 @Composable
 fun QuickCaptureDialogPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         QuickCaptureSheetContent()
     }
 }
@@ -355,7 +355,7 @@ fun QuickCaptureDialogPreview_Dark() {
 )
 @Composable
 fun QuickCaptureDialogPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         QuickCaptureSheetContent()
     }
 }

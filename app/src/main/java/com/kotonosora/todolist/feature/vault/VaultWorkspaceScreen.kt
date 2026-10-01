@@ -58,7 +58,7 @@ import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.search.SearchScreen
 import com.kotonosora.todolist.feature.tags.TagExplorerScreen
 import com.kotonosora.todolist.navigation.appViewModel
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun VaultWorkspaceScreen(
@@ -381,7 +381,7 @@ fun VaultWorkspaceScreenPreview_Populated_Dark() {
         )
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         VaultWorkspaceContent(
             uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes),
             onNoteSelect = {}
@@ -408,7 +408,7 @@ fun VaultWorkspaceScreenPreview_Populated_Light() {
         NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!")
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         VaultWorkspaceContent(
             uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes),
             onNoteSelect = {}

@@ -61,7 +61,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun TodoListTheme(
+fun AppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit

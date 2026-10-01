@@ -25,7 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 data class EditorTabItem(
     val id: String,
@@ -121,7 +121,7 @@ fun EditorTabStripPreview_Dark() {
         EditorTabItem("3", "Meeting Notes")
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         EditorTabStrip(
             openTabs = tabs,
             activeTabId = "1",
@@ -144,7 +144,7 @@ fun EditorTabStripPreview_Light() {
         EditorTabItem("2", "Zettel Concept")
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         EditorTabStrip(
             openTabs = tabs,
             activeTabId = "1",

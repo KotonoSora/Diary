@@ -92,4 +92,39 @@ class VaultManagerTest {
         assertTrue(deleted)
         assertEquals(0, vaultManager.readAllNotes().size)
     }
+
+    @Test
+    fun `saveTemplate round-trips content through list and read`() = runTest {
+        assertTrue(vaultManager.saveTemplate("Standup", "# {{title}}\n\n- Yesterday\n- Today"))
+        assertTrue(vaultManager.saveTemplate("Retro", "# Retro"))
+
+        assertEquals(listOf("Retro", "Standup"), vaultManager.listTemplateNames())
+        assertEquals(
+            "# {{title}}\n\n- Yesterday\n- Today",
+            vaultManager.readTemplate("Standup")
+        )
+    }
+
+    @Test
+    fun `templates are excluded from vault notes and tree`() = runTest {
+        vaultManager.saveTemplate("Standup", "# Template")
+        vaultManager.saveNote(
+            NoteItem(id = "Real.md", title = "Real", relativePath = "", content = "hi")
+        )
+
+        assertEquals(1, vaultManager.readAllNotes().size)
+        val tree = vaultManager.getVaultTree()
+        assertTrue(tree.children.none { it.name == VaultManager.TEMPLATES_DIR })
+    }
+
+    @Test
+    fun `deleteTemplate removes template but blank names are rejected`() = runTest {
+        vaultManager.saveTemplate("Standup", "# Template")
+        assertTrue(vaultManager.deleteTemplate("Standup"))
+        assertTrue(vaultManager.listTemplateNames().isEmpty())
+
+        assertEquals(false, vaultManager.saveTemplate("  ", "# Template"))
+        assertEquals(false, vaultManager.saveTemplate("Name", "  "))
+        assertEquals(false, vaultManager.deleteTemplate("../evil"))
+    }
 }

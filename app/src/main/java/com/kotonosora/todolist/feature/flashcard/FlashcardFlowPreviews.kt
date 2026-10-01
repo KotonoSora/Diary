@@ -41,7 +41,7 @@ import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.feature.editor.EditorContent
 import com.kotonosora.todolist.feature.editor.EditorTabItem
 import com.kotonosora.todolist.feature.editor.EditorUiState
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 /**
  * Interactive Flow Preview for Case 1: Flow starting from Home Page
@@ -350,7 +350,7 @@ fun FlashcardFlowFromEditorContent() {
 )
 @Composable
 fun FlashcardHomeFlowPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FlashcardFlowFromHomeContent()
     }
 }
@@ -362,7 +362,7 @@ fun FlashcardHomeFlowPreview_Dark() {
 )
 @Composable
 fun FlashcardHomeFlowPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FlashcardFlowFromHomeContent()
     }
 }
@@ -374,7 +374,7 @@ fun FlashcardHomeFlowPreview_Light() {
 )
 @Composable
 fun FlashcardEditorFlowPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FlashcardFlowFromEditorContent()
     }
 }
@@ -386,7 +386,7 @@ fun FlashcardEditorFlowPreview_Dark() {
 )
 @Composable
 fun FlashcardEditorFlowPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FlashcardFlowFromEditorContent()
     }
 }

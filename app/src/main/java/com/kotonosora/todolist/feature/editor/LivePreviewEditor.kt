@@ -39,7 +39,11 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -47,11 +51,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import android.os.Environment
+import androidx.compose.ui.platform.LocalContext
+import com.kotonosora.todolist.ui.components.MarkdownLinks
+import com.kotonosora.todolist.ui.components.MarkdownView
 import com.kotonosora.todolist.ui.components.MermaidDiagramView
-import com.kotonosora.todolist.ui.theme.TodoListTheme
-import com.mikepenz.markdown.m3.Markdown
-import com.mikepenz.markdown.m3.markdownColor
-import com.mikepenz.markdown.m3.markdownTypography
+import com.kotonosora.todolist.ui.theme.AppTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 enum class EditorViewMode {
     EDITING,   // Live Source / Markdown Editing
@@ -68,7 +75,8 @@ fun LivePreviewEditor(
     onContentChange: (String) -> Unit,
     onWikiLinkClick: (String) -> Unit,
     viewMode: EditorViewMode = EditorViewMode.EDITING,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    noteDir: String = ""
 ) {
     Box(
         modifier = modifier
@@ -122,7 +130,8 @@ fun LivePreviewEditor(
                                 onTaskToggle = { lineIndex ->
                                     val updatedContent = toggleTaskAtLine(content, lineIndex)
                                     onContentChange(updatedContent)
-                                }
+                                },
+                                noteDir = noteDir
                             )
                         }
                     }
@@ -402,7 +411,8 @@ private fun FrontmatterMetadataHeader(
 private fun MarkdownContentRenderer(
     text: String,
     onWikiLinkClick: (String) -> Unit,
-    onTaskToggle: (Int) -> Unit
+    onTaskToggle: (Int) -> Unit,
+    noteDir: String = ""
 ) {
     if (text.isBlank()) {
         Text(
@@ -413,6 +423,7 @@ private fun MarkdownContentRenderer(
         return
     }
 
+    val context = LocalContext.current
     val parsed = remember(text) { parseFrontmatterAndBody(text) }
 
     // Render Frontmatter Metadata Card if tags / metadata exist
@@ -422,12 +433,11 @@ private fun MarkdownContentRenderer(
 
     val bodyText = parsed.body
 
-    // Extract Mermaid code blocks (```mermaid ... ```) for diagram rendering
-    val mermaidBlocks = remember(bodyText) {
-        val regex = Regex("""```mermaid\s*\n([\s\S]*?)\n```""", RegexOption.IGNORE_CASE)
-        regex.findAll(bodyText).map { it.groupValues[1].trim() }.toList()
+    // Mermaid fences render as interactive diagrams; everything else (prose,
+    // tables, lists, highlighted code) goes through the shared Markdown view.
+    val (proseText, mermaidBlocks) = remember(bodyText) {
+        MarkdownLinks.extractMermaidBlocks(bodyText)
     }
-
     if (mermaidBlocks.isNotEmpty()) {
         mermaidBlocks.forEach { mermaidCode ->
             MermaidDiagramView(
@@ -440,26 +450,29 @@ private fun MarkdownContentRenderer(
         Spacer(Modifier.height(8.dp))
     }
 
-    // Convert WikiLinks [[Target]] into standard Markdown links [Target](wikilink://Target) for AST rendering
-    val processedText = remember(bodyText) {
-        bodyText.replace(Regex("""\[\[([^|\]]+)(?:\|([^\]]+))?\]\]""")) { matchResult ->
-            val target = matchResult.groupValues[1].trim()
-            val alias = matchResult.groupValues.getOrNull(2)?.trim()?.ifBlank { null } ?: target
-            "[$alias](wikilink://$target)"
+    val processedText = remember(proseText, noteDir) {
+        MarkdownLinks.rewriteWikiLinks(proseText)
+    }
+
+    // Image resolution hits the filesystem — keep it off Main. Reset on note
+    // change so the previous note's resolved text never flashes.
+    var resolvedText by remember(processedText, noteDir) { mutableStateOf<String?>(null) }
+    LaunchedEffect(processedText, noteDir) {
+        resolvedText = try {
+            withContext(Dispatchers.IO) {
+                val vaultRoot = context.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                    ?: context.filesDir
+                MarkdownLinks.resolveImageDestinations(processedText, noteDir, vaultRoot)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            processedText
         }
     }
 
-    Markdown(
-        content = processedText,
-        colors = markdownColor(
-            text = MaterialTheme.colorScheme.onSurface
-        ),
-        typography = markdownTypography(
-            h1 = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            h2 = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            h3 = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            paragraph = MaterialTheme.typography.bodyMedium
-        )
+    MarkdownView(
+        content = resolvedText ?: processedText,
+        onWikiLinkClick = onWikiLinkClick
     )
 }
 
@@ -493,7 +506,7 @@ private fun insertMarkdownSymbol(currentContent: String, prefix: String, suffix:
 @Preview(showBackground = true, name = "Obsidian Single View Live Editor with Mermaid (Dark)")
 @Composable
 fun LivePreviewEditorPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         LivePreviewEditor(
             content = """
                 # Architecture & Flowcharts
@@ -515,7 +528,7 @@ fun LivePreviewEditorPreview_Dark() {
 @Preview(showBackground = true, name = "Obsidian Single View Live Editor with Mermaid (Light)")
 @Composable
 fun LivePreviewEditorPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         LivePreviewEditor(
             content = """
                 # Architecture & Flowcharts

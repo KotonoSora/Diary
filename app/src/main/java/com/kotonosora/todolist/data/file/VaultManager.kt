@@ -265,6 +265,117 @@ class VaultManager(
         }
 
     /**
+     * Custom user templates live as plain `.md` files under a hidden `.templates/`
+     * folder. Dot-folders are already excluded from vault scans and search indexing,
+     * so templates never appear as notes.
+     */
+    companion object {
+        const val TEMPLATES_DIR = ".templates"
+    }
+
+    private fun templateRelativePath(name: String): String? {
+        val trimmed = name.trim()
+        val withoutExt =
+            if (trimmed.endsWith(".md", ignoreCase = true)) trimmed.dropLast(3) else trimmed
+        val clean = withoutExt
+            .replace("/", "")
+            .replace("\\", "")
+            .take(100)
+        if (clean.isBlank()) return null
+        return "$TEMPLATES_DIR/$clean.md"
+    }
+
+    private fun stripTemplateExtension(fileName: String): String {
+        return if (fileName.endsWith(".md", ignoreCase = true)) fileName.dropLast(3) else fileName
+    }
+
+    suspend fun listTemplateNames(overrideUri: Uri? = null): List<String> =
+        withContext(Dispatchers.IO) {
+            val safNames = mutableListOf<String>()
+            val resolvedUri = resolveVaultUri(overrideUri)
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    val templatesDir = rootDocument?.listFiles()
+                        ?.firstOrNull { it.isDirectory && it.name == TEMPLATES_DIR }
+                    if (templatesDir != null) {
+                        safNames += templatesDir.listFiles()
+                            .filter { it.isFile }
+                            .mapNotNull { it.name }
+                            .filter { it.endsWith(".md", ignoreCase = true) }
+                            .map { stripTemplateExtension(it) }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            val localNames = try {
+                val dir = File(getDefaultStorageDir(), TEMPLATES_DIR)
+                if (!dir.isDirectory) emptyList()
+                else (dir.listFiles() ?: emptyArray())
+                    .filter { it.isFile && it.extension.equals("md", ignoreCase = true) }
+                    .map { it.nameWithoutExtension }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                emptyList<String>()
+            }
+            // Merge SAF + local (readTemplate falls back to local, so list must too).
+            return@withContext (safNames + localNames).distinct().sorted()
+        }
+
+    suspend fun readTemplate(name: String, overrideUri: Uri? = null): String? =
+        withContext(Dispatchers.IO) {
+            val relativePath = templateRelativePath(name) ?: return@withContext null
+            val resolvedUri = resolveVaultUri(overrideUri)
+            if (resolvedUri != null) {
+                try {
+                    val rootDocument = DocumentFile.fromTreeUri(context, resolvedUri)
+                    if (rootDocument != null) {
+                        val target = findDocumentByRelativePath(rootDocument, relativePath)
+                        if (target != null && target.exists()) {
+                            return@withContext context.contentResolver
+                                .openInputStream(target.uri)?.bufferedReader()
+                                ?.use { it.readText() }
+                        }
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+            try {
+                val file = File(getDefaultStorageDir(), relativePath)
+                if (file.exists()) return@withContext file.readText()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            return@withContext null
+        }
+
+    suspend fun saveTemplate(
+        name: String,
+        content: String,
+        overrideUri: Uri? = null
+    ): Boolean = withContext(Dispatchers.IO) {
+        if (content.isBlank()) return@withContext false
+        val relativePath = templateRelativePath(name) ?: return@withContext false
+        // Reuse the note write path: it creates parent dirs and handles SAF/local.
+        return@withContext saveNote(
+            NoteItem(
+                id = relativePath,
+                title = relativePath.substringAfterLast("/"),
+                relativePath = TEMPLATES_DIR,
+                content = content
+            ),
+            overrideUri
+        )
+    }
+
+    suspend fun deleteTemplate(name: String, overrideUri: Uri? = null): Boolean {
+        val relativePath = templateRelativePath(name) ?: return false
+        return deleteNote(relativePath, overrideUri)
+    }
+
+    /**
      * Renames a note file locally or via SAF DocumentFile.
      */
     suspend fun renameNote(
@@ -329,6 +440,11 @@ class VaultManager(
 
     /**
      * Deletes a folder directory recursively.
+     *
+     * SAF's [DocumentFile.delete] only removes empty directories, so children
+     * are deleted depth-first (matching local `deleteRecursively` semantics).
+     * Previously a non-empty SAF folder silently failed to delete while the
+     * index cleanup still ran, leaving DB and disk diverged until next sync.
      */
     suspend fun deleteFolder(folderPath: String, overrideUri: Uri? = null): Boolean =
         withContext(Dispatchers.IO) {
@@ -342,7 +458,7 @@ class VaultManager(
                     if (rootDocument != null) {
                         val targetDir = findDocumentByRelativePath(rootDocument, folderPath)
                         if (targetDir != null && targetDir.isDirectory) {
-                            deleted = targetDir.delete()
+                            deleted = deleteDocumentRecursively(targetDir)
                         }
                     }
                 } catch (e: Exception) {
@@ -362,6 +478,26 @@ class VaultManager(
 
             return@withContext deleted
         }
+
+    /**
+     * Depth-first recursive delete for SAF trees. Continues past individual
+     * failures so one locked file doesn't orphan the rest; returns false if
+     * anything failed.
+     */
+    private fun deleteDocumentRecursively(file: DocumentFile): Boolean {
+        var ok = true
+        if (file.isDirectory) {
+            for (child in file.listFiles()) {
+                ok = deleteDocumentRecursively(child) && ok
+            }
+        }
+        return try {
+            file.delete() && ok
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
 
     /**
      * Creates a folder directory in local storage or custom SAF vault.

@@ -60,7 +60,7 @@ import androidx.navigation.NavController
 import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.navigation.NavRoute
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -373,7 +373,7 @@ fun TaskListScreenPreview_Populated_Dark() {
         )
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         TaskListContent(
             tasks = sampleTasks,
             searchQuery = ""
@@ -399,7 +399,7 @@ fun TaskListScreenPreview_Populated_Light() {
         )
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         TaskListContent(
             tasks = sampleTasks,
             searchQuery = ""

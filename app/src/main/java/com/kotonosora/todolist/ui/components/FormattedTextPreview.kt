@@ -12,13 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
-import com.mikepenz.markdown.m3.Markdown
-import com.mikepenz.markdown.m3.markdownColor
-import com.mikepenz.markdown.m3.markdownTypography
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun FormattedTextPreview(
@@ -48,7 +44,7 @@ fun FormattedTextPreview(
             } else if (format.equals("txt", ignoreCase = true)) {
                 PlainTextRenderer(text = text)
             } else {
-                MarkdownRenderer(text = text)
+                MarkdownView(content = text)
             }
         }
     }
@@ -61,22 +57,6 @@ private fun PlainTextRenderer(text: String) {
         style = MaterialTheme.typography.bodyMedium,
         fontFamily = FontFamily.Monospace,
         color = MaterialTheme.colorScheme.onSurface
-    )
-}
-
-@Composable
-private fun MarkdownRenderer(text: String) {
-    Markdown(
-        content = text,
-        colors = markdownColor(
-            text = MaterialTheme.colorScheme.onSurface
-        ),
-        typography = markdownTypography(
-            h1 = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-            h2 = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-            h3 = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-            paragraph = MaterialTheme.typography.bodyMedium
-        )
     )
 }
 
@@ -95,13 +75,20 @@ fun FormattedTextPreview_Markdown_Dark() {
         - [x] Flat Design System
         - [ ] Live WYSIWYG Editor
         > "Knowledge management is atomic thinking."
-        
+
+        | Area | Status |
+        | ---- | ------ |
+        | Editor | Done |
+        | Search | Planned |
+
+        See the [docs](https://example.com/guide) and [[Roadmap|roadmap note]].
+
         ```kotlin
         val status = "Flat Design Complete"
         ```
     """.trimIndent()
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FormattedTextPreview(
             text = markdown,
             format = "md"
@@ -118,7 +105,7 @@ fun FormattedTextPreview_Markdown_Dark() {
 fun FormattedTextPreview_PlainText_Light() {
     val plainText = "Plain text notes formatted as raw monospace text."
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FormattedTextPreview(
             text = plainText,
             format = "txt"
@@ -129,7 +116,7 @@ fun FormattedTextPreview_PlainText_Light() {
 @Preview(showBackground = true, name = "3. Formatted Preview - Empty")
 @Composable
 fun FormattedTextPreview_Empty() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FormattedTextPreview(
             text = "",
             format = "md"

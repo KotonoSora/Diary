@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.Card
@@ -61,7 +62,8 @@ import com.kotonosora.todolist.ui.components.AudioPlayerView
 import com.kotonosora.todolist.ui.components.AudioWaveformBars
 import com.kotonosora.todolist.ui.components.CameraCaptureView
 import com.kotonosora.todolist.ui.components.ImageLightboxDialog
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.components.PdfReaderDialog
+import com.kotonosora.todolist.ui.theme.AppTheme
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -74,6 +76,7 @@ fun MediaScreen(
 ) {
     val capturedPhotos by viewModel.capturedPhotoPaths.collectAsState()
     val recordedAudios by viewModel.recordedAudioPaths.collectAsState()
+    val pdfDocuments by viewModel.pdfDocumentPaths.collectAsState()
     val isRecording by viewModel.isRecording.collectAsState()
     val isPaused by viewModel.isPaused.collectAsState()
     val recordingDuration by viewModel.recordingDurationSeconds.collectAsState()
@@ -81,6 +84,7 @@ fun MediaScreen(
 
     var showCameraSheet by remember { mutableStateOf(false) }
     var selectedLightboxPhoto by remember { mutableStateOf<String?>(null) }
+    var selectedPdfPath by remember { mutableStateOf<String?>(null) }
 
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -94,9 +98,16 @@ fun MediaScreen(
         if (granted) viewModel.startRecording()
     }
 
+    val pdfPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) viewModel.importPdf(uri)
+    }
+
     MediaScreenContent(
         capturedPhotos = capturedPhotos,
         recordedAudios = recordedAudios,
+        pdfDocuments = pdfDocuments,
         isRecording = isRecording,
         isPaused = isPaused,
         recordingDurationSeconds = recordingDuration,
@@ -107,7 +118,10 @@ fun MediaScreen(
         onStopRecordClick = { viewModel.stopRecording() },
         onDeletePhoto = { viewModel.deletePhoto(it) },
         onDeleteAudio = { viewModel.deleteAudio(it) },
+        onDeletePdf = { viewModel.deletePdf(it) },
+        onImportPdfClick = { pdfPickerLauncher.launch("application/pdf") },
         onPhotoClick = { selectedLightboxPhoto = it },
+        onPdfClick = { selectedPdfPath = it },
         onOpenDrawer = onOpenDrawer
     )
 
@@ -116,6 +130,14 @@ fun MediaScreen(
         ImageLightboxDialog(
             filePath = photoPath,
             onDismiss = { selectedLightboxPhoto = null }
+        )
+    }
+
+    // Full-screen PDF Reader Dialog
+    selectedPdfPath?.let { pdfPath ->
+        PdfReaderDialog(
+            filePath = pdfPath,
+            onDismiss = { selectedPdfPath = null }
         )
     }
 
@@ -149,6 +171,7 @@ fun MediaScreen(
 fun MediaScreenContent(
     capturedPhotos: List<String>,
     recordedAudios: List<String>,
+    pdfDocuments: List<String> = emptyList(),
     isRecording: Boolean,
     isPaused: Boolean = false,
     recordingDurationSeconds: Int = 0,
@@ -157,9 +180,12 @@ fun MediaScreenContent(
     onPauseRecordClick: () -> Unit = {},
     onResumeRecordClick: () -> Unit = {},
     onStopRecordClick: () -> Unit = {},
+    onImportPdfClick: () -> Unit = {},
     onDeletePhoto: (String) -> Unit = {},
     onDeleteAudio: (String) -> Unit = {},
+    onDeletePdf: (String) -> Unit = {},
     onPhotoClick: (String) -> Unit = {},
+    onPdfClick: (String) -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null
 ) {
     Scaffold { paddingValues ->
@@ -361,6 +387,53 @@ fun MediaScreenContent(
                     )
                 }
             }
+
+            item { HorizontalDivider() }
+
+            // ── PDF documents section ──
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "PDF Documents",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    IconButton(
+                        onClick = onImportPdfClick,
+                        colors = IconButtonDefaults.iconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                    ) {
+                        Icon(
+                            Icons.Default.PictureAsPdf,
+                            contentDescription = "Import PDF",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+            items(pdfDocuments, key = { it }) { path ->
+                MediaFileItem(
+                    name = formatMediaDisplayName(path, isAudio = false),
+                    subtitle = path,
+                    filePath = null,
+                    onPhotoClick = { onPdfClick(path) },
+                    onDelete = { onDeletePdf(path) }
+                )
+            }
+            if (pdfDocuments.isEmpty()) {
+                item {
+                    Text(
+                        "No PDF documents yet.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             item { Spacer(Modifier.height(16.dp)) }
         }
     }
@@ -384,7 +457,7 @@ fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
         pathOrName
     }
 
-    val regex = Regex("""(IMG|AUD|REC)_(\d{8}_\d{6}|\d+)""")
+    val regex = Regex("""(IMG|AUD|REC|DOC)_(\d{8}_\d{6}|\d+)""")
     val match = regex.find(fileName)
 
     if (match != null) {
@@ -394,6 +467,7 @@ fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
         val typeLabel = when (type) {
             "IMG" -> "Photo"
             "AUD", "REC" -> "Audio"
+            "DOC" -> "Document"
             else -> if (isAudio) "Audio" else "Photo"
         }
 
@@ -423,6 +497,7 @@ fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
 
     val prefix = if (isAudio) "Audio - " else "Photo - "
     return prefix + fileName.removeSuffix(".jpg").removeSuffix(".png").removeSuffix(".m4a")
+        .removeSuffix(".pdf")
 }
 
 @Composable
@@ -539,7 +614,7 @@ fun MediaScreenPreview_Populated_Dark() {
     val samplePhotos = listOf("_assets/IMG_20260301_120000.jpg")
     val sampleAudios = listOf("_assets/REC_20260301_120000.m4a")
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         MediaScreenContent(
             capturedPhotos = samplePhotos,
             recordedAudios = sampleAudios,
@@ -555,7 +630,7 @@ fun MediaScreenPreview_Populated_Dark() {
 )
 @Composable
 fun MediaScreenPreview_ActiveRecording_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         MediaScreenContent(
             capturedPhotos = emptyList(),
             recordedAudios = emptyList(),
@@ -569,7 +644,7 @@ fun MediaScreenPreview_ActiveRecording_Dark() {
 @Preview(showBackground = true, name = "3. Media Screen - Empty State")
 @Composable
 fun MediaScreenPreview_EmptyState() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         MediaScreenContent(
             capturedPhotos = emptyList(),
             recordedAudios = emptyList(),

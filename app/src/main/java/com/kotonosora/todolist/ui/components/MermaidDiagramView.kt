@@ -48,7 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 /**
  * Enhanced Mermaid.js Diagram & Flowchart Renderer featuring:
@@ -370,7 +370,7 @@ fun MermaidDiagramViewPreview_Flowchart_Dark() {
             C --> E[Start Flashcard Session]
     """.trimIndent()
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         MermaidDiagramView(
             mermaidCode = flowchartCode,
             modifier = Modifier.padding(16.dp)
@@ -393,7 +393,7 @@ fun MermaidDiagramViewPreview_Sequence_Light() {
             Editor-->>User: Show AutoComplete Overlay
     """.trimIndent()
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         MermaidDiagramView(
             mermaidCode = sequenceCode,
             modifier = Modifier.padding(16.dp)

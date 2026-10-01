@@ -65,7 +65,7 @@ import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.feature.media.formatMediaDisplayName
 import com.kotonosora.todolist.ui.components.CameraCaptureView
 import com.kotonosora.todolist.ui.components.TextFormatToolbar
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import com.mohamedrejeb.richeditor.model.rememberRichTextState
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditor
 import com.mohamedrejeb.richeditor.ui.material3.RichTextEditorDefaults
@@ -441,7 +441,7 @@ fun AddEditTaskContent(
 )
 @Composable
 fun AddEditTaskScreenPreview_New_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         AddEditTaskContent(
             existingTask = null
         )
@@ -464,7 +464,7 @@ fun AddEditTaskScreenPreview_Existing_Dark() {
         isCompleted = false
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         AddEditTaskContent(
             existingTask = sampleTask
         )
@@ -487,7 +487,7 @@ fun AddEditTaskScreenPreview_Existing_Light() {
         isCompleted = false
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         AddEditTaskContent(
             existingTask = sampleTask
         )
