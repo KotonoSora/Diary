@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.vault
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,6 +29,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.ParaCategory
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun ParaExplorerView(
@@ -159,9 +161,13 @@ private fun ParaSectionCard(
     }
 }
 
-@Preview(showBackground = true, name = "PARA Explorer Preview")
+@Preview(
+    showBackground = true,
+    name = "1. PARA Explorer - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
-fun ParaExplorerViewPreview() {
+fun ParaExplorerViewPreview_Dark() {
     val sampleNotes = listOf(
         NoteItem(
             "1. Projects/AppLaunch.md",
@@ -179,7 +185,39 @@ fun ParaExplorerViewPreview() {
         )
     )
 
-    MaterialTheme {
+    AppTheme(darkTheme = true) {
+        ParaExplorerView(
+            notes = sampleNotes,
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. PARA Explorer - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun ParaExplorerViewPreview_Light() {
+    val sampleNotes = listOf(
+        NoteItem(
+            "1. Projects/AppLaunch.md",
+            "App Launch Goal",
+            "1. Projects",
+            "Launch details",
+            paraCategory = ParaCategory.PROJECT
+        ),
+        NoteItem(
+            "2. Areas/Health.md",
+            "Health & Fitness",
+            "2. Areas",
+            "Daily habits",
+            paraCategory = ParaCategory.AREA
+        )
+    )
+
+    AppTheme(darkTheme = false) {
         ParaExplorerView(
             notes = sampleNotes,
             onNoteClick = {}

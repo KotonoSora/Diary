@@ -62,7 +62,6 @@ import com.kizitonwose.calendar.compose.weekcalendar.rememberWeekCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.WeekDay
-import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
 import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.ui.theme.AppTheme
@@ -84,13 +83,15 @@ enum class CalendarViewMode {
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel = viewModel(),
-    onOpenDrawer: (() -> Unit)? = null
+    onOpenDrawer: (() -> Unit)? = null,
+    onNoteClick: ((String) -> Unit)? = null
 ) {
     val year by viewModel.currentYear.collectAsState()
     val month by viewModel.currentMonth.collectAsState()
     val selectedDateMillis by viewModel.selectedDateMillis.collectAsState()
     val allTodos by viewModel.allTodos.collectAsState()
     val todosForDate by viewModel.todosForSelectedDate.collectAsState()
+    val notesForDate by viewModel.notesForSelectedDate.collectAsState()
 
     CalendarScreenContent(
         year = year,
@@ -98,11 +99,13 @@ fun CalendarScreen(
         selectedDateMillis = selectedDateMillis,
         allTodos = allTodos,
         todosForDate = todosForDate,
+        notesForDate = notesForDate,
         onSelectDate = { viewModel.selectDate(it) },
         onSelectToday = { viewModel.selectToday() },
         onPreviousMonth = { viewModel.previousMonth() },
         onNextMonth = { viewModel.nextMonth() },
         onToggleTodo = { viewModel.toggleTodoStatus(it) },
+        onNoteClick = onNoteClick,
         onOpenDrawer = onOpenDrawer
     )
 }
@@ -114,17 +117,21 @@ fun CalendarScreenContent(
     selectedDateMillis: Long,
     allTodos: List<TaskItem>,
     todosForDate: List<TaskItem>,
+    notesForDate: List<com.kotonosora.todolist.domain.model.NoteItem> = emptyList(),
     onSelectDate: (Long) -> Unit = {},
     onSelectToday: () -> Unit = {},
     onPreviousMonth: () -> Unit = {},
     onNextMonth: () -> Unit = {},
     onToggleTodo: (TaskItem) -> Unit = {},
+    onNoteClick: ((String) -> Unit)? = null,
     onOpenDrawer: (() -> Unit)? = null
 ) {
     var viewMode by remember { mutableStateOf(CalendarViewMode.MONTH) }
     val scope = rememberCoroutineScope()
 
-    val firstDayOfWeek = remember { firstDayOfWeekFromLocale() }
+    // English (US) week convention: Sunday first. firstDayOfWeekFromLocale()
+    // follows the device locale and would shift the grid on non-English phones.
+    val firstDayOfWeek = remember { DayOfWeek.SUNDAY }
     val selectedLocalDate = remember(selectedDateMillis) {
         Instant.ofEpochMilli(selectedDateMillis).atZone(ZoneId.systemDefault()).toLocalDate()
     }
@@ -313,7 +320,12 @@ fun CalendarScreenContent(
 
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("${todosForDate.size} Tasks") },
+                    label = {
+                        Text(
+                            if (notesForDate.isEmpty()) "${todosForDate.size} Tasks"
+                            else "${todosForDate.size} Tasks • ${notesForDate.size} Notes"
+                        )
+                    },
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                     )
@@ -321,7 +333,7 @@ fun CalendarScreenContent(
             }
 
             // ── Agenda List ──
-            if (todosForDate.isEmpty()) {
+            if (todosForDate.isEmpty() && notesForDate.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -339,7 +351,7 @@ fun CalendarScreenContent(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(todosForDate, key = { it.id }) { todo ->
+                    items(todosForDate, key = { "task-${it.id}" }) { todo ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -377,6 +389,39 @@ fun CalendarScreenContent(
                                         )
                                     }
                                 }
+                            }
+                        }
+                    }
+                    items(notesForDate, key = { "note-${it.id}" }) { note ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .clickable(enabled = onNoteClick != null) {
+                                    onNoteClick?.invoke(note.id)
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(
+                                    alpha = 0.4f
+                                )
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = note.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = note.content.take(120).replace("\n", " "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2
+                                )
                             }
                         }
                     }

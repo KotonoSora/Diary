@@ -3,7 +3,8 @@ package com.kotonosora.todolist.data.native
 import kotlin.math.max
 
 /**
- * Pure Kotlin helper replacing former Markdown C++ parsing & text analytics functions.
+ * Pure Kotlin helper for Markdown parsing & text analytics.
+ * (Historically named "*Native" when backed by C++; now 100% Kotlin.)
  */
 object MdNativeHelper {
 
@@ -12,7 +13,10 @@ object MdNativeHelper {
     private val titleRegex =
         Regex("^title:\\s*[\"']?([^\"'\\n\\r]+)[\"']?", RegexOption.IGNORE_CASE)
     private val emotionRegex =
-        Regex("^\\s*emotion:\\s*[\"']?(\\w+)[\"']?", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE))
+        Regex(
+            "^\\s*emotion:\\s*[\"']?(\\w+)[\"']?",
+            setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE)
+        )
     private val actionsRegex =
         Regex(
             "^\\s*actions:\\s*\\[([^\\]\n]*)]",
@@ -143,7 +147,7 @@ object MdNativeHelper {
      * Text Stats Analytics.
      * Returns IntArray(4): [wordCount, charCount, lineCount, readingTimeMinutes]
      */
-    fun calculateTextStatsNative(mdContent: String): IntArray {
+    fun calculateTextStats(mdContent: String): IntArray {
         if (mdContent.isEmpty()) {
             return intArrayOf(0, 0, 0, 0)
         }

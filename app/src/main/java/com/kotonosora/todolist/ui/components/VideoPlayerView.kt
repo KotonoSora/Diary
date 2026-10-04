@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.components
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Box
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
@@ -35,6 +37,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
+import com.kotonosora.todolist.ui.theme.AppTheme
 import java.io.File
 
 /**
@@ -142,5 +145,29 @@ fun VideoPlayerView(
                 )
             }
         }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "1. Video Player - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun VideoPlayerViewPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        VideoPlayerView(filePath = "preview_sample.mp4")
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. Video Player - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun VideoPlayerViewPreview_Light() {
+    AppTheme(darkTheme = false) {
+        VideoPlayerView(filePath = "preview_sample.mp4")
     }
 }

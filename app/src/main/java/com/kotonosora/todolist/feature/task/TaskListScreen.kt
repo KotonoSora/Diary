@@ -42,6 +42,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -260,14 +261,10 @@ fun TaskListItem(
 ) {
     val formatter = remember { SimpleDateFormat("MMM d, yyyy", AppConstants.APP_LOCALE) }
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
-            } else false
-        }
-    )
+    val dismissState = rememberSwipeToDismissBoxState()
+    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+        LaunchedEffect(task.id) { onDelete() }
+    }
 
     SwipeToDismissBox(
         state = dismissState,

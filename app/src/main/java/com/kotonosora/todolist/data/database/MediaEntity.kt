@@ -21,7 +21,7 @@ import java.util.UUID
 data class MediaEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val todoId: String?,          // null = standalone gallery item (no parent todo)
-    val type: String,             // "photo" or "audio"
+    val type: String,             // "photo", "video", "audio" or "pdf"
     val filePath: String,
     val createdAt: Long = System.currentTimeMillis()
 )

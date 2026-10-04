@@ -2,6 +2,7 @@ package com.kotonosora.todolist.ui.components
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.res.Configuration
 import android.util.Log
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -12,6 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import com.kotonosora.todolist.ui.theme.AppTheme
 import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.highlightedCodeBlock
@@ -74,5 +77,46 @@ fun MarkdownView(
             ),
             imageTransformer = Coil3ImageTransformerImpl
         )
+    }
+}
+
+private const val MARKDOWN_PREVIEW_SAMPLE = """# Zettelkasten Note
+
+Brainstorming with **bold**, *italic* and `inline code`.
+
+- Fleeting thought
+- Literature reference
+- Permanent insight
+
+See [[Linked Note]] and #ideas tag.
+
+```kotlin
+fun atomic() = "evergreen note"
+```
+
+> Quote block for key takeaways.
+"""
+
+@Preview(
+    showBackground = true,
+    name = "1. Markdown View - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun MarkdownViewPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        MarkdownView(content = MARKDOWN_PREVIEW_SAMPLE)
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. Markdown View - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun MarkdownViewPreview_Light() {
+    AppTheme(darkTheme = false) {
+        MarkdownView(content = MARKDOWN_PREVIEW_SAMPLE)
     }
 }

@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.search
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -35,6 +36,9 @@ import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.repository.VaultRepository
 import com.kotonosora.todolist.navigation.appViewModel
+import com.kotonosora.todolist.ui.theme.AppTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,7 +47,8 @@ import kotlinx.coroutines.launch
 
 data class SearchUiState(
     val query: String = "",
-    val searchResults: List<NoteItem> = emptyList()
+    val searchResults: List<NoteItem> = emptyList(),
+    val isSearching: Boolean = false
 )
 
 class SearchViewModel(
@@ -53,20 +58,30 @@ class SearchViewModel(
     private val _uiState = MutableStateFlow(SearchUiState())
     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
 
+    private var searchJob: Job? = null
+
     fun onQueryChange(newQuery: String) {
         _uiState.value = _uiState.value.copy(query = newQuery)
+        searchJob?.cancel()
         if (newQuery.isBlank()) {
-            _uiState.value = _uiState.value.copy(searchResults = emptyList())
+            _uiState.value = _uiState.value.copy(searchResults = emptyList(), isSearching = false)
             return
         }
-        viewModelScope.launch {
+        // Debounce rapid typing: only the latest query hits the repository,
+        // so stale results can't overwrite fresh ones.
+        _uiState.value = _uiState.value.copy(isSearching = true)
+        searchJob = viewModelScope.launch {
+            delay(250)
             val results = vaultRepository.searchNotes(newQuery).firstOrNull() ?: emptyList()
-            _uiState.value = _uiState.value.copy(searchResults = results)
+            // Drop results if the query changed while we were searching.
+            if (_uiState.value.query != newQuery) return@launch
+            _uiState.value = _uiState.value.copy(searchResults = results, isSearching = false)
         }
     }
 
     fun clearQuery() {
-        onQueryChange("")
+        searchJob?.cancel()
+        _uiState.value = SearchUiState()
     }
 }
 
@@ -128,7 +143,11 @@ fun SearchContent(
 
         if (uiState.query.isNotEmpty()) {
             Text(
-                text = "Results (${uiState.searchResults.size})",
+                text = when {
+                    uiState.isSearching -> "Searching…"
+                    uiState.searchResults.isEmpty() -> "No results for \"${uiState.query}\""
+                    else -> "Results (${uiState.searchResults.size})"
+                },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -155,9 +174,13 @@ fun SearchContent(
     }
 }
 
-@Preview(showBackground = true, name = "Search Screen Preview")
+@Preview(
+    showBackground = true,
+    name = "1. Search Screen - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
-fun SearchScreenPreview() {
+fun SearchScreenPreview_Dark() {
     val results = listOf(
         NoteItem(
             "Projects/Roadmap.md",
@@ -173,7 +196,39 @@ fun SearchScreenPreview() {
         )
     )
 
-    MaterialTheme {
+    AppTheme(darkTheme = true) {
+        SearchContent(
+            uiState = SearchUiState(query = "roadmap", searchResults = results),
+            onQueryChange = {},
+            onClearQuery = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. Search Screen - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun SearchScreenPreview_Light() {
+    val results = listOf(
+        NoteItem(
+            "Projects/Roadmap.md",
+            "Project Roadmap",
+            "Projects",
+            "Milestones for Q1 architecture and SAF integration."
+        ),
+        NoteItem(
+            "Work/Meeting.md",
+            "Meeting Notes",
+            "Work",
+            "Discussed roadmap timelines and FTS search indexing."
+        )
+    )
+
+    AppTheme(darkTheme = false) {
         SearchContent(
             uiState = SearchUiState(query = "roadmap", searchResults = results),
             onQueryChange = {},

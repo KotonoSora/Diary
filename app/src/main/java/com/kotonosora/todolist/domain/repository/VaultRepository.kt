@@ -40,5 +40,6 @@ interface VaultRepository {
         content: String,
         overrideUri: Uri? = null
     ): Boolean
+
     suspend fun deleteCustomTemplate(name: String, overrideUri: Uri? = null): Boolean
 }

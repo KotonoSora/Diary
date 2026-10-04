@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.graph
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -9,11 +10,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -47,6 +51,8 @@ import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.ui.theme.AppTheme
+import com.kotonosora.todolist.ui.theme.NoteTypeColors
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -171,23 +177,28 @@ fun KnowledgeGraphContent(
             uiState.notes.forEach { note ->
                 val pos = nodePositions[note.id] ?: return@forEach
                 val canvasPos = pos * scale + offset
-                val nodeColor = when (note.noteType) {
-                    NoteType.FLEETING -> Color(0xFFFFC107)    // Yellow
-                    NoteType.LITERATURE -> Color(0xFF2196F3)  // Blue
-                    NoteType.PERMANENT -> Color(0xFF4CAF50)   // Green
-                    NoteType.MOC -> Color(0xFF9C27B0)         // Purple
-                    NoteType.DIARY -> Color(0xFFE91E63)       // Pink
-                    NoteType.DAILY -> Color(0xFF00BCD4)       // Cyan
-                    NoteType.REPORT -> Color(0xFFFF5722)      // Deep Orange
-                    NoteType.TODO -> Color(0xFF8BC34A)        // Light Green
-                    NoteType.FLASHCARD -> Color(0xFF673AB7)   // Deep Purple
-                }
+                val nodeColor = NoteTypeColors.forNoteType(note.noteType)
                 drawCircle(
                     color = nodeColor,
                     radius = 16f * scale,
                     center = canvasPos
                 )
             }
+        }
+
+        if (uiState.notes.isEmpty()) {
+            Text(
+                text = "No notes yet — the graph appears once you create linked notes.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        }
+
+        // Dangling-link + count overlay
+        val danglingCount = remember(uiState.notes, uiState.edges) {
+            val titles = uiState.notes.map { it.title }.toSet()
+            uiState.edges.count { it.targetTitle !in titles }
         }
 
         // Flat Legend Overlay Card
@@ -201,17 +212,25 @@ fun KnowledgeGraphContent(
                 containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
             )
         ) {
-            Column(modifier = Modifier.padding(10.dp)) {
+            Column(
+                modifier = Modifier
+                    .padding(10.dp)
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
                 Text(
-                    text = "Legend",
+                    text = "Legend • ${uiState.notes.size} notes • ${uiState.edges.size} links" +
+                        if (danglingCount > 0) " • $danglingCount missing" else "",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Spacer(Modifier.size(4.dp))
-                LegendItem(color = Color(0xFFFFC107), label = "Quick Note")
-                LegendItem(color = Color(0xFF2196F3), label = "Reference Note")
-                LegendItem(color = Color(0xFF4CAF50), label = "Core Note")
-                LegendItem(color = Color(0xFF9C27B0), label = "Topic Index")
+                NoteType.entries.forEach { type ->
+                    LegendItem(
+                        color = NoteTypeColors.forNoteType(type),
+                        label = NoteTypeColors.labelFor(type)
+                    )
+                }
             }
         }
 
@@ -257,9 +276,13 @@ private fun LegendItem(color: Color, label: String) {
     }
 }
 
-@Preview(showBackground = true, name = "Zettelkasten Graph Screen Preview")
+@Preview(
+    showBackground = true,
+    name = "1. Knowledge Graph - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
-fun KnowledgeGraphScreenPreview() {
+fun KnowledgeGraphScreenPreview_Dark() {
     val sampleNotes = listOf(
         NoteItem("Note1.md", "Fleeting Thought", "", "Content", noteType = NoteType.FLEETING),
         NoteItem("Note2.md", "Book Summary", "", "Content", noteType = NoteType.LITERATURE),
@@ -272,7 +295,35 @@ fun KnowledgeGraphScreenPreview() {
         GraphEdge("Note3.md", "MOC Overview")
     )
 
-    MaterialTheme {
+    AppTheme(darkTheme = true) {
+        KnowledgeGraphContent(
+            uiState = GraphUiState(notes = sampleNotes, edges = sampleEdges),
+            onBack = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. Knowledge Graph - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun KnowledgeGraphScreenPreview_Light() {
+    val sampleNotes = listOf(
+        NoteItem("Note1.md", "Fleeting Thought", "", "Content", noteType = NoteType.FLEETING),
+        NoteItem("Note2.md", "Book Summary", "", "Content", noteType = NoteType.LITERATURE),
+        NoteItem("Note3.md", "Atomic Zettel Concept", "", "Content", noteType = NoteType.PERMANENT),
+        NoteItem("Note4.md", "MOC Overview", "", "Content", noteType = NoteType.MOC)
+    )
+    val sampleEdges = listOf(
+        GraphEdge("Note1.md", "Atomic Zettel Concept"),
+        GraphEdge("Note2.md", "Atomic Zettel Concept"),
+        GraphEdge("Note3.md", "MOC Overview")
+    )
+
+    AppTheme(darkTheme = false) {
         KnowledgeGraphContent(
             uiState = GraphUiState(notes = sampleNotes, edges = sampleEdges),
             onBack = {},

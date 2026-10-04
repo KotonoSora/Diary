@@ -1,9 +1,11 @@
 package com.kotonosora.todolist.feature.editor
 
+import android.os.Environment
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,12 +49,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import android.os.Environment
-import androidx.compose.ui.platform.LocalContext
+import com.kotonosora.todolist.domain.model.TaskListEntry
+import com.kotonosora.todolist.domain.model.TaskToggleHelper
 import com.kotonosora.todolist.ui.components.MarkdownLinks
 import com.kotonosora.todolist.ui.components.MarkdownView
 import com.kotonosora.todolist.ui.components.MermaidDiagramView
@@ -295,20 +298,33 @@ private fun MarkdownFormattingToolbar(
 
 private data class FrontmatterParsedResult(
     val metadata: Map<String, String>,
-    val body: String
+    val body: String,
+    /** 0-based line index in the original [text] where [body] starts. */
+    val bodyStartLineIndex: Int = 0
 )
 
 private fun parseFrontmatterAndBody(text: String): FrontmatterParsedResult {
     val trimmed = text.trimStart()
     if (!trimmed.startsWith("---")) {
-        return FrontmatterParsedResult(emptyMap(), text)
+        return FrontmatterParsedResult(emptyMap(), text, 0)
     }
     val closingIndex = trimmed.indexOf("---", startIndex = 3)
     if (closingIndex == -1) {
-        return FrontmatterParsedResult(emptyMap(), text)
+        return FrontmatterParsedResult(emptyMap(), text, 0)
     }
     val yamlSection = trimmed.substring(3, closingIndex).trim()
-    val bodyText = trimmed.substring(closingIndex + 3).trimStart()
+    val afterClosing = trimmed.substring(closingIndex + 3)
+    val bodyText = afterClosing.trimStart()
+
+    // Offset = newlines before body start in the original text, so task
+    // line indices stay correct even with leading blanks or \r\n endings.
+    // Compute from char offsets (mirrors the substring/trim logic above)
+    // instead of `text.lines().size - body.lines().size`, which drifts when
+    // leading/trailing blank lines are trimmed.
+    val trimmedStartChars = text.length - trimmed.length
+    val leadingWsAfterClosing = afterClosing.length - bodyText.length
+    val bodyStartChar = trimmedStartChars + closingIndex + 3 + leadingWsAfterClosing
+    val bodyStartLineIndex = text.substring(0, bodyStartChar.coerceIn(0, text.length)).count { it == '\n' }
 
     val metaMap = mutableMapOf<String, String>()
     yamlSection.lines().forEach { line ->
@@ -321,7 +337,7 @@ private fun parseFrontmatterAndBody(text: String): FrontmatterParsedResult {
             }
         }
     }
-    return FrontmatterParsedResult(metaMap, bodyText)
+    return FrontmatterParsedResult(metaMap, bodyText, bodyStartLineIndex)
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -433,6 +449,21 @@ private fun MarkdownContentRenderer(
 
     val bodyText = parsed.body
 
+    // Interactive task checklist: mikepenz renders `- [ ]` statically, so
+    // surface real checkboxes here. Tapping flips the source line via
+    // onTaskToggle (same helper the editor uses).
+    val taskEntries = remember(bodyText) { TaskToggleHelper.parseTasks(bodyText) }
+    // Frontmatter strip shifts line numbers — use the parser's exact body
+    // start line so toggles hit the full-document index.
+    val bodyOffset = remember(parsed) { parsed.bodyStartLineIndex }
+    if (taskEntries.isNotEmpty()) {
+        TaskChecklistCard(
+            entries = taskEntries,
+            onToggle = { entry -> onTaskToggle(entry.lineIndex + bodyOffset) },
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+    }
+
     // Mermaid fences render as interactive diagrams; everything else (prose,
     // tables, lists, highlighted code) goes through the shared Markdown view.
     val (proseText, mermaidBlocks) = remember(bodyText) {
@@ -465,7 +496,7 @@ private fun MarkdownContentRenderer(
                 MarkdownLinks.resolveImageDestinations(processedText, noteDir, vaultRoot)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            android.util.Log.w("LivePreviewEditor", "image resolve failed", e)
             processedText
         }
     }
@@ -476,22 +507,51 @@ private fun MarkdownContentRenderer(
     )
 }
 
-private fun toggleTaskAtLine(text: String, lineIndex: Int): String {
-    val lines = text.lines().toMutableList()
-    if (lineIndex in lines.indices) {
-        val line = lines[lineIndex]
-        lines[lineIndex] = when {
-            line.contains("- [ ] ") -> line.replace("- [ ] ", "- [x] ")
-            line.contains("* [ ] ") -> line.replace("* [ ] ", "* [x] ")
-            line.contains("- [x] ") -> line.replace("- [x] ", "- [ ] ")
-            line.contains("- [X] ") -> line.replace("- [X] ", "- [ ] ")
-            line.contains("* [x] ") -> line.replace("* [x] ", "* [ ] ")
-            line.contains("* [X] ") -> line.replace("* [X] ", "* [ ] ")
-            else -> line
+@Composable
+private fun TaskChecklistCard(
+    entries: List<TaskListEntry>,
+    onToggle: (TaskListEntry) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = "Tasks (${entries.count { it.checked }}/${entries.size})",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            entries.forEach { entry ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onToggle(entry) }
+                        .padding(vertical = 2.dp)
+                ) {
+                    androidx.compose.material3.Checkbox(
+                        checked = entry.checked,
+                        onCheckedChange = { onToggle(entry) }
+                    )
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        text = entry.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (entry.checked) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
         }
     }
-    return lines.joinToString("\n")
 }
+
+private fun toggleTaskAtLine(text: String, lineIndex: Int): String =
+    TaskToggleHelper.toggleTaskAtLine(text, lineIndex)
 
 private fun insertMarkdownSymbol(currentContent: String, prefix: String, suffix: String): String {
     return if (currentContent.isBlank()) {

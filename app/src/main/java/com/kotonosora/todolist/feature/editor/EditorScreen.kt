@@ -66,8 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.data.native.MdNativeHelper
-import com.kotonosora.todolist.domain.model.ActionStamp
-import com.kotonosora.todolist.domain.model.EmotionStamp
+import com.kotonosora.todolist.domain.model.StampParser
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.description
@@ -75,7 +74,6 @@ import com.kotonosora.todolist.domain.model.displayName
 import com.kotonosora.todolist.feature.flashcard.MarkdownParser
 import com.kotonosora.todolist.feature.vault.formatCleanDisplayName
 import com.kotonosora.todolist.ui.theme.AppTheme
-import java.util.Locale
 
 @Composable
 fun EditorScreen(
@@ -146,21 +144,10 @@ fun EditorContent(
 
     // Mood stamps parsed live from frontmatter so the metadata bar updates as you type.
     val liveEmotion = remember(uiState.note.content) {
-        try {
-            MdNativeHelper.parseEmotionName(uiState.note.content)
-                ?.let { EmotionStamp.valueOf(it.uppercase(Locale.ROOT)) }
-        } catch (_: Exception) {
-            null
-        }
+        StampParser.parseEmotion(uiState.note.content)
     }
     val liveActions = remember(uiState.note.content) {
-        MdNativeHelper.parseActionNames(uiState.note.content).mapNotNull {
-            try {
-                ActionStamp.valueOf(it.uppercase(Locale.ROOT))
-            } catch (_: Exception) {
-                null
-            }
-        }
+        StampParser.parseActions(uiState.note.content)
     }
 
     var noteTitleInput by remember(uiState.note.title) {
@@ -632,8 +619,8 @@ fun EditorContent(
                 val sheetState = rememberModalBottomSheetState()
                 val stats = remember(uiState.note.content) {
                     try {
-                        MdNativeHelper.calculateTextStatsNative(uiState.note.content)
-                    } catch (_: Throwable) {
+                        MdNativeHelper.calculateTextStats(uiState.note.content)
+                    } catch (_: Exception) {
                         val wc =
                             if (uiState.note.content.isBlank()) 0 else uiState.note.content.trim()
                                 .split("\\s+".toRegex()).size
@@ -867,7 +854,34 @@ fun EditorScreenPreview_NormalMode_Dark() {
 
 @Preview(
     showBackground = true,
-    name = "2. Editor Screen - Focus Mode (Dark)",
+    name = "2. Editor Screen - Normal Mode (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun EditorScreenPreview_NormalMode_Light() {
+    val sampleNote = NoteItem(
+        id = "Projects/Vocabulary.md",
+        title = "Japanese Vocabulary",
+        relativePath = "Projects",
+        content = "# Japanese Vocabulary\n\n- Gakkou: School\n- Gakusei: Student\n- Sensei: Teacher\n\nSee [[Grammar]] for details."
+    )
+
+    val sampleTabs = listOf(
+        EditorTabItem("Projects/Vocabulary.md", "Japanese Vocabulary")
+    )
+
+    AppTheme(darkTheme = false) {
+        EditorContent(
+            uiState = EditorUiState(note = sampleNote, openTabs = sampleTabs, isFocusMode = false),
+            onBack = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Editor Screen - Focus Mode (Dark)",
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
@@ -880,6 +894,29 @@ fun EditorScreenPreview_FocusMode_Dark() {
     )
 
     AppTheme(darkTheme = true) {
+        EditorContent(
+            uiState = EditorUiState(note = sampleNote, openTabs = emptyList(), isFocusMode = true),
+            onBack = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Editor Screen - Focus Mode (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun EditorScreenPreview_FocusMode_Light() {
+    val sampleNote = NoteItem(
+        id = "Projects/Roadmap.md",
+        title = "Project Roadmap",
+        relativePath = "Projects",
+        content = "# Project Roadmap\n\nFocus mode hides top bars and headers for distraction-free writing."
+    )
+
+    AppTheme(darkTheme = false) {
         EditorContent(
             uiState = EditorUiState(note = sampleNote, openTabs = emptyList(), isFocusMode = true),
             onBack = {},

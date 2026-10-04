@@ -13,11 +13,11 @@ import com.kotonosora.todolist.data.database.ZettelMetadataDao
 import com.kotonosora.todolist.data.database.ZettelMetadataEntity
 import com.kotonosora.todolist.data.file.VaultManager
 import com.kotonosora.todolist.data.native.MdNativeHelper
-import com.kotonosora.todolist.domain.model.ActionStamp
-import com.kotonosora.todolist.domain.model.EmotionStamp
+import com.kotonosora.todolist.domain.model.FtsQueryBuilder
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.ParaCategory
+import com.kotonosora.todolist.domain.model.StampParser
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.domain.model.ZettelUidGenerator
 import com.kotonosora.todolist.domain.model.renamedId
@@ -28,7 +28,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 class VaultRepositoryImpl(
     private val vaultManager: VaultManager,
@@ -49,6 +48,7 @@ class VaultRepositoryImpl(
                     zettelMetadataDao.getMetadataForNotes(entities.map { it.id })
                         .associateBy { it.noteId }
                 } catch (e: Exception) {
+                    android.util.Log.w("VaultRepository", "metadata batch failed", e)
                     emptyMap()
                 }
             }
@@ -86,6 +86,14 @@ class VaultRepositoryImpl(
         return vaultManager.getVaultTree(overrideUri)
     }
 
+    private suspend fun clearIndex(noteId: String) {
+        noteDao.deleteNoteById(noteId)
+        linkDao.deleteLinksForSource(noteId)
+        tagDao.deleteTagsForNote(noteId)
+        zettelMetadataDao.deleteMetadataForNote(noteId)
+        noteFtsDao.deleteFtsForNote(noteId)
+    }
+
     override suspend fun syncVaultFilesToDb(overrideUri: Uri?) = withContext(Dispatchers.IO) {
         val notesFromFiles = vaultManager.readAllNotes(overrideUri)
         val validIds = notesFromFiles.map { it.id }.toSet()
@@ -93,11 +101,7 @@ class VaultRepositoryImpl(
         val allDbNotes = noteDao.getAllNotesOnce()
         for (dbNote in allDbNotes) {
             if (dbNote.id !in validIds) {
-                noteDao.deleteNoteById(dbNote.id)
-                linkDao.deleteLinksForSource(dbNote.id)
-                tagDao.deleteTagsForNote(dbNote.id)
-                zettelMetadataDao.deleteMetadataForNote(dbNote.id)
-                noteFtsDao.deleteFtsForNote(dbNote.id)
+                clearIndex(dbNote.id)
             }
         }
 
@@ -108,7 +112,7 @@ class VaultRepositoryImpl(
         val allTargets = notesFromFiles.asSequence().flatMap { note ->
             try {
                 MdNativeHelper.extractWikiLinks(note.content).asSequence()
-            } catch (e: Throwable) {
+            } catch (e: Exception) {
                 emptySequence()
             }
         }.distinct().toList()
@@ -132,7 +136,7 @@ class VaultRepositoryImpl(
             .map { note ->
                 try {
                     MdNativeHelper.parseTitle(note.content).ifBlank { note.title }
-                } catch (e: Throwable) {
+                } catch (e: Exception) {
                     note.title
                 }
             }.filter { it.isNotBlank() }.toSet()
@@ -146,7 +150,7 @@ class VaultRepositoryImpl(
                 if (newTitles.isEmpty()) continue
                 val outgoing = try {
                     MdNativeHelper.extractWikiLinks(note.content).toList()
-                } catch (e: Throwable) {
+                } catch (e: Exception) {
                     emptyList()
                 }
                 if (outgoing.none { it in newTitles }) continue
@@ -200,11 +204,7 @@ class VaultRepositoryImpl(
         val renamedOnDisk = vaultManager.renameNote(oldNoteId, newNoteId, overrideUri)
         if (renamedOnDisk) {
             vaultManager.saveNote(updatedNote, overrideUri)
-            noteDao.deleteNoteById(oldNoteId)
-            linkDao.deleteLinksForSource(oldNoteId)
-            tagDao.deleteTagsForNote(oldNoteId)
-            zettelMetadataDao.deleteMetadataForNote(oldNoteId)
-            noteFtsDao.deleteFtsForNote(oldNoteId)
+            clearIndex(oldNoteId)
             indexNoteToDb(updatedNote)
 
             // 3. Cascading WikiLink Refactoring across all other notes in the Vault.
@@ -259,11 +259,7 @@ class VaultRepositoryImpl(
         val movedOnDisk = vaultManager.moveFile(oldRelativePath, destFolderPath, overrideUri)
 
         if (movedOnDisk && noteEntity != null) {
-            noteDao.deleteNoteById(oldRelativePath)
-            linkDao.deleteLinksForSource(oldRelativePath)
-            tagDao.deleteTagsForNote(oldRelativePath)
-            zettelMetadataDao.deleteMetadataForNote(oldRelativePath)
-            noteFtsDao.deleteFtsForNote(oldRelativePath)
+            clearIndex(oldRelativePath)
 
             val meta = try {
                 zettelMetadataDao.getMetadataForNote(oldRelativePath)
@@ -298,11 +294,7 @@ class VaultRepositoryImpl(
             val success = vaultManager.deleteNote(relativePath, overrideUri)
             // Single-note delete: drop its index rows directly. A full vault
             // re-sync here would re-read every file (O(vault)) for no benefit.
-            noteDao.deleteNoteById(relativePath)
-            linkDao.deleteLinksForSource(relativePath)
-            tagDao.deleteTagsForNote(relativePath)
-            zettelMetadataDao.deleteMetadataForNote(relativePath)
-            noteFtsDao.deleteFtsForNote(relativePath)
+            clearIndex(relativePath)
             return@withContext success
         }
 
@@ -317,11 +309,7 @@ class VaultRepositoryImpl(
                     dbNote.relativePath.startsWith("$folderPath/") ||
                     dbNote.id.startsWith("$folderPath/")
                 ) {
-                    noteDao.deleteNoteById(dbNote.id)
-                    linkDao.deleteLinksForSource(dbNote.id)
-                    tagDao.deleteTagsForNote(dbNote.id)
-                    zettelMetadataDao.deleteMetadataForNote(dbNote.id)
-                    noteFtsDao.deleteFtsForNote(dbNote.id)
+                    clearIndex(dbNote.id)
                 }
             }
 
@@ -330,65 +318,29 @@ class VaultRepositoryImpl(
         }
 
     override suspend fun searchNotes(query: String): Flow<List<NoteItem>> {
-        // Title fallback needs domain mapping too — batch its metadata as well.
-        suspend fun toDomain(entities: List<NoteEntity>): List<NoteItem> {
-            if (entities.isEmpty()) return emptyList()
-            val metaMap = try {
-                zettelMetadataDao.getMetadataForNotes(entities.map { it.id })
-                    .associateBy { it.noteId }
-            } catch (e: Exception) {
-                emptyMap()
-            }
-            return entities.map { entityToDomain(it, metaMap[it.id]) }
-        }
         // Escape LIKE wildcards so a literal `%`/`_` in the query can't
         // over-match (the DAO pattern uses ESCAPE '\').
-        val likeFallback = noteDao.searchNotesByTitle(escapeLikeQuery(query)).map { entities ->
-            toDomain(entities)
+        val likeFallback = noteDao.searchNotesByTitle(FtsQueryBuilder.escapeLike(query)).map { entities ->
+            entitiesToDomain(entities)
         }
-        val ftsQuery = toFtsMatchQuery(query) ?: return likeFallback
+        val ftsQuery = FtsQueryBuilder.toFtsMatchQuery(query) ?: return likeFallback
         return noteDao.searchNotesFts(ftsQuery).map { entities ->
-            toDomain(entities)
+            entitiesToDomain(entities)
         }.catch { emitAll(likeFallback) }
     }
 
-    /**
-     * Escapes user input for a LIKE pattern using '\' as the escape char
-     * (must match the DAO's `ESCAPE '\'` clause).
-     */
-    internal fun escapeLikeQuery(query: String): String {
-        val sb = StringBuilder(query.length)
-        for (c in query) {
-            if (c == '\\' || c == '%' || c == '_') sb.append('\\')
-            sb.append(c)
+    private suspend fun entitiesToDomain(entities: List<NoteEntity>): List<NoteItem> {
+        if (entities.isEmpty()) return emptyList()
+        val metaMap = try {
+            zettelMetadataDao.getMetadataForNotes(entities.map { it.id })
+                .associateBy { it.noteId }
+        } catch (e: Exception) {
+            emptyMap()
         }
-        return sb.toString()
+        return entities.map { entityToDomain(it, metaMap[it.id]) }
     }
 
-    /**
-     * Builds a safe FTS4 MATCH query from raw user input.
-     * Tokens are split on non-alphanumerics (FTS4 simple tokenizer splits the
-     * same way, e.g. `hello-world` is indexed as `hello` + `world`) and
-     * prefix-matched so as-you-type search works. Returns null when nothing
-     * searchable remains. Terms are capped so a pasted paragraph can't blow
-     * up the MATCH statement.
-     */
-    private fun toFtsMatchQuery(query: String): String? {
-        val tokens = query.split("[^\\p{L}\\p{Nd}]+".toRegex())
-            .map { it.trim().take(MAX_FTS_TOKEN_LEN) }
-            .filter { it.isNotBlank() }
-            .take(MAX_FTS_TOKENS)
-        if (tokens.isEmpty()) return null
-        return tokens.joinToString(" ") { "\"$it*\"" }
-    }
-
-    companion object {
-        /** Max terms per FTS MATCH; beyond this extra words add noise, not signal. */
-        private const val MAX_FTS_TOKENS = 12
-
-        /** Max chars per FTS term; guards against pathological pasted input. */
-        private const val MAX_FTS_TOKEN_LEN = 40
-    }
+    internal fun escapeLikeQuery(query: String): String = FtsQueryBuilder.escapeLike(query)
 
     override suspend fun getCustomTemplateNames(overrideUri: Uri?): List<String> =
         withContext(Dispatchers.IO) {
@@ -423,19 +375,19 @@ class VaultRepositoryImpl(
     ) {
         val parsedTitle = try {
             MdNativeHelper.parseTitle(note.content).ifBlank { note.title }
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             note.title
         }
 
         val extractedLinks = try {
             MdNativeHelper.extractWikiLinks(note.content).toList()
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             emptyList()
         }
 
         val extractedTags = try {
             MdNativeHelper.extractTags(note.content).toList()
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             emptyList()
         }
 
@@ -443,7 +395,7 @@ class VaultRepositoryImpl(
         // misses it — merge both sources so tag index and FTS stay complete.
         val frontmatterTags = try {
             MdNativeHelper.parseFrontmatterTags(note.content)
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             emptyList()
         }
         val allTags = (extractedTags + frontmatterTags).distinct()
@@ -546,19 +498,8 @@ class VaultRepositoryImpl(
 
         // Mood stamps live in YAML frontmatter (`emotion:` / `actions:`) written at
         // creation time — rehydrate them on every read so they survive DB round-trips.
-        val emotion = try {
-            MdNativeHelper.parseEmotionName(entity.content)
-                ?.let { EmotionStamp.valueOf(it.uppercase(Locale.ROOT)) }
-        } catch (e: Exception) {
-            null
-        }
-        val actions = MdNativeHelper.parseActionNames(entity.content).mapNotNull {
-            try {
-                ActionStamp.valueOf(it.uppercase(Locale.ROOT))
-            } catch (e: Exception) {
-                null
-            }
-        }
+        val emotion = StampParser.parseEmotion(entity.content)
+        val actions = StampParser.parseActions(entity.content)
 
         return NoteItem(
             id = entity.id,

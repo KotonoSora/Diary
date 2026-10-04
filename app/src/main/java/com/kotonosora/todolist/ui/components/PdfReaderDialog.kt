@@ -1,6 +1,7 @@
 package com.kotonosora.todolist.ui.components
 
 import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
@@ -46,9 +47,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -67,6 +71,77 @@ fun PdfReaderDialog(
     filePath: String,
     onDismiss: () -> Unit
 ) {
+    if (LocalInspectionMode.current) {
+        // Preview placeholder: PdfRenderer needs a real file + native init.
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.surface
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = {}) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close PDF reader"
+                        )
+                    }
+                    Text(
+                        text = "Page 1 of 12",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    IconButton(onClick = {}, enabled = false) {
+                        Icon(
+                            imageVector = Icons.Default.PictureAsPdf,
+                            contentDescription = null,
+                            tint = Color.Transparent
+                        )
+                    }
+                }
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PictureAsPdf,
+                        contentDescription = "PDF preview",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(48.dp)
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = {}, enabled = false) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Previous page"
+                        )
+                    }
+                    IconButton(onClick = {}, enabled = true) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Next page"
+                        )
+                    }
+                }
+            }
+        }
+        return
+    }
     val context = LocalContext.current
     val density = LocalDensity.current
     var pageIndex by rememberSaveable(filePath) { mutableIntStateOf(0) }
@@ -311,5 +386,29 @@ private fun openPdfRenderer(context: Context, filePath: String): PdfHandle? {
         PdfHandle(pfd, PdfRenderer(pfd))
     } catch (e: Exception) {
         null
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "1. PDF Reader - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PdfReaderDialogPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        PdfReaderDialog(filePath = "preview_sample.pdf", onDismiss = {})
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. PDF Reader - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun PdfReaderDialogPreview_Light() {
+    AppTheme(darkTheme = false) {
+        PdfReaderDialog(filePath = "preview_sample.pdf", onDismiss = {})
     }
 }

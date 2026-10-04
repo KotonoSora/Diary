@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.components
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
@@ -45,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
@@ -53,6 +55,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import com.kotonosora.todolist.common.AppConstants
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.delay
 import java.io.File
 
@@ -103,37 +106,37 @@ fun AudioPlayerView(
         if (audioMissing) {
             null
         } else {
-        ExoPlayer.Builder(context).build().apply {
-            val mediaItem = if (filePath.startsWith("content://")) {
-                MediaItem.fromUri(Uri.parse(filePath))
-            } else {
-                val file = File(filePath)
-                if (!file.exists()) return@apply
-                MediaItem.fromUri(Uri.fromFile(file))
-            }
-            setMediaItem(mediaItem)
-            prepare()
-            addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(playing: Boolean) {
-                    isPlaying = playing
+            ExoPlayer.Builder(context).build().apply {
+                val mediaItem = if (filePath.startsWith("content://")) {
+                    MediaItem.fromUri(Uri.parse(filePath))
+                } else {
+                    val file = File(filePath)
+                    if (!file.exists()) return@apply
+                    MediaItem.fromUri(Uri.fromFile(file))
                 }
-
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_READY) {
-                        duration = this@apply.duration.coerceAtLeast(1L)
-                        playbackError = null
-                    } else if (playbackState == Player.STATE_ENDED) {
-                        isPlaying = false
-                        seekTo(0)
-                        pause()
+                setMediaItem(mediaItem)
+                prepare()
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(playing: Boolean) {
+                        isPlaying = playing
                     }
-                }
 
-                override fun onPlayerError(error: PlaybackException) {
-                    playbackError = error.message ?: "Unsupported audio format"
-                }
-            })
-        }
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_READY) {
+                            duration = this@apply.duration.coerceAtLeast(1L)
+                            playbackError = null
+                        } else if (playbackState == Player.STATE_ENDED) {
+                            isPlaying = false
+                            seekTo(0)
+                            pause()
+                        }
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        playbackError = error.message ?: "Unsupported audio format"
+                    }
+                })
+            }
         }
     }
 
@@ -307,9 +310,15 @@ fun AudioPlayerView(
 @Composable
 fun AudioWaveformBars(
     isPlaying: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    amplitude: Int = 0,
+    isLiveMeter: Boolean = false
 ) {
     val barHeights = remember { List(24) { (8..28).random() } }
+    // Live mic level 0..32767 -> 0..1 boost. In live-meter mode (recording)
+    // the bars track the real level so silence stays flat and loud input
+    // pumps; otherwise (playback) they animate decoratively.
+    val level = (amplitude.coerceIn(0, 32767) / 32767f).coerceIn(0f, 1f)
 
     Row(
         modifier = modifier
@@ -322,16 +331,24 @@ fun AudioWaveformBars(
         barHeights.forEachIndexed { index, height ->
             val animatedHeight = remember { Animatable(height.toFloat()) }
 
-            LaunchedEffect(isPlaying) {
-                while (isPlaying) {
-                    val newHeight = (6..28).random().toFloat()
-                    animatedHeight.animateTo(
-                        newHeight,
-                        animationSpec = tween(150 + (index % 5) * 20)
-                    )
-                }
-                if (!isPlaying) {
-                    animatedHeight.animateTo(height.toFloat(), animationSpec = tween(300))
+            LaunchedEffect(isPlaying, isLiveMeter, level) {
+                if (isPlaying && isLiveMeter) {
+                    // Live meter: base height + level boost with slight per-bar variance.
+                    // Silence (level 0) stays flat at the baseline.
+                    val variance = 0.7f + (index % 5) * 0.15f
+                    val target = (8f + level * 22f * variance).coerceIn(6f, 30f)
+                    animatedHeight.animateTo(target, animationSpec = tween(120))
+                } else {
+                    while (isPlaying) {
+                        val newHeight = (6..28).random().toFloat()
+                        animatedHeight.animateTo(
+                            newHeight,
+                            animationSpec = tween(150 + (index % 5) * 20)
+                        )
+                    }
+                    if (!isPlaying) {
+                        animatedHeight.animateTo(height.toFloat(), animationSpec = tween(300))
+                    }
                 }
             }
 
@@ -354,4 +371,28 @@ private fun formatTime(millis: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return String.format(AppConstants.APP_LOCALE, "%02d:%02d", minutes, seconds)
+}
+
+@Preview(
+    showBackground = true,
+    name = "1. Audio Player - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun AudioPlayerViewPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        AudioPlayerView(filePath = "preview_sample.m4a")
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. Audio Player - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun AudioPlayerViewPreview_Light() {
+    AppTheme(darkTheme = false) {
+        AudioPlayerView(filePath = "preview_sample.m4a")
+    }
 }

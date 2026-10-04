@@ -66,7 +66,7 @@ object MarkdownLinks {
                 ).map { it.normalize() }.firstOrNull { candidate ->
                     // Contain traversal (`../`) inside the vault.
                     candidate.canonicalPath.startsWith(root.path + File.separator) &&
-                        candidate.exists()
+                            candidate.exists()
                 }
                 if (file != null) {
                     return@replace "![$alt](${fileToEncodedUri(file)}$title)"
@@ -80,12 +80,12 @@ object MarkdownLinks {
         if (dest.isBlank()) return false
         val lower = dest.lowercase()
         return !lower.startsWith("http://") &&
-            !lower.startsWith("https://") &&
-            !lower.startsWith("file://") &&
-            !lower.startsWith("content://") &&
-            !lower.startsWith("data:") &&
-            !dest.startsWith("#") &&
-            !dest.startsWith("/")
+                !lower.startsWith("https://") &&
+                !lower.startsWith("file://") &&
+                !lower.startsWith("content://") &&
+                !lower.startsWith("data:") &&
+                !dest.startsWith("#") &&
+                !dest.startsWith("/")
     }
 
     /**
@@ -94,13 +94,14 @@ object MarkdownLinks {
      * and `#`/`?`/`%` don't break Coil.
      */
     internal fun fileToEncodedUri(file: File): String {
-        val encoded = file.absolutePath.split(File.separator).joinToString(File.separator) { segment ->
-            try {
-                URLEncoder.encode(segment, Charsets.UTF_8.name()).replace("+", "%20")
-            } catch (e: Exception) {
-                segment
+        val encoded =
+            file.absolutePath.split(File.separator).joinToString(File.separator) { segment ->
+                try {
+                    URLEncoder.encode(segment, Charsets.UTF_8.name()).replace("+", "%20")
+                } catch (e: Exception) {
+                    segment
+                }
             }
-        }
         return "file://$encoded"
     }
 

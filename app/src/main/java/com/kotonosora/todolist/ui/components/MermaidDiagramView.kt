@@ -1,6 +1,7 @@
 package com.kotonosora.todolist.ui.components
 
 import android.annotation.SuppressLint
+import android.content.ClipData
 import android.content.res.Configuration
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -34,13 +35,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalInspectionMode
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -48,7 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.ui.theme.AppTheme
+import kotlinx.coroutines.launch
 
 /**
  * Enhanced Mermaid.js Diagram & Flowchart Renderer featuring:
@@ -66,7 +70,8 @@ fun MermaidDiagramView(
 ) {
     var showSourceCode by remember { mutableStateOf(false) }
     var showFullscreenModal by remember { mutableStateOf(false) }
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
 
     val bgColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
     val textColor = MaterialTheme.colorScheme.onSurface
@@ -77,9 +82,9 @@ fun MermaidDiagramView(
         generateMermaidHtml(
             mermaidCode = mermaidCode,
             themeName = themeName,
-            bgHex = String.format("#%06X", (0xFFFFFF and bgColor.toArgb())),
-            textHex = String.format("#%06X", (0xFFFFFF and textColor.toArgb())),
-            primaryHex = String.format("#%06X", (0xFFFFFF and primaryColor.toArgb()))
+            bgHex = String.format(AppConstants.APP_LOCALE, "#%06X", (0xFFFFFF and bgColor.toArgb())),
+            textHex = String.format(AppConstants.APP_LOCALE, "#%06X", (0xFFFFFF and textColor.toArgb())),
+            primaryHex = String.format(AppConstants.APP_LOCALE, "#%06X", (0xFFFFFF and primaryColor.toArgb()))
         )
     }
 
@@ -114,7 +119,13 @@ fun MermaidDiagramView(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Copy code button
                     IconButton(
-                        onClick = { clipboardManager.setText(AnnotatedString(mermaidCode)) },
+                        onClick = {
+                            scope.launch {
+                                clipboard.setClipEntry(
+                                    ClipEntry(ClipData.newPlainText("mermaid", mermaidCode))
+                                )
+                            }
+                        },
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(

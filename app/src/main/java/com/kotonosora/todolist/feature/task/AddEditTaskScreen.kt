@@ -450,7 +450,21 @@ fun AddEditTaskScreenPreview_New_Dark() {
 
 @Preview(
     showBackground = true,
-    name = "2. Add/Edit Task - Existing Task (Dark)",
+    name = "2. Add/Edit Task - New (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun AddEditTaskScreenPreview_New_Light() {
+    AppTheme(darkTheme = false) {
+        AddEditTaskContent(
+            existingTask = null
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Add/Edit Task - Existing Task (Dark)",
     uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
@@ -473,7 +487,7 @@ fun AddEditTaskScreenPreview_Existing_Dark() {
 
 @Preview(
     showBackground = true,
-    name = "3. Add/Edit Task - Existing Task (Light)",
+    name = "4. Add/Edit Task - Existing Task (Light)",
     uiMode = Configuration.UI_MODE_NIGHT_NO
 )
 @Composable

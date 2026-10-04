@@ -405,6 +405,9 @@ fun AppNavGraph() {
                     }
                     CalendarScreen(
                         viewModel = calendarViewModel,
+                        onNoteClick = { noteId ->
+                            navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                        },
                         onOpenDrawer = { scope.launch { drawerState.open() } }
                     )
                 }
