@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.data.repository.FlashcardRepository
 import com.kotonosora.todolist.domain.repository.VaultRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,9 +23,24 @@ class FlashcardViewModel(
     private var fullDeckSize: Int = 0
     private var originalCards: List<Flashcard> = emptyList()
 
+    // Session-level mastery accumulated across every finished round
+    // (full runs + focused review runs), keyed by card id so a card
+    // mastered in any round counts once toward the deck's global progress.
+    private val sessionMasteredIds = mutableSetOf<String>()
+
+    // True while the current round only covers a review subset. Its result
+    // merges into [sessionMasteredIds]; a full round replaces the set.
+    private var isReviewRound: Boolean = false
+
+    // Guards against overlapping loads (retry double-tap / fast
+    // re-navigation) resetting a session that already started.
+    private var loadJob: Job? = null
+
     fun loadNote(noteId: String, isDemo: Boolean = false) {
         currentDeckId = noteId
-        viewModelScope.launch {
+        loadJob?.cancel()
+        _uiState.update { it.copy(isLoading = true, error = null) }
+        loadJob = viewModelScope.launch {
             // DB is source of truth — covers seeded built-ins + user decks.
             // Check deck existence FIRST so a newly created (still empty) deck
             // shows its own empty state instead of falling through to demo data.
@@ -65,6 +81,8 @@ class FlashcardViewModel(
     private fun setSession(title: String, cards: List<Flashcard>, fromDb: Boolean = false) {
         fullDeckSize = cards.size
         originalCards = cards
+        sessionMasteredIds.clear()
+        isReviewRound = false
         _uiState.update {
             it.copy(
                 deckTitle = title,
@@ -77,7 +95,9 @@ class FlashcardViewModel(
                 isFinished = cards.isEmpty(),
                 canManageCards = fromDb,
                 isLoading = false,
-                error = null
+                error = null,
+                completedRuns = 0,
+                sessionMasteredCount = 0
             )
         }
     }
@@ -95,6 +115,10 @@ class FlashcardViewModel(
     }
 
     fun markAsMastered() {
+        // Persist exactly once per round: only on the tap that transitions
+        // the round into the finished state. Taps after finish are no-ops
+        // and must not double-count runs or double-write progress.
+        val wasFinished = _uiState.value.isFinished
         _uiState.update { currentState ->
             if (currentState.cards.isNotEmpty()) {
                 val current = currentState.cards.first()
@@ -109,10 +133,11 @@ class FlashcardViewModel(
                 )
             } else currentState
         }
-        persistProgressIfFinished()
+        if (!wasFinished && _uiState.value.isFinished) persistProgressIfFinished()
     }
 
     fun markForReview() {
+        val wasFinished = _uiState.value.isFinished
         _uiState.update { currentState ->
             if (currentState.cards.isNotEmpty()) {
                 val current = currentState.cards.first()
@@ -127,20 +152,41 @@ class FlashcardViewModel(
                 )
             } else currentState
         }
-        persistProgressIfFinished()
+        if (!wasFinished && _uiState.value.isFinished) persistProgressIfFinished()
     }
 
+    /**
+     * Merges a finished round into the session mastery and persists the
+     * deck's global progress. Full runs replace the session set (the latest
+     * full pass is authoritative); review runs union into it so mastering
+     * the leftover subset on a 2nd run still moves the global counter —
+     * including to a perfect full-deck score.
+     */
     private fun persistProgressIfFinished() {
         val deckId = currentDeckId ?: return
         val state = _uiState.value
         if (!state.isFinished) return
-        if (state.totalCardsCount < fullDeckSize) return
+        if (fullDeckSize <= 0) return
+        val roundMasteredIds = state.masteredCards.map { it.id }
+        if (isReviewRound) {
+            sessionMasteredIds += roundMasteredIds
+        } else {
+            sessionMasteredIds.clear()
+            sessionMasteredIds += roundMasteredIds
+        }
+        val effectiveMastered = sessionMasteredIds.size.coerceIn(0, fullDeckSize)
+        _uiState.update {
+            it.copy(
+                completedRuns = it.completedRuns + 1,
+                sessionMasteredCount = effectiveMastered
+            )
+        }
         viewModelScope.launch {
             try {
                 flashcardRepository?.saveFullRun(
                     deckId,
-                    state.masteredCards.size,
-                    state.totalCardsCount
+                    effectiveMastered,
+                    fullDeckSize
                 )
             } catch (_: Exception) {
             }
@@ -148,6 +194,7 @@ class FlashcardViewModel(
     }
 
     fun restartDeck() {
+        isReviewRound = false
         _uiState.update { currentState ->
             // Restore the full original session so a focused review round
             // (practiceReviewCards) never permanently drops mastered cards.
@@ -169,8 +216,12 @@ class FlashcardViewModel(
     }
 
     fun practiceReviewCards() {
+        // Nothing left to review (e.g. a perfect run): keep the finished
+        // summary instead of opening a degenerate 0-card round.
+        val reviewOnly = _uiState.value.reviewCards
+        if (reviewOnly.isEmpty()) return
+        isReviewRound = true
         _uiState.update { currentState ->
-            val reviewOnly = currentState.reviewCards
             currentState.copy(
                 cards = reviewOnly,
                 totalCardsCount = reviewOnly.size,
@@ -178,7 +229,7 @@ class FlashcardViewModel(
                 masteredCards = emptyList(),
                 reviewCards = emptyList(),
                 isCardFlipped = false,
-                isFinished = reviewOnly.isEmpty()
+                isFinished = false
             )
         }
     }
@@ -202,5 +253,9 @@ data class FlashcardUiState(
     val isFinished: Boolean = false,
     val canManageCards: Boolean = false,
     val isLoading: Boolean = true,
-    val error: String? = null
+    val error: String? = null,
+    // Session-level progress across every finished round in this visit:
+    // how many runs completed and how many distinct cards were mastered.
+    val completedRuns: Int = 0,
+    val sessionMasteredCount: Int = 0
 )

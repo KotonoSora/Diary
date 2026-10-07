@@ -66,9 +66,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.data.native.MdNativeHelper
-import com.kotonosora.todolist.domain.model.StampParser
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
+import com.kotonosora.todolist.domain.model.StampParser
 import com.kotonosora.todolist.domain.model.description
 import com.kotonosora.todolist.domain.model.displayName
 import com.kotonosora.todolist.feature.flashcard.MarkdownParser

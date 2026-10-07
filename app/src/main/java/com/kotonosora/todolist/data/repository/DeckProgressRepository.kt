@@ -17,12 +17,23 @@ class DeckProgressRepository(
             }.toMap()
         }
 
+    /**
+     * Records a finished run. The stored value is the best score seen so far,
+     * so a weaker re-run never regresses the deck's global progress.
+     */
     suspend fun saveFullRun(deckId: String, mastered: Int, total: Int) {
         if (total <= 0) return
+        val clamped = mastered.coerceIn(0, total)
+        val previous = try {
+            deckProgressDao.getById(deckId)
+        } catch (_: Exception) {
+            null
+        }
+        val best = maxOf(previous?.mastered ?: 0, clamped).coerceIn(0, total)
         deckProgressDao.upsert(
             DeckProgressEntity(
                 deckId = deckId,
-                mastered = mastered.coerceIn(0, total),
+                mastered = best,
                 total = total
             )
         )

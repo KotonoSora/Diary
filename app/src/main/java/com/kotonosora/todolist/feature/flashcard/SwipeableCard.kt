@@ -17,11 +17,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Flip
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -178,7 +178,7 @@ fun SwipeableCard(
                                 modifier = Modifier.size(44.dp)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.VolumeUp,
+                                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
                                     contentDescription = "Play pronunciation of ${flashcard.word}",
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(26.dp)

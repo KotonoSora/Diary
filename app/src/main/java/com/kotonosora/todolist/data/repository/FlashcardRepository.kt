@@ -1,13 +1,13 @@
 package com.kotonosora.todolist.data.repository
 
+import androidx.room.withTransaction
 import com.kotonosora.todolist.data.database.DeckProgressDao
+import com.kotonosora.todolist.data.database.DeckProgressDatabase
 import com.kotonosora.todolist.data.database.DeckProgressEntity
 import com.kotonosora.todolist.data.database.FlashcardCardDao
 import com.kotonosora.todolist.data.database.FlashcardCardEntity
 import com.kotonosora.todolist.data.database.FlashcardDeckDao
 import com.kotonosora.todolist.data.database.FlashcardDeckEntity
-import androidx.room.withTransaction
-import com.kotonosora.todolist.data.database.DeckProgressDatabase
 import com.kotonosora.todolist.feature.flashcard.DemoFlashcardData
 import com.kotonosora.todolist.feature.flashcard.Flashcard
 import kotlinx.coroutines.flow.Flow
@@ -208,12 +208,24 @@ class FlashcardRepository(
         cardDao.deleteById(cardId)
     }
 
+    /**
+     * Records a finished run. The stored value is the best score seen so far,
+     * so a weaker re-run never regresses the deck's global progress shown
+     * in the deck list.
+     */
     suspend fun saveFullRun(deckId: String, mastered: Int, total: Int) {
         if (total <= 0) return
+        val clamped = mastered.coerceIn(0, total)
+        val previous = try {
+            progressDao.getById(deckId)
+        } catch (_: Exception) {
+            null
+        }
+        val best = maxOf(previous?.mastered ?: 0, clamped).coerceIn(0, total)
         progressDao.upsert(
             DeckProgressEntity(
                 deckId = deckId,
-                mastered = mastered.coerceIn(0, total),
+                mastered = best,
                 total = total
             )
         )

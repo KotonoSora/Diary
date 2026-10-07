@@ -320,9 +320,10 @@ class VaultRepositoryImpl(
     override suspend fun searchNotes(query: String): Flow<List<NoteItem>> {
         // Escape LIKE wildcards so a literal `%`/`_` in the query can't
         // over-match (the DAO pattern uses ESCAPE '\').
-        val likeFallback = noteDao.searchNotesByTitle(FtsQueryBuilder.escapeLike(query)).map { entities ->
-            entitiesToDomain(entities)
-        }
+        val likeFallback =
+            noteDao.searchNotesByTitle(FtsQueryBuilder.escapeLike(query)).map { entities ->
+                entitiesToDomain(entities)
+            }
         val ftsQuery = FtsQueryBuilder.toFtsMatchQuery(query) ?: return likeFallback
         return noteDao.searchNotesFts(ftsQuery).map { entities ->
             entitiesToDomain(entities)

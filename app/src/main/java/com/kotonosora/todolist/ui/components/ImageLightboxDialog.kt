@@ -3,7 +3,6 @@ package com.kotonosora.todolist.ui.components
 import android.content.res.Configuration
 import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -11,9 +10,11 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -23,12 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.kotonosora.todolist.ui.theme.AppTheme
 import java.io.File
@@ -36,30 +34,19 @@ import java.io.File
 /**
  * Full-screen Lightbox Dialog with Pinch-to-Zoom & Pan Gestures for Photos.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageLightboxDialog(
     filePath: String,
     onDismiss: () -> Unit
 ) {
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
-
-    val imageModel = remember(filePath) {
-        if (filePath.startsWith("content://")) Uri.parse(filePath)
-        else File(filePath)
-    }
-
-    Dialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        dragHandle = null,
+        containerColor = Color.Black.copy(alpha = 0.95f)
     ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = Color.Black.copy(alpha = 0.95f)
-        ) {
-            ImageLightboxContent(filePath = filePath, onDismiss = onDismiss)
-        }
+        ImageLightboxContent(filePath = filePath, onDismiss = onDismiss)
     }
 }
 
@@ -86,16 +73,14 @@ fun ImageLightboxContent(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.95f))
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    scale = (scale * zoom).coerceIn(0.8f, 5f)
-                    if (scale > 1f) {
-                        offsetX += pan.x
-                        offsetY += pan.y
-                    } else {
-                        offsetX = 0f
-                        offsetY = 0f
-                    }
+            .zoomPanGestures(isZoomed = { scale > 1f }) { zoom, pan ->
+                scale = (scale * zoom).coerceIn(0.8f, 5f)
+                if (scale > 1f) {
+                    offsetX += pan.x
+                    offsetY += pan.y
+                } else {
+                    offsetX = 0f
+                    offsetY = 0f
                 }
             },
         contentAlignment = Alignment.Center

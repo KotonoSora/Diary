@@ -27,12 +27,15 @@ import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -44,8 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
 import com.kotonosora.todolist.ui.components.AudioPlayerView
 import com.kotonosora.todolist.ui.components.VideoPlayerView
@@ -172,7 +173,9 @@ fun MediaGalleryGrid(
         return
     }
     Column(
-        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         for (rowItems in items.chunked(3)) {
@@ -181,7 +184,11 @@ fun MediaGalleryGrid(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 for (item in rowItems) {
-                    Box(modifier = Modifier.weight(1f).aspectRatio(1f)) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1f)
+                    ) {
                         MediaGridCell(
                             item = item,
                             onClick = {
@@ -281,7 +288,9 @@ private fun PhotoGridThumbnail(path: String) {
         model = gridImageModel(path),
         contentDescription = formatMediaDisplayName(path, false),
         contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(12.dp))
     )
 }
 
@@ -308,7 +317,9 @@ private fun VideoGridThumbnail(path: String) {
                 model = gridImageModel(path),
                 contentDescription = formatMediaDisplayName(path, false),
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp))
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(12.dp))
             )
             Box(
                 modifier = Modifier
@@ -324,7 +335,9 @@ private fun VideoGridThumbnail(path: String) {
                         Icons.Default.PlayCircleFilled,
                         contentDescription = "Play video",
                         tint = MaterialTheme.colorScheme.surface,
-                        modifier = Modifier.padding(4.dp).size(28.dp)
+                        modifier = Modifier
+                            .padding(4.dp)
+                            .size(28.dp)
                     )
                 }
             }
@@ -401,15 +414,17 @@ private fun PdfGridTile(path: String) {
  * Full preview for a grid video cell — ExoPlayer is created only for the open
  * dialog, not per grid cell.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPreviewDialog(
     filePath: String,
     onDismiss: () -> Unit,
     onDelete: ((String) -> Unit)? = null
 ) {
-    Dialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        dragHandle = null
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
@@ -417,7 +432,9 @@ fun VideoPreviewDialog(
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -430,7 +447,9 @@ fun VideoPreviewDialog(
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 8.dp)
                     )
                     if (onDelete != null) {
                         IconButton(onClick = { onDelete(filePath); onDismiss() }) {
@@ -442,7 +461,11 @@ fun VideoPreviewDialog(
                         }
                     }
                 }
-                Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                ) {
                     if (!LocalInspectionMode.current) {
                         VideoPlayerView(filePath = filePath)
                     }
@@ -455,13 +478,14 @@ fun VideoPreviewDialog(
 /**
  * Full preview for a grid audio cell — waveform + transport controls.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioPreviewDialog(
     filePath: String,
     onDismiss: () -> Unit,
     onDelete: ((String) -> Unit)? = null
 ) {
-    Dialog(onDismissRequest = onDismiss) {
+    ModalBottomSheet(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Row(
@@ -507,7 +531,11 @@ fun AudioPreviewDialog(
     }
 }
 
-@Preview(showBackground = true, name = "1. Gallery Grid - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    name = "1. Gallery Grid - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun MediaGalleryGridPreview_Dark() {
     AppTheme(darkTheme = true) {
@@ -527,7 +555,11 @@ fun MediaGalleryGridPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "2. Gallery Grid - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(
+    showBackground = true,
+    name = "2. Gallery Grid - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun MediaGalleryGridPreview_Light() {
     AppTheme(darkTheme = false) {

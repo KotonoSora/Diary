@@ -14,10 +14,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
@@ -26,11 +29,14 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,8 +54,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
@@ -82,9 +86,21 @@ fun MermaidDiagramView(
         generateMermaidHtml(
             mermaidCode = mermaidCode,
             themeName = themeName,
-            bgHex = String.format(AppConstants.APP_LOCALE, "#%06X", (0xFFFFFF and bgColor.toArgb())),
-            textHex = String.format(AppConstants.APP_LOCALE, "#%06X", (0xFFFFFF and textColor.toArgb())),
-            primaryHex = String.format(AppConstants.APP_LOCALE, "#%06X", (0xFFFFFF and primaryColor.toArgb()))
+            bgHex = String.format(
+                AppConstants.APP_LOCALE,
+                "#%06X",
+                (0xFFFFFF and bgColor.toArgb())
+            ),
+            textHex = String.format(
+                AppConstants.APP_LOCALE,
+                "#%06X",
+                (0xFFFFFF and textColor.toArgb())
+            ),
+            primaryHex = String.format(
+                AppConstants.APP_LOCALE,
+                "#%06X",
+                (0xFFFFFF and primaryColor.toArgb())
+            )
         )
     }
 
@@ -237,68 +253,76 @@ fun MermaidDiagramView(
 
     // Fullscreen Interactive Zoom Modal Dialog
     if (showFullscreenModal && !LocalInspectionMode.current) {
-        Dialog(
-            onDismissRequest = { showFullscreenModal = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 8.dp
-            ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Full Diagram View (Pinch to Zoom)",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        IconButton(onClick = { showFullscreenModal = false }) {
-                            Icon(Icons.Default.Close, contentDescription = "Close Dialog")
-                        }
-                    }
+        FullDiagramSheet(
+            onDismiss = { showFullscreenModal = false },
+            htmlContent = htmlContent
+        )
+    }
+}
 
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                            .padding(8.dp)
-                    ) {
-                        AndroidView(
-                            factory = { context ->
-                                WebView(context).apply {
-                                    settings.javaScriptEnabled = true
-                                    settings.domStorageEnabled = true
-                                    settings.useWideViewPort = true
-                                    settings.loadWithOverviewMode = true
-                                    settings.builtInZoomControls = true
-                                    settings.displayZoomControls = false
-                                    setBackgroundColor(0x00000000)
-                                    webViewClient = WebViewClient()
-                                }
-                            },
-                            update = { webView ->
-                                webView.loadDataWithBaseURL(
-                                    "https://cdn.jsdelivr.net/",
-                                    htmlContent,
-                                    "text/html",
-                                    "UTF-8",
-                                    null
-                                )
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FullDiagramSheet(
+    onDismiss: () -> Unit,
+    htmlContent: String
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Full Diagram View (Pinch to Zoom)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Close diagram view")
                 }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(480.dp)
+            ) {
+                AndroidView(
+                    factory = { context ->
+                        WebView(context).apply {
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.useWideViewPort = true
+                            settings.loadWithOverviewMode = true
+                            settings.builtInZoomControls = true
+                            settings.displayZoomControls = false
+                            setBackgroundColor(0x00000000)
+                            webViewClient = WebViewClient()
+                        }
+                    },
+                    update = { webView ->
+                        webView.loadDataWithBaseURL(
+                            "https://cdn.jsdelivr.net/",
+                            htmlContent,
+                            "text/html",
+                            "UTF-8",
+                            null
+                        )
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }

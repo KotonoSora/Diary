@@ -11,6 +11,9 @@ interface DeckProgressDao {
     @Query("SELECT * FROM deck_progress")
     fun getAll(): Flow<List<DeckProgressEntity>>
 
+    @Query("SELECT * FROM deck_progress WHERE deckId = :deckId")
+    suspend fun getById(deckId: String): DeckProgressEntity?
+
     @Upsert
     suspend fun upsert(progress: DeckProgressEntity)
 

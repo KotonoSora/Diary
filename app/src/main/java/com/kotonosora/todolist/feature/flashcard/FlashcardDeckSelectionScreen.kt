@@ -8,16 +8,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -25,7 +32,8 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material.icons.filled.Style
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,25 +44,32 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.ui.components.ConfirmActionSheet
 import com.kotonosora.todolist.ui.theme.AppTheme
 
 data class FlashcardDeck(
@@ -102,9 +117,21 @@ fun FlashcardDeckSelectionScreen(
     onManageDeck: (String) -> Unit = {},
     onDismissError: () -> Unit = {}
 ) {
-    var showCreateDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var deckToRename by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<FlashcardDeck?>(null) }
-    var deckToDelete by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<FlashcardDeck?>(null) }
+    var showCreateDialog by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(
+            false
+        )
+    }
+    var deckToRename by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<FlashcardDeck?>(
+            null
+        )
+    }
+    var deckToDelete by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf<FlashcardDeck?>(
+            null
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -132,7 +159,9 @@ fun FlashcardDeckSelectionScreen(
         },
         floatingActionButton = {
             if (crudEnabled) {
-                androidx.compose.material3.FloatingActionButton(onClick = { showCreateDialog = true }) {
+                androidx.compose.material3.FloatingActionButton(onClick = {
+                    showCreateDialog = true
+                }) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Create deck"
@@ -157,8 +186,9 @@ fun FlashcardDeckSelectionScreen(
     }
 
     if (showCreateDialog) {
-        DeckEditDialog(
+        DeckEditBottomSheet(
             title = "New deck",
+            isCreate = true,
             onDismiss = { showCreateDialog = false },
             onConfirm = { name, description ->
                 showCreateDialog = false
@@ -167,8 +197,9 @@ fun FlashcardDeckSelectionScreen(
         )
     }
     deckToRename?.let { deck ->
-        DeckEditDialog(
+        DeckEditBottomSheet(
             title = "Rename deck",
+            isCreate = false,
             initialName = deck.name,
             initialDescription = deck.description,
             onDismiss = { deckToRename = null },
@@ -179,69 +210,169 @@ fun FlashcardDeckSelectionScreen(
         )
     }
     deckToDelete?.let { deck ->
-        AlertDialog(
-            onDismissRequest = { deckToDelete = null },
-            title = { Text("Delete deck?") },
-            text = { Text("\"${deck.name}\" and its ${deck.cardCount} cards will be removed.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        deckToDelete = null
-                        onDeleteDeck(deck.id)
-                    }
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { deckToDelete = null }) { Text("Cancel") }
+        ConfirmActionSheet(
+            title = "Delete deck?",
+            message = "\"${deck.name}\" and its ${deck.cardCount} cards will be removed.",
+            confirmLabel = "Delete",
+            onDismiss = { deckToDelete = null },
+            onConfirm = {
+                deckToDelete = null
+                onDeleteDeck(deck.id)
             }
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DeckEditDialog(
+private fun DeckEditBottomSheet(
     title: String,
+    isCreate: Boolean,
     initialName: String = "",
     initialDescription: String = "",
     onDismiss: () -> Unit,
     onConfirm: (String, String) -> Unit
 ) {
-    var name by androidx.compose.runtime.remember(initialName) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        DeckEditSheetContent(
+            title = title,
+            isCreate = isCreate,
+            initialName = initialName,
+            initialDescription = initialDescription,
+            onDismiss = onDismiss,
+            onConfirm = onConfirm
+        )
+    }
+}
+
+@Composable
+private fun DeckEditSheetContent(
+    title: String,
+    isCreate: Boolean,
+    initialName: String = "",
+    initialDescription: String = "",
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    var name by androidx.compose.runtime.saveable.rememberSaveable(initialName) {
         androidx.compose.runtime.mutableStateOf(initialName)
     }
-    var description by androidx.compose.runtime.remember(initialDescription) {
+    var description by androidx.compose.runtime.saveable.rememberSaveable(initialDescription) {
         androidx.compose.runtime.mutableStateOf(initialDescription)
     }
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                androidx.compose.material3.OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth()
+    val focusManager = LocalFocusManager.current
+    val canSave = name.isNotBlank()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Icon(
+                    imageVector = if (isCreate) Icons.Default.Add else Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(12.dp)
                 )
             }
-        },
-        confirmButton = {
-            androidx.compose.material3.TextButton(
-                onClick = { onConfirm(name, description) },
-                enabled = name.isNotBlank()
-            ) { Text("Save") }
-        },
-        dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = if (isCreate) "Name your deck to start adding words" else "Update the deck name and description",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close"
+                )
+            }
         }
-    )
+        OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Name *") },
+            placeholder = { Text("e.g. Japanese Vocabulary") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Style,
+                    contentDescription = null
+                )
+            },
+            supportingText = if (name.isBlank()) {
+                { Text("Required — shown in the deck list") }
+            } else null,
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+        OutlinedTextField(
+            value = description,
+            onValueChange = { description = it },
+            label = { Text("Description") },
+            placeholder = { Text("e.g. Words I am learning this month") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.List,
+                    contentDescription = null
+                )
+            },
+            shape = RoundedCornerShape(16.dp),
+            minLines = 2,
+            maxLines = 4,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f)
+            ) { Text("Cancel") }
+            Button(
+                onClick = { onConfirm(name, description) },
+                enabled = canSave,
+                modifier = Modifier.weight(1f)
+            ) { Text(if (isCreate) "Create" else "Save") }
+        }
+    }
 }
 
 @Composable
@@ -273,7 +404,10 @@ fun FlashcardDeckSelectionContent(
             .fillMaxSize()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 8.dp, bottom = 24.dp)
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(
+            top = 8.dp,
+            bottom = 24.dp
+        )
     ) {
         item {
             DeckListHeader(
@@ -573,5 +707,37 @@ fun FlashcardDeckSelectionPreview_Light() {
             onDeckSelected = {},
             progress = mapOf("demo_basic" to 30, "demo_advanced" to 12)
         )
+    }
+}
+
+@Preview(showBackground = true, name = "3. Deck Sheet New - Dark")
+@Composable
+fun FlashcardDeckNewSheetPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            DeckEditSheetContent(
+                title = "New deck",
+                isCreate = true,
+                onDismiss = {},
+                onConfirm = { _, _ -> }
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "4. Deck Sheet Rename - Light")
+@Composable
+fun FlashcardDeckRenameSheetPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            DeckEditSheetContent(
+                title = "Rename deck",
+                isCreate = false,
+                initialName = "Basic Vocabulary",
+                initialDescription = "Common everyday words.",
+                onDismiss = {},
+                onConfirm = { _, _ -> }
+            )
+        }
     }
 }

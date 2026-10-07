@@ -90,7 +90,7 @@ class TagViewModel(
         internal fun noteTags(content: String): Set<String> {
             return try {
                 (MdNativeHelper.extractTags(content).toList() +
-                    MdNativeHelper.parseFrontmatterTags(content)).toSet()
+                        MdNativeHelper.parseFrontmatterTags(content)).toSet()
             } catch (_: Exception) {
                 emptySet()
             }

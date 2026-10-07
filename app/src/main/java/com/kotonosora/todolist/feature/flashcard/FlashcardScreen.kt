@@ -15,9 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
@@ -179,7 +179,9 @@ fun FlashcardScreenContent(
                         onRestartDeck = onRestartDeck,
                         onPracticeReview = onPracticeReview,
                         onFinish = onNavigateBack,
-                        reviewWords = uiState.reviewCards
+                        reviewWords = uiState.reviewCards,
+                        completedRuns = uiState.completedRuns,
+                        sessionMasteredCount = uiState.sessionMasteredCount
                     )
                 }
             } else {
@@ -421,7 +423,9 @@ fun FlashcardSummaryContent(
     onRestartDeck: () -> Unit,
     onPracticeReview: () -> Unit,
     onFinish: () -> Unit,
-    reviewWords: List<Flashcard> = emptyList()
+    reviewWords: List<Flashcard> = emptyList(),
+    completedRuns: Int = 0,
+    sessionMasteredCount: Int = 0
 ) {
     val fraction = if (totalCount > 0) masteredCount.toFloat() / totalCount else 0f
     val message = when {
@@ -430,6 +434,9 @@ fun FlashcardSummaryContent(
         fraction >= 0.4f -> "Good progress — review the marked words and try again."
         else -> "Keep practicing — mastery comes with repetition."
     }
+    // Session totals span full + review rounds; the round total can be
+    // smaller than the session total after a focused review run.
+    val sessionTotal = maxOf(totalCount, sessionMasteredCount)
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -496,6 +503,16 @@ fun FlashcardSummaryContent(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
+
+        if (completedRuns > 1 && sessionTotal > 0) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Session: $sessionMasteredCount of $sessionTotal mastered across $completedRuns runs",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center
+            )
+        }
 
         Spacer(Modifier.height(24.dp))
 

@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
@@ -220,7 +220,7 @@ fun KnowledgeGraphContent(
             ) {
                 Text(
                     text = "Legend • ${uiState.notes.size} notes • ${uiState.edges.size} links" +
-                        if (danglingCount > 0) " • $danglingCount missing" else "",
+                            if (danglingCount > 0) " • $danglingCount missing" else "",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

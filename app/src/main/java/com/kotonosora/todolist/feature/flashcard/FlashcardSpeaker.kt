@@ -25,15 +25,15 @@ fun rememberFlashcardSpeaker(): (String) -> Unit {
                 val e = tts ?: return@TextToSpeech
                 val result = e.setLanguage(Locale.US)
                 ready = result != TextToSpeech.LANG_MISSING_DATA &&
-                    result != TextToSpeech.LANG_NOT_SUPPORTED
+                        result != TextToSpeech.LANG_NOT_SUPPORTED
                 e.setSpeechRate(0.9f)
             }
         }
         engine = tts
         onDispose {
             try {
-                tts?.stop()
-                tts?.shutdown()
+                tts.stop()
+                tts.shutdown()
             } catch (_: Exception) {
             }
             engine = null

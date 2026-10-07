@@ -4,8 +4,8 @@ import android.os.Environment
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -324,7 +324,8 @@ private fun parseFrontmatterAndBody(text: String): FrontmatterParsedResult {
     val trimmedStartChars = text.length - trimmed.length
     val leadingWsAfterClosing = afterClosing.length - bodyText.length
     val bodyStartChar = trimmedStartChars + closingIndex + 3 + leadingWsAfterClosing
-    val bodyStartLineIndex = text.substring(0, bodyStartChar.coerceIn(0, text.length)).count { it == '\n' }
+    val bodyStartLineIndex =
+        text.substring(0, bodyStartChar.coerceIn(0, text.length)).count { it == '\n' }
 
     val metaMap = mutableMapOf<String, String>()
     yamlSection.lines().forEach { line ->
@@ -518,7 +519,10 @@ private fun TaskChecklistCard(
         color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.5f),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Text(
                 text = "Tasks (${entries.count { it.checked }}/${entries.size})",
                 style = MaterialTheme.typography.labelMedium,

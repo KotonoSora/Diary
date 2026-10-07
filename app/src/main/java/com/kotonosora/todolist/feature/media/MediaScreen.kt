@@ -144,6 +144,24 @@ fun MediaScreen(
         else Toast.makeText(context, "Camera permission is needed.", Toast.LENGTH_SHORT).show()
     }
 
+    // Dedicated mic grant for VIDEO recording inside the camera sheet.
+    // (The audio recorder's launcher below auto-starts audio recording on
+    // grant, so it must not be reused here.)
+    val cameraMicLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            Toast.makeText(context, "Microphone granted — tap record to start.", Toast.LENGTH_SHORT)
+                .show()
+        } else {
+            Toast.makeText(
+                context,
+                "Microphone denied — video will have no sound. Enable it in Settings to record with audio.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     val audioPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -151,34 +169,39 @@ fun MediaScreen(
         else Toast.makeText(context, "Microphone permission is needed.", Toast.LENGTH_SHORT).show()
     }
 
-    // System pickers need no storage permission — they return transient
-    // content:// URIs that we copy into the vault off Main (see ViewModel).
-    // GetMultipleContents covers Gallery/Files/Downloads/Drive/SD card.
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetMultipleContents()
-    ) { uris ->
-        if (uris.isNotEmpty()) viewModel.importMediaUris(uris)
-    }
-    val videoPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetMultipleContents()
-    ) { uris ->
-        if (uris.isNotEmpty()) viewModel.importMediaUris(uris)
-    }
-    val audioPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetMultipleContents()
-    ) { uris ->
-        if (uris.isNotEmpty()) viewModel.importMediaUris(uris)
-    }
-    val genericPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetMultipleContents()
-    ) { uris ->
-        if (uris.isNotEmpty()) viewModel.importMediaUris(uris)
+    // NOTE: photo/video/audio/pdf/file imports intentionally do NOT use
+    // system pickers: ACTION_GET_CONTENT always offers Google Photos as a
+    // source. Imports go through the in-app DeviceMediaPickerSheet (MediaStore
+    // = on-device files only).
+
+    // ── Device-only media picker (MediaStore, never Google Photos) ──
+    var devicePickerTab by remember { mutableStateOf<DeviceMediaTab?>(null) }
+    var pendingPickerTab by remember { mutableStateOf<DeviceMediaTab?>(null) }
+    var pendingPerms by remember { mutableStateOf(emptyArray<String>()) }
+    val deviceMediaPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        if (pendingPerms.isNotEmpty() && pendingPerms.all { grants[it] == true }) {
+            devicePickerTab = pendingPickerTab ?: DeviceMediaTab.Photos
+        } else {
+            Toast.makeText(
+                context,
+                "Allow access to photos & videos to pick files from this device.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        pendingPickerTab = null
+        pendingPerms = emptyArray()
     }
 
-    val pdfPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) viewModel.importPdf(uri)
+    fun openDevicePicker(tab: DeviceMediaTab) {
+        if (hasDeviceMediaAccess(context, tab)) {
+            devicePickerTab = tab
+        } else {
+            pendingPickerTab = tab
+            pendingPerms = permissionsForTab(tab)
+            deviceMediaPermLauncher.launch(pendingPerms)
+        }
     }
 
     val vaultLabel = if (!customFolderUri.isNullOrBlank()) {
@@ -216,11 +239,11 @@ fun MediaScreen(
         onDeleteVideo = { viewModel.deleteVideo(it) },
         onDeleteAudio = { viewModel.deleteAudio(it) },
         onDeletePdf = { viewModel.deletePdf(it) },
-        onImportPdfClick = { pdfPickerLauncher.launch("application/pdf") },
-        onImportPhotosClick = { photoPickerLauncher.launch("image/*") },
-        onImportVideosClick = { videoPickerLauncher.launch("video/*") },
-        onImportAudioClick = { audioPickerLauncher.launch("audio/*") },
-        onImportFilesClick = { genericPickerLauncher.launch("*/*") },
+        onImportPdfClick = { openDevicePicker(DeviceMediaTab.Pdfs) },
+        onImportPhotosClick = { openDevicePicker(DeviceMediaTab.Photos) },
+        onImportVideosClick = { openDevicePicker(DeviceMediaTab.Videos) },
+        onImportAudioClick = { openDevicePicker(DeviceMediaTab.Audio) },
+        onImportFilesClick = { openDevicePicker(DeviceMediaTab.All) },
         onRefreshVaultClick = { viewModel.refreshVaultMedia() },
         onPhotoClick = { selectedLightboxPhoto = it },
         onVideoClick = { selectedVideoPath = it },
@@ -261,6 +284,18 @@ fun MediaScreen(
         )
     }
 
+    // In-app device media picker (MediaStore only — Google Photos can never appear).
+    devicePickerTab?.let { tab ->
+        DeviceMediaPickerSheet(
+            initialTab = tab,
+            onDismiss = { devicePickerTab = null },
+            onImport = { uris ->
+                devicePickerTab = null
+                if (uris.isNotEmpty()) viewModel.importMediaUris(uris)
+            }
+        )
+    }
+
     // Camera Capture Bottom Sheet (photo + video)
     if (showCameraSheet) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -286,6 +321,9 @@ fun MediaScreen(
                     },
                     onCaptureError = { message ->
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                    },
+                    onMicPermissionNeeded = {
+                        cameraMicLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
                 )
             }
@@ -456,327 +494,327 @@ fun MediaScreenContent(
             }
 
             if (!isGridView) {
-            // ── Photos section ──
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Photos",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        IconButton(
-                            onClick = onImportPhotosClick,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.PhotoLibrary,
-                                contentDescription = "Import photos",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                        IconButton(
-                            onClick = onCapturePhotoClick,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.PhotoCamera,
-                                contentDescription = "Capture Photo or Video",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-            }
-            items(capturedPhotos, key = { it }) { path ->
-                MediaFileItem(
-                    name = formatMediaDisplayName(path, isAudio = false),
-                    subtitle = path,
-                    filePath = path,
-                    onPhotoClick = { onPhotoClick(path) },
-                    onDelete = { onDeletePhoto(path) }
-                )
-            }
-            if (capturedPhotos.isEmpty()) {
+                // ── Photos section ──
                 item {
-                    Text(
-                        "No photos captured yet.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item { HorizontalDivider() }
-
-            // ── Videos section ──
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Videos",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        IconButton(
-                            onClick = onImportVideosClick,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.VideoLibrary,
-                                contentDescription = "Import videos",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                        IconButton(
-                            onClick = onCapturePhotoClick,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.Videocam,
-                                contentDescription = "Record Video",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                }
-            }
-            items(recordedVideos, key = { it }) { path ->
-                VideoFileItem(
-                    name = formatMediaDisplayName(path, isAudio = false),
-                    filePath = path,
-                    onDelete = { onDeleteVideo(path) }
-                )
-            }
-            if (recordedVideos.isEmpty()) {
-                item {
-                    Text(
-                        "No videos recorded yet.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item { HorizontalDivider() }
-
-            // ── Audio section ──
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Audio Recordings",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        IconButton(
-                            onClick = onImportAudioClick,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.AudioFile,
-                                contentDescription = "Import audio (MP3, WAV, FLAC, OGG, OPUS, MIDI and more)",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                        if (!isRecording) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Photos",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             IconButton(
-                                onClick = onStartRecordClick,
-                                colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer
-                                )
-                            ) {
-                                Icon(
-                                    Icons.Default.Mic,
-                                    contentDescription = "Start Recording",
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                            }
-                        } else {
-                            // Pause / Resume Button
-                            IconButton(
-                                onClick = { if (isPaused) onResumeRecordClick() else onPauseRecordClick() },
+                                onClick = onImportPhotosClick,
                                 colors = IconButtonDefaults.iconButtonColors(
                                     containerColor = MaterialTheme.colorScheme.secondaryContainer
                                 )
                             ) {
                                 Icon(
-                                    imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
-                                    contentDescription = if (isPaused) "Resume Recording" else "Pause Recording",
+                                    Icons.Default.PhotoLibrary,
+                                    contentDescription = "Import photos",
                                     tint = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
-                            // Stop Button
                             IconButton(
-                                onClick = onStopRecordClick,
+                                onClick = onCapturePhotoClick,
                                 colors = IconButtonDefaults.iconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
                                 )
                             ) {
                                 Icon(
-                                    Icons.Default.Stop,
-                                    contentDescription = "Stop Recording",
-                                    tint = MaterialTheme.colorScheme.onErrorContainer
+                                    Icons.Default.PhotoCamera,
+                                    contentDescription = "Capture Photo or Video",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
                                 )
                             }
                         }
                     }
                 }
-            }
+                items(capturedPhotos, key = { it }) { path ->
+                    MediaFileItem(
+                        name = formatMediaDisplayName(path, isAudio = false),
+                        subtitle = path,
+                        filePath = path,
+                        onPhotoClick = { onPhotoClick(path) },
+                        onDelete = { onDeletePhoto(path) }
+                    )
+                }
+                if (capturedPhotos.isEmpty()) {
+                    item {
+                        Text(
+                            "No photos captured yet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
-            if (isRecording) {
+                item { HorizontalDivider() }
+
+                // ── Videos section ──
                 item {
-                    Card(
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(
-                                alpha = 0.3f
-                            )
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                        Text(
+                            "Videos",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            IconButton(
+                                onClick = onImportVideosClick,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
                             ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(
-                                        color = MaterialTheme.colorScheme.error,
-                                        shape = RoundedCornerShape(6.dp),
-                                        modifier = Modifier.padding(end = 8.dp)
-                                    ) {
-                                        Text(
-                                            text = if (isPaused) "PAUSED" else "REC",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onError,
-                                            modifier = Modifier.padding(
-                                                horizontal = 6.dp,
-                                                vertical = 2.dp
-                                            )
-                                        )
-                                    }
-                                    Text(
-                                        text = formatRecordingTimer(recordingDurationSeconds),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.error
+                                Icon(
+                                    Icons.Default.VideoLibrary,
+                                    contentDescription = "Import videos",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(
+                                onClick = onCapturePhotoClick,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.Videocam,
+                                    contentDescription = "Record Video",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+                items(recordedVideos, key = { it }) { path ->
+                    VideoFileItem(
+                        name = formatMediaDisplayName(path, isAudio = false),
+                        filePath = path,
+                        onDelete = { onDeleteVideo(path) }
+                    )
+                }
+                if (recordedVideos.isEmpty()) {
+                    item {
+                        Text(
+                            "No videos recorded yet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                item { HorizontalDivider() }
+
+                // ── Audio section ──
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Audio Recordings",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            IconButton(
+                                onClick = onImportAudioClick,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.AudioFile,
+                                    contentDescription = "Import audio (MP3, WAV, FLAC, OGG, OPUS, MIDI and more)",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            if (!isRecording) {
+                                IconButton(
+                                    onClick = onStartRecordClick,
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Default.Mic,
+                                        contentDescription = "Start Recording",
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            } else {
+                                // Pause / Resume Button
+                                IconButton(
+                                    onClick = { if (isPaused) onResumeRecordClick() else onPauseRecordClick() },
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
+                                        contentDescription = if (isPaused) "Resume Recording" else "Pause Recording",
+                                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                    )
+                                }
+                                // Stop Button
+                                IconButton(
+                                    onClick = onStopRecordClick,
+                                    colors = IconButtonDefaults.iconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer
+                                    )
+                                ) {
+                                    Icon(
+                                        Icons.Default.Stop,
+                                        contentDescription = "Stop Recording",
+                                        tint = MaterialTheme.colorScheme.onErrorContainer
                                     )
                                 }
                             }
-                            Spacer(Modifier.height(8.dp))
-                            AudioWaveformBars(
-                                isPlaying = !isPaused,
-                                amplitude = currentAmplitude,
-                                isLiveMeter = true
-                            )
                         }
                     }
                 }
-            }
 
-            items(recordedAudios, key = { it }) { path ->
-                AudioFileItem(
-                    name = formatMediaDisplayName(path, isAudio = true),
-                    filePath = path,
-                    onDelete = { onDeleteAudio(path) }
-                )
-            }
-            if (recordedAudios.isEmpty()) {
-                item {
-                    Text(
-                        "No recordings yet.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item { HorizontalDivider() }
-
-            // ── PDF documents section ──
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "PDF Documents",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        IconButton(
-                            onClick = onImportFilesClick,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.secondaryContainer
-                            )
+                if (isRecording) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(
+                                    alpha = 0.3f
+                                )
+                            ),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Icon(
-                                Icons.Default.AddPhotoAlternate,
-                                contentDescription = "Import any media file",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
-                            )
-                        }
-                        IconButton(
-                            onClick = onImportPdfClick,
-                            colors = IconButtonDefaults.iconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        ) {
-                            Icon(
-                                Icons.Default.PictureAsPdf,
-                                contentDescription = "Import PDF",
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Surface(
+                                            color = MaterialTheme.colorScheme.error,
+                                            shape = RoundedCornerShape(6.dp),
+                                            modifier = Modifier.padding(end = 8.dp)
+                                        ) {
+                                            Text(
+                                                text = if (isPaused) "PAUSED" else "REC",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onError,
+                                                modifier = Modifier.padding(
+                                                    horizontal = 6.dp,
+                                                    vertical = 2.dp
+                                                )
+                                            )
+                                        }
+                                        Text(
+                                            text = formatRecordingTimer(recordingDurationSeconds),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                AudioWaveformBars(
+                                    isPlaying = !isPaused,
+                                    amplitude = currentAmplitude,
+                                    isLiveMeter = true
+                                )
+                            }
                         }
                     }
                 }
-            }
-            items(pdfDocuments, key = { it }) { path ->
-                MediaFileItem(
-                    name = formatMediaDisplayName(path, isAudio = false),
-                    subtitle = path,
-                    filePath = null,
-                    onPhotoClick = { onPdfClick(path) },
-                    onDelete = { onDeletePdf(path) }
-                )
-            }
-            if (pdfDocuments.isEmpty()) {
-                item {
-                    Text(
-                        "No PDF documents yet.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+
+                items(recordedAudios, key = { it }) { path ->
+                    AudioFileItem(
+                        name = formatMediaDisplayName(path, isAudio = true),
+                        filePath = path,
+                        onDelete = { onDeleteAudio(path) }
                     )
                 }
-            }
-            item { Spacer(Modifier.height(16.dp)) }
+                if (recordedAudios.isEmpty()) {
+                    item {
+                        Text(
+                            "No recordings yet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                item { HorizontalDivider() }
+
+                // ── PDF documents section ──
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "PDF Documents",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            IconButton(
+                                onClick = onImportFilesClick,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.secondaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.AddPhotoAlternate,
+                                    contentDescription = "Import any media file",
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                )
+                            }
+                            IconButton(
+                                onClick = onImportPdfClick,
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Default.PictureAsPdf,
+                                    contentDescription = "Import PDF",
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                    }
+                }
+                items(pdfDocuments, key = { it }) { path ->
+                    MediaFileItem(
+                        name = formatMediaDisplayName(path, isAudio = false),
+                        subtitle = path,
+                        filePath = null,
+                        onPhotoClick = { onPdfClick(path) },
+                        onDelete = { onDeletePdf(path) }
+                    )
+                }
+                if (pdfDocuments.isEmpty()) {
+                    item {
+                        Text(
+                            "No PDF documents yet.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                item { Spacer(Modifier.height(16.dp)) }
             }
         }
     }
@@ -814,7 +852,9 @@ private fun AudioRecorderGridBar(
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -963,19 +1003,21 @@ fun formatMediaDisplayName(pathOrName: String, isAudio: Boolean): String {
     val lower = fileName.lowercase(AppConstants.APP_LOCALE)
     val fallbackLabel = when {
         lower.endsWith(".mp4") || lower.endsWith(".m4v") || lower.endsWith(".mov") ||
-            lower.endsWith(".mkv") || lower.endsWith(".webm") || lower.endsWith(".3gp") ||
-            lower.endsWith(".3g2") || lower.endsWith(".ts") || lower.endsWith(".m2ts") ||
-            lower.endsWith(".mts") || lower.endsWith(".mpg") || lower.endsWith(".mpeg") ||
-            lower.endsWith(".ogv") || lower.endsWith(".flv") -> "Video - "
+                lower.endsWith(".mkv") || lower.endsWith(".webm") || lower.endsWith(".3gp") ||
+                lower.endsWith(".3g2") || lower.endsWith(".ts") || lower.endsWith(".m2ts") ||
+                lower.endsWith(".mts") || lower.endsWith(".mpg") || lower.endsWith(".mpeg") ||
+                lower.endsWith(".ogv") || lower.endsWith(".flv") -> "Video - "
+
         lower.endsWith(".m4a") || lower.endsWith(".mp3") || lower.endsWith(".mp2") ||
-            lower.endsWith(".aac") || lower.endsWith(".adts") || lower.endsWith(".ac3") ||
-            lower.endsWith(".ogg") || lower.endsWith(".oga") || lower.endsWith(".opus") ||
-            lower.endsWith(".weba") || lower.endsWith(".wav") || lower.endsWith(".wave") ||
-            lower.endsWith(".flac") || lower.endsWith(".alac") || lower.endsWith(".amr") ||
-            lower.endsWith(".awb") || lower.endsWith(".mid") || lower.endsWith(".midi") ||
-            lower.endsWith(".xmf") || lower.endsWith(".mxmf") || lower.endsWith(".rtttl") ||
-            lower.endsWith(".3ga") || lower.endsWith(".mka") || lower.endsWith(".aiff") ||
-            lower.endsWith(".aif") || lower.endsWith(".wma") -> "Audio - "
+                lower.endsWith(".aac") || lower.endsWith(".adts") || lower.endsWith(".ac3") ||
+                lower.endsWith(".ogg") || lower.endsWith(".oga") || lower.endsWith(".opus") ||
+                lower.endsWith(".weba") || lower.endsWith(".wav") || lower.endsWith(".wave") ||
+                lower.endsWith(".flac") || lower.endsWith(".alac") || lower.endsWith(".amr") ||
+                lower.endsWith(".awb") || lower.endsWith(".mid") || lower.endsWith(".midi") ||
+                lower.endsWith(".xmf") || lower.endsWith(".mxmf") || lower.endsWith(".rtttl") ||
+                lower.endsWith(".3ga") || lower.endsWith(".mka") || lower.endsWith(".aiff") ||
+                lower.endsWith(".aif") || lower.endsWith(".wma") -> "Audio - "
+
         lower.endsWith(".pdf") -> "Document - "
         isAudio -> "Audio - "
         else -> "Photo - "

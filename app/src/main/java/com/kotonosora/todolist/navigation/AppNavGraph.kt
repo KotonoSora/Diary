@@ -125,6 +125,7 @@ sealed class NavRoute(val route: String) {
             return "flashcard_deck_detail/$encoded"
         }
     }
+
     object Flashcards : NavRoute("flashcards/{noteId}?isDemo={isDemo}") {
         fun createRoute(noteId: String, isDemo: Boolean = false): String {
             val encodedNoteId = URLEncoder.encode(noteId, StandardCharsets.UTF_8.toString())

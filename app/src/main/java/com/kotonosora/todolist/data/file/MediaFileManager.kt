@@ -144,31 +144,8 @@ class MediaFileManager(
     }
 
     /**
-     * Copies a user-picked PDF (`content://` from the system file picker) into the
-     * vault: the SAF tree when a custom folder is set, else the local Documents dir.
-     * Returns the output location, or null when the copy fails.
-     *
-     * Delegates to the generic [importMediaDocument] path so PDFs from any source
-     * (Files, Downloads, Drive, SD card) share the same buffered copy + cleanup.
-     */
-    fun importPdfDocument(
-        sourceUri: Uri,
-        displayName: String?,
-        customFolderUriStr: String?
-    ): MediaOutputLocation? {
-        val resolvedName = displayName ?: queryDisplayName(sourceUri)
-        return importMediaDocument(
-            sourceUri = sourceUri,
-            displayName = resolvedName,
-            mimeType = "application/pdf",
-            customFolderUriStr = customFolderUriStr,
-            fallbackType = "pdf"
-        )
-    }
-
-    /**
-     * Generic vault import for any user-picked media (`content://` from Gallery,
-     * Files, Downloads, Drive, SD card, USB-OTG, etc.).
+     * Generic vault import for on-device media picked through the in-app
+     * device picker (`content://media/...` from `MediaStore`).
      *
      * - Resolves the display name + MIME via ContentResolver (caller must be off Main).
      * - Detects the media type from the filename first, then the MIME as fallback.
@@ -377,7 +354,8 @@ class MediaFileManager(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return out.distinctBy { it.pathString }.sortedBy { it.displayName.lowercase(AppConstants.APP_LOCALE) }
+        return out.distinctBy { it.pathString }
+            .sortedBy { it.displayName.lowercase(AppConstants.APP_LOCALE) }
     }
 
     private fun listLocalVaultMedia(): List<VaultMediaFile> {
@@ -417,7 +395,8 @@ class MediaFileManager(
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return out.distinctBy { it.pathString }.sortedBy { it.displayName.lowercase(AppConstants.APP_LOCALE) }
+        return out.distinctBy { it.pathString }
+            .sortedBy { it.displayName.lowercase(AppConstants.APP_LOCALE) }
     }
 
     companion object {
@@ -491,6 +470,7 @@ class MediaFileManager(
                     "audio/midi", "audio/x-midi",
                     "application/midi", "application/x-midi"
                 ) -> "audio"
+
                 mime == "application/pdf" -> "pdf"
                 else -> null
             }

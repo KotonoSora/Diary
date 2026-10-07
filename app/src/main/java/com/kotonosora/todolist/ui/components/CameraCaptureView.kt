@@ -1,5 +1,7 @@
 package com.kotonosora.todolist.ui.components
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
@@ -68,6 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.MediaOutputLocation
 import com.kotonosora.todolist.ui.theme.AppTheme
@@ -76,7 +79,6 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.TimeUnit
 import androidx.compose.ui.tooling.preview.Preview as ComposePreview
-import com.kotonosora.todolist.common.AppConstants
 
 enum class CaptureMode { PHOTO, VIDEO }
 
@@ -101,7 +103,11 @@ fun CameraCaptureView(
     customFolderUriStr: String? = null,
     modifier: Modifier = Modifier,
     onVideoCaptured: (String) -> Unit = {},
-    onCaptureError: (String) -> Unit = {}
+    onCaptureError: (String) -> Unit = {},
+    // Invoked when video recording needs RECORD_AUDIO but it isn't granted,
+    // so the host can launch the mic permission request (the sheet itself
+    // owns no permission launcher). The user taps record again after granting.
+    onMicPermissionNeeded: () -> Unit = {}
 ) {
     if (LocalInspectionMode.current) {
         // Preview placeholder: CameraX needs a real lifecycle + camera hardware.
@@ -119,9 +125,10 @@ fun CameraCaptureView(
     var isRecording by remember { mutableStateOf(false) }
     var videoElapsedSeconds by remember { mutableIntStateOf(0) }
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
-
-    // Pin the latest recording for dispose: DisposableEffect(Unit) would
-    // capture the initial null, so observe the state holder instead.
+    // True once the video use-case is bound and ready. Switching Photo→Video
+    // rebinds asynchronously — recording before that completes always fails,
+    // so the record button stays disabled until the bind lands.
+    var isVideoBound by remember { mutableStateOf(false) }
 
     // Tap-to-focus indicator position & animation
     var focusOffset by remember { mutableStateOf<Offset?>(null) }
@@ -145,6 +152,9 @@ fun CameraCaptureView(
     }
 
     LaunchedEffect(lensFacing, flashMode, captureMode) {
+        // Entering video mode invalidates the previous bind; don't let a
+        // record tap race the rebind below.
+        if (captureMode == CaptureMode.VIDEO) isVideoBound = false
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
@@ -173,13 +183,23 @@ fun CameraCaptureView(
                         videoCapture
                     )
                 }
+                if (captureMode == CaptureMode.VIDEO) isVideoBound = true
             } catch (e: Exception) {
                 e.printStackTrace()
+                if (captureMode == CaptureMode.VIDEO) {
+                    isVideoBound = false
+                    onCaptureError("Couldn't start the video camera (${e.message}).")
+                }
             }
         }, ContextCompat.getMainExecutor(context))
     }
 
-    DisposableEffect(activeRecording) {
+    // Stop any in-flight recording only when the view leaves the composition
+    // (sheet dismissed / navigation away). Keyed on Unit: a state key would
+    // re-dispose on every recording start, and because `activeRecording` is a
+    // delegated state read fresh at dispose time, that instantly stops the
+    // just-started recording (Finalize ERROR_NO_VALID_DATA every time).
+    DisposableEffect(Unit) {
         onDispose {
             try {
                 activeRecording?.stop()
@@ -256,6 +276,23 @@ fun CameraCaptureView(
     }
 
     fun startVideoRecording() {
+        if (isRecording) return
+        // The sheet opens on CAMERA alone, so the mic may still be denied at
+        // this point. Fail open into the permission flow (host re-requests)
+        // instead of the old dead-end SecurityException toast.
+        val hasMicPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!hasMicPermission) {
+            onCaptureError("Microphone permission is needed for video with audio.")
+            onMicPermissionNeeded()
+            return
+        }
+        if (!isVideoBound) {
+            onCaptureError("Camera is starting — try again in a second.")
+            return
+        }
         val mediaFileManager = MediaFileManager(context)
         val location = mediaFileManager.createVideoOutputLocation(customFolderUriStr)
         val targetFile = when (location) {
@@ -323,6 +360,10 @@ fun CameraCaptureView(
         } catch (e: SecurityException) {
             e.printStackTrace()
             onCaptureError("Microphone permission is needed for video with audio.")
+            onMicPermissionNeeded()
+        } catch (e: IllegalStateException) {
+            e.printStackTrace()
+            onCaptureError("Camera is starting — try again in a second.")
         } catch (e: Exception) {
             e.printStackTrace()
             onCaptureError("Couldn't start recording (${e.message}).")
@@ -521,6 +562,14 @@ fun CameraCaptureView(
                         )
                     }
                 }
+            }
+            if (!isRecording && captureMode == CaptureMode.VIDEO && !isVideoBound) {
+                Text(
+                    "Starting camera…",
+                    color = Color.White.copy(alpha = 0.8f),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
             if (isRecording) {
                 Row(

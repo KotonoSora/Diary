@@ -12,22 +12,30 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.automirrored.filled.NoteAdd
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,23 +44,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.domain.model.VaultNode
+import com.kotonosora.todolist.ui.components.ConfirmActionSheet
 import com.kotonosora.todolist.ui.theme.AppTheme
 
 fun formatCleanDisplayName(rawName: String): String {
@@ -333,48 +345,123 @@ private fun RenderFolderNode(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateFolderDialog(
     parentFolderPath: String,
     onDismiss: () -> Unit,
     onConfirm: (folderName: String) -> Unit
 ) {
-    var folderName by remember { mutableStateOf("") }
-
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                if (parentFolderPath.isBlank()) "New Folder" else "New folder in '$parentFolderPath'"
-            )
-        },
-        text = {
-            OutlinedTextField(
-                value = folderName,
-                onValueChange = { folderName = it },
-                label = { Text("Folder Name") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    if (folderName.isNotBlank()) {
-                        onConfirm(folderName.trim())
-                    }
-                },
-                enabled = folderName.isNotBlank()
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        CreateFolderSheetContent(
+            parentFolderPath = parentFolderPath,
+            onDismiss = onDismiss,
+            onConfirm = onConfirm
+        )
+    }
+}
+
+@Composable
+fun CreateFolderSheetContent(
+    parentFolderPath: String,
+    onDismiss: () -> Unit,
+    onConfirm: (folderName: String) -> Unit
+) {
+    var folderName by rememberSaveable { mutableStateOf("") }
+    val canCreate = folderName.isNotBlank()
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Create Folder")
+                Icon(
+                    imageVector = Icons.Default.CreateNewFolder,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(12.dp)
+                )
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (parentFolderPath.isBlank()) "New Folder" else "New folder",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = if (parentFolderPath.isBlank()) {
+                        "Created at the vault root"
+                    } else {
+                        "Inside '$parentFolderPath'"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close"
+                )
             }
         }
-    )
+        OutlinedTextField(
+            value = folderName,
+            onValueChange = { folderName = it },
+            label = { Text("Folder Name *") },
+            placeholder = { Text("e.g. Travel Notes") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Default.Folder,
+                    contentDescription = null
+                )
+            },
+            supportingText = if (folderName.isBlank()) {
+                { Text("Required") }
+            } else null,
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Words,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    if (canCreate) onConfirm(folderName.trim())
+                }
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f)
+            ) { Text("Cancel") }
+            Button(
+                onClick = { onConfirm(folderName.trim()) },
+                enabled = canCreate,
+                modifier = Modifier.weight(1f)
+            ) { Text("Create Folder") }
+        }
+    }
 }
 
 @Composable
@@ -383,23 +470,16 @@ fun DeleteFolderConfirmationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Delete folder '$folderName'") },
-        text = { Text("Are you sure you want to delete this folder and all its contents? This action cannot be undone.") },
-        confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text("Delete Folder", color = MaterialTheme.colorScheme.error)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+    ConfirmActionSheet(
+        title = "Delete folder '$folderName'",
+        message = "Are you sure you want to delete this folder and all its contents? This action cannot be undone.",
+        confirmLabel = "Delete Folder",
+        onDismiss = onDismiss,
+        onConfirm = onConfirm
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoveDestinationDialog(
     rootNode: VaultNode.FolderNode,
@@ -409,95 +489,144 @@ fun MoveDestinationDialog(
     onDismiss: () -> Unit,
     onConfirm: (destFolderPath: String) -> Unit
 ) {
-    val allFolders = remember(rootNode) { getAllFolderPaths(rootNode) }
-    var selectedFolder by remember { mutableStateOf("") }
-
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = {
-            Text("Move ${if (isFolder) "folder" else "file"} '$srcItemName'")
-        },
-        text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 300.dp)
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        MoveDestinationSheetContent(
+            rootNode = rootNode,
+            srcItemName = srcItemName,
+            srcRelativePath = srcRelativePath,
+            isFolder = isFolder,
+            onDismiss = onDismiss,
+            onConfirm = onConfirm
+        )
+    }
+}
+
+@Composable
+fun MoveDestinationSheetContent(
+    rootNode: VaultNode.FolderNode,
+    srcItemName: String,
+    srcRelativePath: String,
+    isFolder: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (destFolderPath: String) -> Unit
+) {
+    val allFolders = remember(rootNode) { getAllFolderPaths(rootNode) }
+    var selectedFolder by rememberSaveable { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer,
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Text(
-                    text = "Select target folder:",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.DriveFileMove,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.padding(12.dp)
                 )
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Move ${if (isFolder) "folder" else "file"} '$srcItemName'",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Select target folder",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onDismiss) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close"
+                )
+            }
+        }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 300.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items(allFolders) { (label, folderPath) ->
+                val isSelfOrChild =
+                    isFolder && (folderPath == srcRelativePath || folderPath.startsWith("$srcRelativePath/"))
+                val isSelected = selectedFolder == folderPath
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !isSelfOrChild) {
+                            selectedFolder = folderPath
+                        },
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(
+                        alpha = 0.6f
+                    )
+                    else if (isSelfOrChild) MaterialTheme.colorScheme.surfaceVariant.copy(
+                        alpha = 0.2f
+                    )
+                    else MaterialTheme.colorScheme.surface,
+                    tonalElevation = if (isSelected) 2.dp else 0.dp
                 ) {
-                    items(allFolders) { (label, folderPath) ->
-                        val isSelfOrChild =
-                            isFolder && (folderPath == srcRelativePath || folderPath.startsWith("$srcRelativePath/"))
-                        val isSelected = selectedFolder == folderPath
-
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !isSelfOrChild) {
-                                    selectedFolder = folderPath
-                                },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(
-                                alpha = 0.6f
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (folderPath.isBlank()) Icons.Default.FolderOpen else Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary
+                            else if (isSelfOrChild) MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.3f
                             )
-                            else if (isSelfOrChild) MaterialTheme.colorScheme.surfaceVariant.copy(
-                                alpha = 0.2f
+                            else MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
+                            else if (isSelfOrChild) MaterialTheme.colorScheme.onSurface.copy(
+                                alpha = 0.3f
                             )
-                            else MaterialTheme.colorScheme.surface,
-                            tonalElevation = if (isSelected) 2.dp else 0.dp
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = if (folderPath.isBlank()) Icons.Default.FolderOpen else Icons.Default.Folder,
-                                    contentDescription = null,
-                                    tint = if (isSelected) MaterialTheme.colorScheme.primary
-                                    else if (isSelfOrChild) MaterialTheme.colorScheme.onSurface.copy(
-                                        alpha = 0.3f
-                                    )
-                                    else MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer
-                                    else if (isSelfOrChild) MaterialTheme.colorScheme.onSurface.copy(
-                                        alpha = 0.3f
-                                    )
-                                    else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
+                            else MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { onConfirm(selectedFolder) }
-            ) {
-                Text("Move Here")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.weight(1f)
+            ) { Text("Cancel") }
+            Button(
+                onClick = { onConfirm(selectedFolder) },
+                modifier = Modifier.weight(1f)
+            ) { Text("Move Here") }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -767,5 +896,87 @@ fun FolderTreeExplorerPreview_Light() {
             onDeleteNote = {},
             onDeleteFolder = {}
         )
+    }
+}
+
+@Preview(showBackground = true, name = "3. New Folder Sheet - Dark")
+@Composable
+fun FolderNewSheetPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            CreateFolderSheetContent(
+                parentFolderPath = "Projects",
+                onDismiss = {},
+                onConfirm = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "4. New Folder Sheet - Light")
+@Composable
+fun FolderNewSheetPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            CreateFolderSheetContent(
+                parentFolderPath = "",
+                onDismiss = {},
+                onConfirm = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "5. Move Sheet - Dark")
+@Composable
+fun FolderMoveSheetPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            MoveDestinationSheetContent(
+                rootNode = VaultNode.FolderNode(
+                    name = "My Personal Vault",
+                    relativePath = "",
+                    children = listOf(
+                        VaultNode.FolderNode(
+                            name = "Projects",
+                            relativePath = "Projects"
+                        ),
+                        VaultNode.FileNode("Index.md", "Index.md", "md", 1024, 0L)
+                    )
+                ),
+                srcItemName = "Roadmap.md",
+                srcRelativePath = "Projects/Roadmap.md",
+                isFolder = false,
+                onDismiss = {},
+                onConfirm = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "6. Move Sheet - Light")
+@Composable
+fun FolderMoveSheetPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            MoveDestinationSheetContent(
+                rootNode = VaultNode.FolderNode(
+                    name = "My Personal Vault",
+                    relativePath = "",
+                    children = listOf(
+                        VaultNode.FolderNode(
+                            name = "Projects",
+                            relativePath = "Projects"
+                        ),
+                        VaultNode.FileNode("Index.md", "Index.md", "md", 1024, 0L)
+                    )
+                ),
+                srcItemName = "Roadmap.md",
+                srcRelativePath = "Projects/Roadmap.md",
+                isFolder = false,
+                onDismiss = {},
+                onConfirm = {}
+            )
+        }
     }
 }

@@ -90,6 +90,7 @@ class MediaViewModel(
 
     // In-memory map from filePath -> MediaEntity for deletion lookups
     private val mediaEntityCache = mutableMapOf<String, MediaEntity>()
+
     // Serializes vault reconciliations so concurrent refresh/import calls can't
     // both pass the guard and insert the same file twice.
     // The `is*` flags always change together with the mutex — only via the
@@ -432,46 +433,12 @@ class MediaViewModel(
         }
     }
 
-    fun importPdf(sourceUri: Uri, onImported: () -> Unit = {}, onError: (String) -> Unit = {}) {
-        viewModelScope.launch {
-            _importError.value = null
-            val location = try {
-                withContext(ioDispatcher) {
-                    val customFolderUriStr =
-                        userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
-                    val manager = mediaFileManager ?: MediaFileManager(context)
-                    // Display-name lookup is a ContentResolver query (IPC) — keep it
-                    // off Main along with the file copy.
-                    val displayName = queryDisplayName(sourceUri)
-                    manager.importPdfDocument(sourceUri, displayName, customFolderUriStr)
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                null
-            }
-            val storedPath = when (location) {
-                is MediaOutputLocation.DocumentFileUri -> location.pathString
-                is MediaOutputLocation.LocalFile -> location.file.absolutePath
-                null -> null
-            }
-            if (storedPath != null) {
-                val entity = MediaEntity(todoId = null, type = "pdf", filePath = storedPath)
-                mediaDao.insertMedia(entity)
-                mediaEntityCache[storedPath] = entity
-                onImported()
-            } else {
-                val message = "Couldn't import this PDF — copy failed."
-                _importError.value = message
-                onError(message)
-            }
-        }
-    }
-
     /**
-     * Generic vault import for user-picked media from any source (Gallery,
-     * Files, Downloads, Drive, SD card): images, videos, any audio format and
-     * PDFs. Copies off Main with a streaming buffer, indexes each success into
-     * Room, and reports a summary. `onResult(success, failed)` runs on Main.
+     * Vault import for on-device media selected in the in-app device picker
+     * (`content://media/...` from `MediaStore`): images, videos, any audio
+     * format and PDFs. Copies off Main with a streaming buffer, indexes each
+     * success into Room, and reports a summary.
+     * `onResult(success, failed)` runs on Main.
      */
     fun importMediaUris(
         uris: List<Uri>,
@@ -536,7 +503,8 @@ class MediaViewModel(
                 releaseImport()
             }
             if (failed > 0 && success == 0) {
-                _importError.value = "Couldn't import ${uris.size} file(s) — unsupported type or copy failed."
+                _importError.value =
+                    "Couldn't import ${uris.size} file(s) — unsupported type or copy failed."
             } else if (failed > 0) {
                 _lastImportSummary.value = "Imported $success file(s), $failed failed."
             } else {
@@ -589,18 +557,6 @@ class MediaViewModel(
             }
         } catch (e: Exception) {
             e.printStackTrace()
-        }
-    }
-
-    private fun queryDisplayName(uri: Uri): String? {
-        return try {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                val nameIndex =
-                    cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                if (nameIndex != -1 && cursor.moveToFirst()) cursor.getString(nameIndex) else null
-            }
-        } catch (e: Exception) {
-            null
         }
     }
 

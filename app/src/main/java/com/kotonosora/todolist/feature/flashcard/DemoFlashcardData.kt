@@ -5,9 +5,21 @@ object DemoFlashcardData {
     data class SeedDeck(val id: String, val name: String, val description: String)
 
     val seedDecks = listOf(
-        SeedDeck("demo_basic", "Basic Vocabulary", "Common everyday words like student, school, afternoon."),
-        SeedDeck("demo_advanced", "Advanced Vocabulary", "Complex words to expand your vocabulary."),
-        SeedDeck("demo_tech", "Tech Terminology", "Words used in software engineering and technology.")
+        SeedDeck(
+            "demo_basic",
+            "Basic Vocabulary",
+            "Common everyday words like student, school, afternoon."
+        ),
+        SeedDeck(
+            "demo_advanced",
+            "Advanced Vocabulary",
+            "Complex words to expand your vocabulary."
+        ),
+        SeedDeck(
+            "demo_tech",
+            "Tech Terminology",
+            "Words used in software engineering and technology."
+        )
     )
 
     fun demoCards(deckId: String): Pair<String, List<Flashcard>> {
@@ -579,5 +591,5 @@ object DemoFlashcardData {
                 )
             )
         }
-}
+    }
 }
