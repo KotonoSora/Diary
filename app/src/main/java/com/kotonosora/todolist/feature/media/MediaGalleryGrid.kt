@@ -6,6 +6,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,13 +17,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material3.Card
@@ -37,7 +42,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +58,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.kotonosora.todolist.ui.components.AudioPlayerView
+import com.kotonosora.todolist.ui.components.ImmersiveSystemBarsEffect
 import com.kotonosora.todolist.ui.components.VideoPlayerView
 import com.kotonosora.todolist.ui.theme.AppTheme
 import java.io.File
@@ -123,7 +133,9 @@ fun MediaFilterRow(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         MediaFilter.entries.forEach { filter ->
@@ -139,6 +151,8 @@ fun MediaFilterRow(
                 }
             )
         }
+        // Trailing spacer so the last chip can scroll fully into view.
+        Spacer(modifier = Modifier.size(4.dp))
     }
 }
 
@@ -164,12 +178,30 @@ fun MediaGalleryGrid(
     modifier: Modifier = Modifier
 ) {
     if (items.isEmpty()) {
-        Text(
-            "No media in this view yet. Capture or import files to fill the gallery.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = modifier.padding(vertical = 8.dp)
-        )
+        Column(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Default.PhotoLibrary,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(40.dp)
+            )
+            Text(
+                "No media in this view yet.",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                "Capture a photo/video, record audio, or import files to fill the gallery.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         return
     }
     Column(
@@ -284,14 +316,29 @@ private fun PhotoGridThumbnail(path: String) {
         }
         return
     }
-    AsyncImage(
-        model = gridImageModel(path),
-        contentDescription = formatMediaDisplayName(path, false),
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-    )
+    Box(modifier = Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = gridImageModel(path),
+            contentDescription = formatMediaDisplayName(path, false),
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(12.dp))
+        )
+        Text(
+            text = formatMediaDisplayName(path, false),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.surface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.45f))
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
 }
 
 @Composable
@@ -419,8 +466,11 @@ private fun PdfGridTile(path: String) {
 fun VideoPreviewDialog(
     filePath: String,
     onDismiss: () -> Unit,
-    onDelete: ((String) -> Unit)? = null
+    onDelete: ((String) -> Unit)? = null,
+    startFullscreen: Boolean = false
 ) {
+    var isFullscreen by rememberSaveable(filePath) { mutableStateOf(startFullscreen) }
+    ImmersiveSystemBarsEffect(enabled = isFullscreen)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -451,6 +501,17 @@ fun VideoPreviewDialog(
                             .weight(1f)
                             .padding(horizontal = 8.dp)
                     )
+                    IconButton(onClick = { isFullscreen = !isFullscreen }) {
+                        Icon(
+                            if (isFullscreen) Icons.Default.FullscreenExit
+                            else Icons.Default.Fullscreen,
+                            contentDescription = if (isFullscreen) {
+                                "Exit fullscreen"
+                            } else {
+                                "Fullscreen"
+                            }
+                        )
+                    }
                     if (onDelete != null) {
                         IconButton(onClick = { onDelete(filePath); onDismiss() }) {
                             Icon(
@@ -462,12 +523,18 @@ fun VideoPreviewDialog(
                     }
                 }
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp)
+                    modifier = if (isFullscreen) {
+                        Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 2.dp)
+                    } else {
+                        Modifier
+                            .fillMaxSize()
+                            .padding(8.dp)
+                    }
                 ) {
                     if (!LocalInspectionMode.current) {
-                        VideoPlayerView(filePath = filePath)
+                        VideoPlayerView(filePath = filePath, fullscreen = isFullscreen)
                     }
                 }
             }

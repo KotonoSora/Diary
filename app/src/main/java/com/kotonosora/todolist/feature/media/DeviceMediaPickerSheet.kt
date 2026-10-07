@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,7 +36,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.data.file.DeviceMediaItem
 import com.kotonosora.todolist.data.file.DeviceMediaStore
 import kotlinx.coroutines.Dispatchers
@@ -65,19 +69,27 @@ enum class DeviceMediaTab { All, Photos, Videos, Audio, Pdfs }
  * `MediaStore` (on-device files only). No system picker is involved, so
  * Google Photos / Drive can never appear here — unlike `ACTION_GET_CONTENT`,
  * which always offers them as sources even with `EXTRA_LOCAL_ONLY`.
+ *
+ * PDFs are best-effort in this sheet: on API 33+ scoped storage
+ * `MediaStore.Files` no longer exposes PDFs/Downloads to normal apps, so the
+ * Pdfs tab may be empty. Pass [onBrowsePdfs] to offer the SAF document
+ * picker (`ACTION_OPEN_DOCUMENT`, `application/pdf`) as a fallback — Photos
+ * holds no PDFs so it can never appear there.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DeviceMediaPickerSheet(
     initialTab: DeviceMediaTab,
     onDismiss: () -> Unit,
-    onImport: (List<Uri>) -> Unit
+    onImport: (List<Uri>) -> Unit,
+    onBrowsePdfs: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var allItems by remember { mutableStateOf<List<DeviceMediaItem>?>(null) }
     var tab by remember { mutableStateOf(initialTab) }
     var selected by remember { mutableStateOf(setOf<Uri>()) }
+    var query by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         allItems = withContext(Dispatchers.IO) {
@@ -111,6 +123,19 @@ fun DeviceMediaPickerSheet(
                 modifier = Modifier.padding(horizontal = 20.dp)
             )
             Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("Search by file name") },
+                leadingIcon = {
+                    Icon(Icons.Default.Search, contentDescription = null)
+                },
+                singleLine = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            )
+            Spacer(Modifier.height(8.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -118,11 +143,22 @@ fun DeviceMediaPickerSheet(
                     .padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                val counts = remember(allItems) {
+                    val items = allItems.orEmpty()
+                    mapOf(
+                        DeviceMediaTab.All to items.size,
+                        DeviceMediaTab.Photos to items.count { it.type == "photo" },
+                        DeviceMediaTab.Videos to items.count { it.type == "video" },
+                        DeviceMediaTab.Audio to items.count { it.type == "audio" },
+                        DeviceMediaTab.Pdfs to items.count { it.type == "pdf" }
+                    )
+                }
                 DeviceMediaTab.entries.forEach { entry ->
+                    val count = counts[entry] ?: 0
                     FilterChip(
                         selected = tab == entry,
                         onClick = { tab = entry },
-                        label = { Text(entry.name) }
+                        label = { Text("${entry.name} ($count)") }
                     )
                 }
             }
@@ -138,13 +174,49 @@ fun DeviceMediaPickerSheet(
                 ) { CircularProgressIndicator() }
 
                 else -> {
+                    val trimmedQuery = query.trim().lowercase(AppConstants.APP_LOCALE)
                     val visible = items.filter {
-                        when (tab) {
+                        val tabOk = when (tab) {
                             DeviceMediaTab.All -> true
                             DeviceMediaTab.Photos -> it.type == "photo"
                             DeviceMediaTab.Videos -> it.type == "video"
                             DeviceMediaTab.Audio -> it.type == "audio"
                             DeviceMediaTab.Pdfs -> it.type == "pdf"
+                        }
+                        tabOk && (trimmedQuery.isBlank() ||
+                                it.displayName.lowercase(AppConstants.APP_LOCALE)
+                                    .contains(trimmedQuery))
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Selection is cumulative across tabs but Import acts
+                        // on this view only (see button below), so show both
+                        // counts — total alone would promise too much.
+                        val visibleUris = visible.map { it.uri }.toSet()
+                        val visibleSelectedCount = selected.count { it in visibleUris }
+                        Text(
+                            text = if (selected.isEmpty()) "${visible.size} file(s)"
+                            else "$visibleSelectedCount in this view • ${selected.size} selected total",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Row {
+                            TextButton(
+                                onClick = {
+                                    selected = selected + visible.map { it.uri }
+                                },
+                                enabled = visible.isNotEmpty()
+                            ) { Text("Select visible") }
+                            if (selected.isNotEmpty()) {
+                                TextButton(onClick = { selected = selected - visibleUris }) {
+                                    Text("Clear visible")
+                                }
+                            }
                         }
                     }
                     if (visible.isEmpty()) {
@@ -154,11 +226,35 @@ fun DeviceMediaPickerSheet(
                                 .height(280.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "Nothing on this device yet.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            if (tab == DeviceMediaTab.Pdfs && onBrowsePdfs != null) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(horizontal = 24.dp)
+                                ) {
+                                    Text(
+                                        text = if (query.isBlank()) "No PDFs found on this device."
+                                        else "No matches for \"$query\".",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Text(
+                                        text = "Downloads & documents aren't listed here on newer Android versions.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Button(onClick = onBrowsePdfs) {
+                                        Text("Browse PDF files")
+                                    }
+                                }
+                            } else {
+                                Text(
+                                    text = if (query.isBlank()) "Nothing on this device yet."
+                                    else "No matches for \"$query\".",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     } else if (tab == DeviceMediaTab.Audio || tab == DeviceMediaTab.Pdfs) {
                         LazyColumn(
@@ -243,15 +339,32 @@ fun DeviceMediaPickerSheet(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
+                    if (tab == DeviceMediaTab.Pdfs && onBrowsePdfs != null) {
+                        TextButton(
+                            onClick = onBrowsePdfs,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp)
+                        ) {
+                            Text("Can't find it? Browse PDF files")
+                        }
+                    }
+                    // Import exactly what is visible: selection is cumulative
+                    // across tabs, but the button sits under this list —
+                    // importing hidden rows would surprise. The All tab still
+                    // covers multi-type picks in one go. The header above
+                    // shows both the in-view and total counts.
+                    val visibleUris = visible.map { it.uri }.toSet()
+                    val visibleSelected = selected.filter { it in visibleUris }
                     Button(
-                        onClick = { onImport(selected.toList()) },
-                        enabled = selected.isNotEmpty(),
+                        onClick = { onImport(visibleSelected) },
+                        enabled = visibleSelected.isNotEmpty(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
                             .height(50.dp)
                     ) {
-                        Text(if (selected.isEmpty()) "Select files to import" else "Import ${selected.size} file(s)")
+                        Text(if (visibleSelected.isEmpty()) "Select files to import" else "Import ${visibleSelected.size} file(s) in this view")
                     }
                 }
             }
@@ -448,7 +561,7 @@ private fun PickerDocRow(
 private fun formatPickerDuration(durationMs: Long): String {
     val totalSec = (durationMs / 1000).toInt().coerceAtLeast(0)
     return String.format(
-        com.kotonosora.todolist.common.AppConstants.APP_LOCALE,
+        AppConstants.APP_LOCALE,
         "%02d:%02d",
         totalSec / 60,
         totalSec % 60
@@ -460,13 +573,13 @@ private fun formatPickerSize(bytes: Long): String {
     val mb = bytes / (1024f * 1024f)
     return if (mb >= 1) {
         String.format(
-            com.kotonosora.todolist.common.AppConstants.APP_LOCALE,
+            AppConstants.APP_LOCALE,
             "%.1f MB",
             mb
         )
     } else {
         String.format(
-            com.kotonosora.todolist.common.AppConstants.APP_LOCALE,
+            AppConstants.APP_LOCALE,
             "%d KB",
             (bytes / 1024).coerceAtLeast(1)
         )

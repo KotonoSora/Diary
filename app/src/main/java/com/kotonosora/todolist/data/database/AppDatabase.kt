@@ -14,7 +14,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LinkEntity::class,
         TagEntity::class,
         NoteFtsEntity::class,
-        ZettelMetadataEntity::class
+        ZettelMetadataEntity::class,
+        PdfReadingStateEntity::class,
+        PdfBookmarkEntity::class
     ],
     version = 1,
     exportSchema = false
@@ -28,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tagDao(): TagDao
     abstract fun zettelMetadataDao(): ZettelMetadataDao
     abstract fun noteFtsDao(): NoteFtsDao
+    abstract fun pdfReaderDao(): PdfReaderDao
 
     companion object {
         @Volatile

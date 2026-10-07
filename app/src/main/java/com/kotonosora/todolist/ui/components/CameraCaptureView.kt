@@ -42,12 +42,15 @@ import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.FlipCameraAndroid
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -78,6 +81,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 
 enum class CaptureMode { PHOTO, VIDEO }
@@ -117,6 +121,10 @@ fun CameraCaptureView(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val coroutineScope = rememberCoroutineScope()
+    // Application context for anything outliving the composition (camera
+    // provider, PreviewView): holding the Activity across rotation would leak
+    // it, and a recreated PreviewView would miss the bind below.
+    val appContext = remember(context) { context.applicationContext }
 
     var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
     var flashMode by remember { mutableIntStateOf(ImageCapture.FLASH_MODE_OFF) }
@@ -125,6 +133,15 @@ fun CameraCaptureView(
     var isRecording by remember { mutableStateOf(false) }
     var videoElapsedSeconds by remember { mutableIntStateOf(0) }
     var activeRecording by remember { mutableStateOf<Recording?>(null) }
+    // Held so dispose can unbind the camera. Without this the use-cases
+    // stay bound to the Activity lifecycle after the sheet closes and keep
+    // pushing frames to the destroyed PreviewView surface (abandoned
+    // BufferQueue flood in logcat, ending in process death).
+    var boundCameraProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    // Set on dispose; the bind listener posted to the main executor may run
+    // after disposal (open + instant dismiss), so it must skip binding then
+    // instead of leaking a camera bound to a dead surface.
+    val cameraDisposed = remember { AtomicBoolean(false) }
     // True once the video use-case is bound and ready. Switching Photo→Video
     // rebinds asynchronously — recording before that completes always fails,
     // so the record button stays disabled until the bind lands.
@@ -137,7 +154,7 @@ fun CameraCaptureView(
     // Shutter flash feedback animation
     val shutterFlashAlpha = remember { Animatable(0f) }
 
-    val previewView = remember { PreviewView(context) }
+    val previewView = remember(appContext) { PreviewView(appContext) }
     val imageCapture = remember(flashMode) {
         ImageCapture.Builder()
             .setFlashMode(flashMode)
@@ -155,9 +172,19 @@ fun CameraCaptureView(
         // Entering video mode invalidates the previous bind; don't let a
         // record tap race the rebind below.
         if (captureMode == CaptureMode.VIDEO) isVideoBound = false
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(appContext)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
+            if (cameraDisposed.get()) {
+                // Disposed before the bind ran: never bind to the dead
+                // surface, just make sure nothing is left bound.
+                try {
+                    cameraProvider.unbindAll()
+                } catch (_: Exception) {
+                }
+                return@addListener
+            }
+
             val preview = Preview.Builder().build().also {
                 it.surfaceProvider = previewView.surfaceProvider
             }
@@ -184,6 +211,7 @@ fun CameraCaptureView(
                     )
                 }
                 if (captureMode == CaptureMode.VIDEO) isVideoBound = true
+                boundCameraProvider = cameraProvider
             } catch (e: Exception) {
                 e.printStackTrace()
                 if (captureMode == CaptureMode.VIDEO) {
@@ -194,17 +222,25 @@ fun CameraCaptureView(
         }, ContextCompat.getMainExecutor(context))
     }
 
-    // Stop any in-flight recording only when the view leaves the composition
-    // (sheet dismissed / navigation away). Keyed on Unit: a state key would
-    // re-dispose on every recording start, and because `activeRecording` is a
-    // delegated state read fresh at dispose time, that instantly stops the
-    // just-started recording (Finalize ERROR_NO_VALID_DATA every time).
+    // Stop any in-flight recording and release the camera only when the view
+    // leaves the composition (sheet dismissed / navigation away). Keyed on
+    // Unit: a state key would re-dispose on every recording start, and
+    // because `activeRecording` is a delegated state read fresh at dispose
+    // time, that instantly stops the just-started recording (Finalize
+    // ERROR_NO_VALID_DATA every time).
     DisposableEffect(Unit) {
         onDispose {
+            cameraDisposed.set(true)
             try {
                 activeRecording?.stop()
             } catch (_: Exception) {
             }
+            try {
+                boundCameraProvider?.unbindAll()
+            } catch (_: Exception) {
+            }
+            boundCameraProvider = null
+            activeCamera = null
         }
     }
 
@@ -480,33 +516,57 @@ fun CameraCaptureView(
         androidx.compose.foundation.layout.Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 24.dp),
+                .padding(bottom = 24.dp, start = 16.dp, end = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (!isRecording) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(
+                @OptIn(ExperimentalMaterial3Api::class)
+                SingleChoiceSegmentedButtonRow {
+                    SegmentedButton(
+                        selected = captureMode == CaptureMode.PHOTO,
                         onClick = { captureMode = CaptureMode.PHOTO },
-                        enabled = captureMode != CaptureMode.PHOTO
-                    ) {
-                        Text(
-                            "Photo",
-                            color = if (captureMode == CaptureMode.PHOTO) Color.Yellow else Color.White
-                        )
-                    }
-                    TextButton(
+                        shape = SegmentedButtonDefaults.itemShape(0, 2),
+                        icon = {
+                            SegmentedButtonDefaults.Icon(
+                                active = captureMode == CaptureMode.PHOTO
+                            ) {
+                                Icon(
+                                    Icons.Default.Camera,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        },
+                        label = { Text("Photo") }
+                    )
+                    SegmentedButton(
+                        selected = captureMode == CaptureMode.VIDEO,
                         onClick = { captureMode = CaptureMode.VIDEO },
-                        enabled = captureMode != CaptureMode.VIDEO
-                    ) {
-                        Text(
-                            "Video",
-                            color = if (captureMode == CaptureMode.VIDEO) Color.Yellow else Color.White
-                        )
-                    }
+                        shape = SegmentedButtonDefaults.itemShape(1, 2),
+                        icon = {
+                            SegmentedButtonDefaults.Icon(
+                                active = captureMode == CaptureMode.VIDEO
+                            ) {
+                                Icon(
+                                    Icons.Default.Videocam,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        },
+                        label = { Text("Video") }
+                    )
                 }
+                Text(
+                    text = if (captureMode == CaptureMode.PHOTO) {
+                        "Tap preview to focus • Saves to photos/"
+                    } else {
+                        "Needs microphone for audio • Saves to videos/"
+                    },
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -551,8 +611,14 @@ fun CameraCaptureView(
                             if (isRecording) stopVideoRecording() else startVideoRecording()
                         },
                         shape = CircleShape,
-                        containerColor = if (isRecording) Color.Red else MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(72.dp)
+                        containerColor = when {
+                            isRecording -> Color.Red
+                            !isVideoBound -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                            else -> MaterialTheme.colorScheme.primary
+                        },
+                        modifier = Modifier
+                            .size(72.dp)
+                            .alpha(if (!isRecording && !isVideoBound) 0.6f else 1f)
                     ) {
                         Icon(
                             if (isRecording) Icons.Default.Stop else Icons.Default.Videocam,
@@ -628,33 +694,43 @@ fun CameraCaptureContent(
                 Icon(Icons.Default.FlashOff, contentDescription = "Flash Off", tint = Color.White)
             }
         }
-        Row(
+        androidx.compose.foundation.layout.Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            IconButton(onClick = {}, modifier = Modifier.padding(end = 24.dp)) {
-                Icon(
-                    Icons.Default.FlipCameraAndroid,
-                    contentDescription = "Switch Camera",
-                    tint = Color.White,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-            FloatingActionButton(
-                onClick = {},
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(72.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    Icons.Default.Camera,
-                    contentDescription = "Take Photo",
-                    tint = Color.White,
-                    modifier = Modifier.size(36.dp)
-                )
+                IconButton(onClick = {}, modifier = Modifier.padding(end = 24.dp)) {
+                    Icon(
+                        Icons.Default.FlipCameraAndroid,
+                        contentDescription = "Switch Camera",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                FloatingActionButton(
+                    onClick = {},
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(72.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Camera,
+                        contentDescription = "Take Photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
             }
+            Text(
+                "Photo • Video toggle above shutter • Tap preview to focus",
+                color = Color.White.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }

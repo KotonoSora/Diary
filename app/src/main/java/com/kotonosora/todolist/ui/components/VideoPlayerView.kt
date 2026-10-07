@@ -26,6 +26,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
@@ -49,7 +51,8 @@ import java.io.File
 @Composable
 fun VideoPlayerView(
     filePath: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fullscreen: Boolean = false
 ) {
     if (LocalInspectionMode.current) {
         // Preview placeholder for IDE layout renderer (ExoPlayer needs a real context)
@@ -112,17 +115,25 @@ fun VideoPlayerView(
     }
 
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        modifier = if (fullscreen) modifier.fillMaxSize() else modifier.fillMaxWidth(),
+        // Fullscreen is edge-to-edge: no rounded corners or tinted margins.
+        shape = if (fullscreen) RectangleShape else RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            containerColor = if (fullscreen) {
+                Color.Black
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            }
         )
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .clip(RoundedCornerShape(12.dp)),
+            modifier = if (fullscreen) {
+                Modifier.fillMaxSize()
+            } else {
+                Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+            }.clip(if (fullscreen) RectangleShape else RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             val error = playbackError

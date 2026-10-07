@@ -9,6 +9,7 @@ import com.kotonosora.todolist.data.database.LinkDao
 import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.NoteDao
 import com.kotonosora.todolist.data.database.NoteFtsDao
+import com.kotonosora.todolist.data.database.PdfReaderDao
 import com.kotonosora.todolist.data.database.TagDao
 import com.kotonosora.todolist.data.database.TaskDao
 import com.kotonosora.todolist.data.database.ZettelMetadataDao
@@ -49,6 +50,7 @@ class AppContainer(private val applicationContext: Context) {
     val tagDao: TagDao by lazy { appDatabase.tagDao() }
     val zettelMetadataDao: ZettelMetadataDao by lazy { appDatabase.zettelMetadataDao() }
     val noteFtsDao: NoteFtsDao by lazy { appDatabase.noteFtsDao() }
+    val pdfReaderDao: PdfReaderDao by lazy { appDatabase.pdfReaderDao() }
 
     val userPreferencesRepository: UserPreferencesRepository by lazy {
         UserPreferencesRepository(applicationContext)

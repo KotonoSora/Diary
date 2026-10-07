@@ -98,11 +98,13 @@ import java.nio.charset.StandardCharsets
 
 @Composable
 inline fun <reified T : ViewModel> appViewModel(
+    key: String? = null,
     crossinline creator: (AppContainer) -> T
 ): T {
     val context = LocalContext.current
     val app = context.applicationContext as MainApplication
     return viewModel(
+        key = key,
         factory = ViewModelFactory { creator(app.container) }
     )
 }
@@ -528,7 +530,8 @@ fun AppNavGraph() {
                             context = context.applicationContext,
                             mediaDao = container.mediaDao,
                             userPreferencesRepository = container.userPreferencesRepository,
-                            mediaFileManager = container.mediaFileManager
+                            mediaFileManager = container.mediaFileManager,
+                            pdfReaderDao = container.pdfReaderDao
                         )
                     }
                     MediaScreen(

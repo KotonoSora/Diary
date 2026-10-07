@@ -19,7 +19,8 @@ import androidx.compose.ui.input.pointer.pointerInput
  */
 internal fun Modifier.zoomPanGestures(
     isZoomed: () -> Boolean,
-    onGesture: (zoomChange: Float, panChange: Offset) -> Unit
+    onGesture: (zoomChange: Float, panChange: Offset) -> Unit,
+    onEnd: () -> Unit = {}
 ): Modifier = pointerInput(Unit) {
     awaitEachGesture {
         awaitFirstDown(requireUnconsumed = false)
@@ -43,5 +44,8 @@ internal fun Modifier.zoomPanGestures(
             }
             // Single finger at 1x: pass through so the sheet can drag/dismiss.
         } while (event.changes.any { it.pressed })
+        // All pointers released: the reader uses this to commit the zoom
+        // level (crisper re-render). Harmless after plain taps/scrolls.
+        onEnd()
     }
 }

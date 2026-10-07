@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.MediaEntity
+import com.kotonosora.todolist.data.database.PdfReaderDao
 import com.kotonosora.todolist.data.factory.MediaRecorderFactory
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.MediaOutputLocation
@@ -36,6 +37,7 @@ class MediaViewModel(
     private val userPreferencesRepository: UserPreferencesRepository? = null,
     private val mediaFileManager: MediaFileManager? = null,
     private val mediaRecorderFactory: MediaRecorderFactory? = null,
+    private val pdfReaderDao: PdfReaderDao? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
@@ -206,12 +208,48 @@ class MediaViewModel(
                 !vaultPaths.contains(cached) && !mediaFileExists(cached)
             }
             for (path in stale) {
-                mediaEntityCache.remove(path)
+                val removed = mediaEntityCache.remove(path)
                 try {
                     mediaDao.deleteByPath(path)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
+                // PDFs deleted externally leave no other cleaner: drop their
+                // bookmarks + resume position with the media row so the PDF
+                // tables can't accumulate unreachable rows.
+                val wasPdf = removed?.type == "pdf" ||
+                    MediaFileManager.typeForFileName(
+                        storedFileNameFromPath(path)
+                    ) == "pdf"
+                if (wasPdf) {
+                    try {
+                        pdfReaderDao?.deleteBookmarksForFile(path)
+                        pdfReaderDao?.deleteReadingState(path)
+                    } catch (_: Exception) {
+                    }
+                }
+            }
+            // Catch-up for orphans that predate the stale-path cleanup above
+            // (e.g. PDF removed while its media row was already gone): drop
+            // PDF rows whose file no longer exists anywhere.
+            try {
+                val dao = pdfReaderDao
+                if (dao != null) {
+                    val tracked = (dao.bookmarkedPaths() + dao.readingStatePaths()).toSet()
+                    for (pdfPath in tracked) {
+                        if (!vaultPaths.contains(pdfPath) && !mediaFileExists(pdfPath)) {
+                            try {
+                                dao.deleteBookmarksForFile(pdfPath)
+                            } catch (_: Exception) {
+                            }
+                            try {
+                                dao.deleteReadingState(pdfPath)
+                            } catch (_: Exception) {
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {
             }
         } finally {
             releaseVaultSync()
@@ -414,7 +452,21 @@ class MediaViewModel(
 
     fun deleteAudio(path: String) = deleteMedia(path)
 
-    fun deletePdf(path: String) = deleteMedia(path)
+    fun deletePdf(path: String) = viewModelScope.launch {
+        try {
+            deleteMedia(path).join()
+        } catch (_: Exception) {
+        }
+        // Bookmarks + resume position are keyed by path — drop them with the
+        // file so the tables can't accumulate unreachable rows.
+        withContext(ioDispatcher) {
+            try {
+                pdfReaderDao?.deleteBookmarksForFile(path)
+                pdfReaderDao?.deleteReadingState(path)
+            } catch (_: Exception) {
+            }
+        }
+    }
 
     fun deleteMedia(path: String) = viewModelScope.launch {
         withContext(ioDispatcher) { deleteMediaFile(path) }

@@ -10,8 +10,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
@@ -39,9 +42,11 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,6 +57,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,6 +80,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.data.file.MediaFileManager
+import com.kotonosora.todolist.navigation.appViewModel
 import com.kotonosora.todolist.ui.components.AudioPlayerView
 import com.kotonosora.todolist.ui.components.AudioWaveformBars
 import com.kotonosora.todolist.ui.components.CameraCaptureView
@@ -111,8 +118,15 @@ fun MediaScreen(
     var selectedPdfPath by remember { mutableStateOf<String?>(null) }
     var selectedVideoPath by remember { mutableStateOf<String?>(null) }
     var selectedAudioPath by remember { mutableStateOf<String?>(null) }
+    // When true, the video preview dialog opens directly in fullscreen
+    // (used by the list-mode inline player's fullscreen button).
+    var videoDialogFullscreen by remember { mutableStateOf(false) }
     var isGridView by rememberSaveable { mutableStateOf(true) }
     var selectedFilter by rememberSaveable { mutableStateOf(MediaFilter.All) }
+    // Pending delete confirmation. Deletion only runs after the user
+    // confirms — grid × / long-press and list delete icons all route here
+    // instead of deleting immediately.
+    var pendingDelete by remember { mutableStateOf<PendingDelete?>(null) }
     val context = LocalContext.current
 
     LaunchedEffect(recordingError) {
@@ -169,10 +183,20 @@ fun MediaScreen(
         else Toast.makeText(context, "Microphone permission is needed.", Toast.LENGTH_SHORT).show()
     }
 
-    // NOTE: photo/video/audio/pdf/file imports intentionally do NOT use
-    // system pickers: ACTION_GET_CONTENT always offers Google Photos as a
-    // source. Imports go through the in-app DeviceMediaPickerSheet (MediaStore
-    // = on-device files only).
+    // NOTE: photo/video/audio imports intentionally do NOT use system
+    // pickers: ACTION_GET_CONTENT always offers Google Photos as a source.
+    // They go through the in-app DeviceMediaPickerSheet (MediaStore =
+    // on-device files only). PDFs are the exception: on API 33+ scoped
+    // storage MediaStore.Files no longer exposes PDFs/Downloads to normal
+    // apps, so a MediaStore-only picker shows an empty PDF list. PDFs use
+    // ACTION_OPEN_DOCUMENT (application/pdf) — Google Photos holds no PDFs
+    // so it can never appear there — and importMediaDocument() already
+    // copies any returned content:// uri into the vault.
+    val pdfPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris ->
+        if (uris.isNotEmpty()) viewModel.importMediaUris(uris)
+    }
 
     // ── Device-only media picker (MediaStore, never Google Photos) ──
     var devicePickerTab by remember { mutableStateOf<DeviceMediaTab?>(null) }
@@ -235,18 +259,25 @@ fun MediaScreen(
         onPauseRecordClick = { viewModel.pauseRecording() },
         onResumeRecordClick = { viewModel.resumeRecording() },
         onStopRecordClick = { viewModel.stopRecording() },
-        onDeletePhoto = { viewModel.deletePhoto(it) },
-        onDeleteVideo = { viewModel.deleteVideo(it) },
-        onDeleteAudio = { viewModel.deleteAudio(it) },
-        onDeletePdf = { viewModel.deletePdf(it) },
-        onImportPdfClick = { openDevicePicker(DeviceMediaTab.Pdfs) },
+        onDeletePhoto = { pendingDelete = PendingDelete(PendingDeleteType.PHOTO, it) },
+        onDeleteVideo = { pendingDelete = PendingDelete(PendingDeleteType.VIDEO, it) },
+        onDeleteAudio = { pendingDelete = PendingDelete(PendingDeleteType.AUDIO, it) },
+        onDeletePdf = { pendingDelete = PendingDelete(PendingDeleteType.PDF, it) },
+        onImportPdfClick = { pdfPickerLauncher.launch(arrayOf("application/pdf")) },
         onImportPhotosClick = { openDevicePicker(DeviceMediaTab.Photos) },
         onImportVideosClick = { openDevicePicker(DeviceMediaTab.Videos) },
         onImportAudioClick = { openDevicePicker(DeviceMediaTab.Audio) },
         onImportFilesClick = { openDevicePicker(DeviceMediaTab.All) },
         onRefreshVaultClick = { viewModel.refreshVaultMedia() },
         onPhotoClick = { selectedLightboxPhoto = it },
-        onVideoClick = { selectedVideoPath = it },
+        onVideoClick = {
+            videoDialogFullscreen = false
+            selectedVideoPath = it
+        },
+        onVideoFullscreenClick = {
+            videoDialogFullscreen = true
+            selectedVideoPath = it
+        },
         onAudioClick = { selectedAudioPath = it },
         onPdfClick = { selectedPdfPath = it },
         onOpenDrawer = onOpenDrawer
@@ -260,11 +291,16 @@ fun MediaScreen(
         )
     }
 
-    // Full-screen PDF Reader Dialog
+    // Full-screen PDF Reader Dialog (own ViewModel per document for
+    // bookmarks + resume position, keyed by path).
     selectedPdfPath?.let { pdfPath ->
+        val pdfReaderViewModel = appViewModel(key = "pdfReader/$pdfPath") { container ->
+            PdfReaderViewModel(pdfPath, container.pdfReaderDao)
+        }
         PdfReaderDialog(
             filePath = pdfPath,
-            onDismiss = { selectedPdfPath = null }
+            onDismiss = { selectedPdfPath = null },
+            readerViewModel = pdfReaderViewModel
         )
     }
 
@@ -272,19 +308,66 @@ fun MediaScreen(
     selectedVideoPath?.let { videoPath ->
         VideoPreviewDialog(
             filePath = videoPath,
-            onDismiss = { selectedVideoPath = null },
-            onDelete = { viewModel.deleteVideo(it) }
+            onDismiss = {
+                selectedVideoPath = null
+                videoDialogFullscreen = false
+            },
+            startFullscreen = videoDialogFullscreen,
+            onDelete = { pendingDelete = PendingDelete(PendingDeleteType.VIDEO, it) }
         )
     }
     selectedAudioPath?.let { audioPath ->
         AudioPreviewDialog(
             filePath = audioPath,
             onDismiss = { selectedAudioPath = null },
-            onDelete = { viewModel.deleteAudio(it) }
+            onDelete = { pendingDelete = PendingDelete(PendingDeleteType.AUDIO, it) }
+        )
+    }
+
+    // Delete confirmation — single choke point for every delete affordance.
+    pendingDelete?.let { target ->
+        MediaDeleteConfirmDialog(
+            typeLabel = when (target.type) {
+                PendingDeleteType.PHOTO -> "photo"
+                PendingDeleteType.VIDEO -> "video"
+                PendingDeleteType.AUDIO -> "audio recording"
+                PendingDeleteType.PDF -> "PDF document"
+            },
+            fileName = formatMediaDisplayName(
+                target.path,
+                target.type == PendingDeleteType.AUDIO
+            ),
+            onConfirm = {
+                when (target.type) {
+                    PendingDeleteType.PHOTO -> {
+                        viewModel.deletePhoto(target.path)
+                        if (selectedLightboxPhoto == target.path) selectedLightboxPhoto = null
+                    }
+
+                    PendingDeleteType.VIDEO -> {
+                        viewModel.deleteVideo(target.path)
+                        if (selectedVideoPath == target.path) selectedVideoPath = null
+                    }
+
+                    PendingDeleteType.AUDIO -> {
+                        viewModel.deleteAudio(target.path)
+                        if (selectedAudioPath == target.path) selectedAudioPath = null
+                    }
+
+                    PendingDeleteType.PDF -> {
+                        viewModel.deletePdf(target.path)
+                        if (selectedPdfPath == target.path) selectedPdfPath = null
+                    }
+                }
+                pendingDelete = null
+            },
+            onDismiss = { pendingDelete = null }
         )
     }
 
     // In-app device media picker (MediaStore only — Google Photos can never appear).
+    // The sheet keeps a "Browse PDF files" fallback: MediaStore can't list
+    // PDFs on API 33+, so the Pdfs tab offers the SAF document picker.
     devicePickerTab?.let { tab ->
         DeviceMediaPickerSheet(
             initialTab = tab,
@@ -292,6 +375,10 @@ fun MediaScreen(
             onImport = { uris ->
                 devicePickerTab = null
                 if (uris.isNotEmpty()) viewModel.importMediaUris(uris)
+            },
+            onBrowsePdfs = {
+                devicePickerTab = null
+                pdfPickerLauncher.launch(arrayOf("application/pdf"))
             }
         )
     }
@@ -303,10 +390,12 @@ fun MediaScreen(
             onDismissRequest = { showCameraSheet = false },
             sheetState = sheetState
         ) {
+            // Fraction of the sheet height (not a fixed dp) so shutter/record
+            // controls stay reachable on short screens and landscape.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(560.dp)
+                    .fillMaxHeight(0.85f)
             ) {
                 CameraCaptureView(
                     onPhotoCaptured = { pathStr ->
@@ -366,16 +455,35 @@ fun MediaScreenContent(
     onDeletePdf: (String) -> Unit = {},
     onPhotoClick: (String) -> Unit = {},
     onVideoClick: (String) -> Unit = {},
+    onVideoFullscreenClick: (String) -> Unit = {},
     onAudioClick: (String) -> Unit = {},
     onPdfClick: (String) -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null
 ) {
-    Scaffold { paddingValues ->
+    Scaffold(
+        floatingActionButton = {
+            if (isGridView) {
+                ExtendedFloatingActionButton(
+                    onClick = onCapturePhotoClick,
+                    icon = {
+                        Icon(
+                            Icons.Default.PhotoCamera,
+                            contentDescription = null
+                        )
+                    },
+                    text = { Text("Capture") }
+                )
+            }
+        }
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 16.dp),
+            // Bottom clearance for the grid Capture FAB so it never covers
+            // the trailing hint text.
+            contentPadding = PaddingValues(bottom = if (isGridView) 88.dp else 0.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
@@ -436,6 +544,12 @@ fun MediaScreenContent(
 
             if (isGridView) {
                 item {
+                    MediaCaptureGridBar(
+                        onCaptureClick = onCapturePhotoClick,
+                        onImportClick = onImportFilesClick
+                    )
+                }
+                item {
                     MediaFilterRow(
                         selected = selectedFilter,
                         onSelect = onFilterSelect,
@@ -486,7 +600,7 @@ fun MediaScreenContent(
                 }
                 item {
                     Text(
-                        "Tap a tile to preview. Long-press or tap × to delete. Use the list view for inline playback and recording controls.",
+                        "Tap a tile to preview • tap × for delete options. Use Capture to take a photo or record video, or switch to list view for inline playback.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -537,7 +651,7 @@ fun MediaScreenContent(
                 items(capturedPhotos, key = { it }) { path ->
                     MediaFileItem(
                         name = formatMediaDisplayName(path, isAudio = false),
-                        subtitle = path,
+                        subtitle = formatMediaSubtitle(path),
                         filePath = path,
                         onPhotoClick = { onPhotoClick(path) },
                         onDelete = { onDeletePhoto(path) }
@@ -545,10 +659,10 @@ fun MediaScreenContent(
                 }
                 if (capturedPhotos.isEmpty()) {
                     item {
-                        Text(
-                            "No photos captured yet.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        MediaEmptyState(
+                            message = "No photos yet.",
+                            actionLabel = "Capture",
+                            onAction = onCapturePhotoClick
                         )
                     }
                 }
@@ -599,15 +713,16 @@ fun MediaScreenContent(
                     VideoFileItem(
                         name = formatMediaDisplayName(path, isAudio = false),
                         filePath = path,
-                        onDelete = { onDeleteVideo(path) }
+                        onDelete = { onDeleteVideo(path) },
+                        onFullscreenClick = { onVideoFullscreenClick(path) }
                     )
                 }
                 if (recordedVideos.isEmpty()) {
                     item {
-                        Text(
-                            "No videos recorded yet.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        MediaEmptyState(
+                            message = "No videos yet.",
+                            actionLabel = "Record",
+                            onAction = onCapturePhotoClick
                         )
                     }
                 }
@@ -744,12 +859,12 @@ fun MediaScreenContent(
                         onDelete = { onDeleteAudio(path) }
                     )
                 }
-                if (recordedAudios.isEmpty()) {
+                if (recordedAudios.isEmpty() && !isRecording) {
                     item {
-                        Text(
-                            "No recordings yet.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        MediaEmptyState(
+                            message = "No recordings yet.",
+                            actionLabel = "Import",
+                            onAction = onImportAudioClick
                         )
                     }
                 }
@@ -799,7 +914,7 @@ fun MediaScreenContent(
                 items(pdfDocuments, key = { it }) { path ->
                     MediaFileItem(
                         name = formatMediaDisplayName(path, isAudio = false),
-                        subtitle = path,
+                        subtitle = formatMediaSubtitle(path),
                         filePath = null,
                         onPhotoClick = { onPdfClick(path) },
                         onDelete = { onDeletePdf(path) }
@@ -807,10 +922,10 @@ fun MediaScreenContent(
                 }
                 if (pdfDocuments.isEmpty()) {
                     item {
-                        Text(
-                            "No PDF documents yet.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        MediaEmptyState(
+                            message = "No PDF documents yet.",
+                            actionLabel = "Import",
+                            onAction = onImportPdfClick
                         )
                     }
                 }
@@ -824,6 +939,175 @@ private fun formatRecordingTimer(seconds: Int): String {
     val mins = seconds / 60
     val secs = seconds % 60
     return String.format(AppConstants.APP_LOCALE, "%02d:%02d", mins, secs)
+}
+
+/**
+ * Vault-relative subtitle for list rows — folder • EXT instead of the raw
+ * absolute path or SAF uri (readable, no internal paths leaked).
+ */
+private fun formatMediaSubtitle(path: String): String {
+    return try {
+        if (path.startsWith("content://")) {
+            val decoded = try {
+                java.net.URLDecoder.decode(
+                    path.substringAfterLast("/"),
+                    java.nio.charset.StandardCharsets.UTF_8
+                )
+            } catch (_: Exception) {
+                path.substringAfterLast("/")
+            }.replace("%2F", "/").replace("%2f", "/").substringAfterLast("/")
+            val ext = decoded.substringAfterLast(".", "").uppercase(AppConstants.APP_LOCALE)
+            if (ext.isNotBlank()) "Vault file • $ext" else "Vault file"
+        } else {
+            val file = File(path)
+            val folder = file.parentFile?.name?.takeIf { it.isNotBlank() } ?: "Vault"
+            val ext = file.extension.uppercase(AppConstants.APP_LOCALE).takeIf { it.isNotBlank() }
+            if (ext != null) "$folder • $ext" else folder
+        }
+    } catch (_: Exception) {
+        "Vault file"
+    }
+}
+
+/**
+ * Capture entry for grid mode — photo/video capture was previously only
+ * reachable from list view sections. Primary camera action + secondary
+ * import keeps both paths one tap away.
+ */
+@Composable
+private fun MediaCaptureGridBar(
+    onCaptureClick: () -> Unit,
+    onImportClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    "Capture",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "Photo or video → vault",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                IconButton(
+                    onClick = onImportClick,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                    )
+                ) {
+                    Icon(Icons.Default.UploadFile, contentDescription = "Import files")
+                }
+                IconButton(
+                    onClick = onCaptureClick,
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.PhotoCamera,
+                        contentDescription = "Capture photo or video",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Compact empty state with a single CTA — replaces bare "No X yet" text.
+ */
+@Composable
+private fun MediaEmptyState(
+    message: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onAction) { Text(actionLabel) }
+        }
+    }
+}
+
+/**
+ * Delete request awaiting user confirmation. Enum-typed (not stringly-typed)
+ * so the confirm `when` is exhaustive — a typo can never silently fall into
+ * the wrong delete path.
+ */
+private enum class PendingDeleteType { PHOTO, VIDEO, AUDIO, PDF }
+
+private data class PendingDelete(val type: PendingDeleteType, val path: String)
+
+/**
+ * Single delete confirmation for every media delete affordance (grid ×,
+ * long-press, list rows, preview dialogs). Files are deleted from the
+ * vault with no trash, so confirmation is the safety net.
+ */
+@Composable
+private fun MediaDeleteConfirmDialog(
+    typeLabel: String,
+    fileName: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete this $typeLabel?") },
+        text = {
+            Text(
+                "$fileName\n\nThis removes the file from the vault. This can't be undone.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm
+            ) {
+                Text("Delete", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 /**
@@ -1069,7 +1353,8 @@ private fun AudioFileItem(
 private fun VideoFileItem(
     name: String,
     filePath: String,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onFullscreenClick: () -> Unit = {}
 ) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -1090,6 +1375,12 @@ private fun VideoFileItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                IconButton(onClick = onFullscreenClick) {
+                    Icon(
+                        Icons.Default.Fullscreen,
+                        contentDescription = "Fullscreen"
+                    )
+                }
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
