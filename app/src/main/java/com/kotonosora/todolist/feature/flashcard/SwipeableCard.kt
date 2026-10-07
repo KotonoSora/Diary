@@ -21,9 +21,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Flip
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,7 +56,8 @@ fun SwipeableCard(
     onFlip: () -> Unit,
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSpeak: () -> Unit = {}
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = with(LocalDensity.current) { configuration.screenWidthDp.dp.toPx() }
@@ -121,7 +124,7 @@ fun SwipeableCard(
             containerColor = if (animatedRotationY <= 90f) {
                 MaterialTheme.colorScheme.surface
             } else {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+                MaterialTheme.colorScheme.primaryContainer
             }
         )
     ) {
@@ -132,7 +135,6 @@ fun SwipeableCard(
             contentAlignment = Alignment.Center
         ) {
             if (animatedRotationY <= 90f) {
-                // Front side: Word & Phonetic
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -156,14 +158,33 @@ fun SwipeableCard(
                         textAlign = TextAlign.Center
                     )
 
-                    if (flashcard.phonetic.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = flashcard.phonetic,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
+                    if (flashcard.phonetic.isNotBlank() || flashcard.word.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (flashcard.phonetic.isNotBlank()) {
+                                Text(
+                                    text = flashcard.phonetic,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontStyle = FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Spacer(modifier = Modifier.size(4.dp))
+                            }
+                            IconButton(
+                                onClick = onSpeak,
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VolumeUp,
+                                    contentDescription = "Play pronunciation of ${flashcard.word}",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -192,7 +213,6 @@ fun SwipeableCard(
                     }
                 }
             } else {
-                // Back side: Definition & Example (Flipped rotation for correct text reading)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -268,7 +288,6 @@ fun SwipeableCard(
                 }
             }
 
-            // Drag overlay badge - Mastered (Right)
             if (dragProgress > 0.2f) {
                 Box(
                     modifier = Modifier
@@ -296,7 +315,6 @@ fun SwipeableCard(
                 }
             }
 
-            // Drag overlay badge - Need Practice (Left)
             if (dragProgress < -0.2f) {
                 Box(
                     modifier = Modifier

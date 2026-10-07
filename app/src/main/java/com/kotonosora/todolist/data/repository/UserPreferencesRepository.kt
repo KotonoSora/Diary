@@ -21,6 +21,7 @@ class UserPreferencesRepository(
         val THEME_MODE = stringPreferencesKey("theme_mode") // "system", "dark", "light"
         val DEFAULT_NOTE_FORMAT = stringPreferencesKey("default_note_format") // "md", "txt"
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+        val HAS_SEEDED_FLASHCARDS = booleanPreferencesKey("has_seeded_flashcards")
     }
 
     val customStorageFolderUri: Flow<String?> = context.dataStore.data.map { preferences ->
@@ -37,6 +38,10 @@ class UserPreferencesRepository(
 
     val hasCompletedOnboarding: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[PreferencesKeys.HAS_COMPLETED_ONBOARDING] ?: false
+    }
+
+    val hasSeededFlashcards: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.HAS_SEEDED_FLASHCARDS] ?: false
     }
 
     suspend fun saveCustomStorageFolderUri(uri: String?) {
@@ -64,6 +69,12 @@ class UserPreferencesRepository(
     suspend fun saveHasCompletedOnboarding(completed: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.HAS_COMPLETED_ONBOARDING] = completed
+        }
+    }
+
+    suspend fun saveHasSeededFlashcards(seeded: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.HAS_SEEDED_FLASHCARDS] = seeded
         }
     }
 }

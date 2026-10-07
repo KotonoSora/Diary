@@ -198,10 +198,9 @@ class MediaViewModel(
                     mediaEntityCache[found.pathString] = entity
                 }
             }
-            // Prune rows whose file vanished from the vault. Rows pointing at
-            // pre-subfolder Pictures/Music captures are intentionally kept while
-            // the file still exists on disk (vault scans no longer cover those
-            // dirs) — they stay playable/deletable via the gallery until removed.
+            // Prune rows whose file vanished from the vault. Rows outside the
+            // current vault scan are kept while the file still exists on disk —
+            // they stay playable/deletable via the gallery until removed.
             val stale = mediaEntityCache.keys.filter { cached ->
                 !vaultPaths.contains(cached) && !mediaFileExists(cached)
             }

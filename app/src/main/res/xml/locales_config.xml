@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Single-locale config: English is the primary language throughout the app.
-     Paired with AppConstants.APP_LOCALE (Locale.US) and the runtime
-     AppCompatDelegate enforcement in MainApplication. -->
-<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
-    <locale android:name="en" />
-    <locale android:name="en-US" />
-</locale-config>

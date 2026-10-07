@@ -29,6 +29,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -56,6 +57,10 @@ import com.kotonosora.todolist.feature.editor.EditorContent
 import com.kotonosora.todolist.feature.editor.EditorScreen
 import com.kotonosora.todolist.feature.editor.EditorUiState
 import com.kotonosora.todolist.feature.editor.EditorViewModel
+import com.kotonosora.todolist.feature.flashcard.FlashcardDeck
+import com.kotonosora.todolist.feature.flashcard.FlashcardDeckDetailScreen
+import com.kotonosora.todolist.feature.flashcard.FlashcardDeckDetailViewModel
+import com.kotonosora.todolist.feature.flashcard.FlashcardDeckListViewModel
 import com.kotonosora.todolist.feature.flashcard.FlashcardDeckSelectionScreen
 import com.kotonosora.todolist.feature.flashcard.FlashcardScreen
 import com.kotonosora.todolist.feature.flashcard.FlashcardViewModel
@@ -114,6 +119,12 @@ sealed class NavRoute(val route: String) {
     }
 
     object FlashcardDecks : NavRoute("flashcard_decks")
+    object FlashcardDeckDetail : NavRoute("flashcard_deck_detail/{deckId}") {
+        fun createRoute(deckId: String): String {
+            val encoded = URLEncoder.encode(deckId, StandardCharsets.UTF_8.toString())
+            return "flashcard_deck_detail/$encoded"
+        }
+    }
     object Flashcards : NavRoute("flashcards/{noteId}?isDemo={isDemo}") {
         fun createRoute(noteId: String, isDemo: Boolean = false): String {
             val encodedNoteId = URLEncoder.encode(noteId, StandardCharsets.UTF_8.toString())
@@ -308,7 +319,10 @@ fun AppNavGraph() {
                 val noteId = URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
 
                 val viewModel = appViewModel { container ->
-                    FlashcardViewModel(container.vaultRepository)
+                    FlashcardViewModel(
+                        container.vaultRepository,
+                        container.flashcardRepository
+                    )
                 }
                 LaunchedEffect(noteId) {
                     viewModel.loadNote(noteId, isDemo = isDemo)
@@ -317,11 +331,34 @@ fun AppNavGraph() {
                 FlashcardScreen(
                     noteId = noteId,
                     onNavigateBack = { navController.popBackStack() },
-                    viewModel = viewModel
+                    viewModel = viewModel,
+                    onManageCards = { deckId ->
+                        navController.navigate(
+                            NavRoute.FlashcardDeckDetail.createRoute(deckId)
+                        )
+                    },
+                    isDemo = isDemo
                 )
             }
 
             composable(NavRoute.FlashcardDecks.route) {
+                val deckListViewModel = appViewModel { container ->
+                    FlashcardDeckListViewModel(
+                        flashcardRepository = container.flashcardRepository,
+                        deckProgressRepository = container.deckProgressRepository,
+                        userPreferencesRepository = container.userPreferencesRepository
+                    )
+                }
+                val deckProgress by deckListViewModel.progress.collectAsState()
+                val deckListState by deckListViewModel.uiState.collectAsState()
+                val dbDecks = deckListState.decks.map { meta ->
+                    FlashcardDeck(
+                        id = meta.id,
+                        name = meta.name,
+                        description = meta.description,
+                        cardCount = meta.cardCount
+                    )
+                }
                 FlashcardDeckSelectionScreen(
                     onOpenDrawer = { scope.launch { drawerState.open() } },
                     onDeckSelected = { deckId ->
@@ -330,6 +367,51 @@ fun AppNavGraph() {
                                 noteId = deckId,
                                 isDemo = true
                             )
+                        )
+                    },
+                    progress = deckProgress,
+                    decks = dbDecks,
+                    isLoading = deckListState.isLoading,
+                    crudEnabled = true,
+                    builtInDeckIds = deckListState.decks
+                        .filter { it.isBuiltIn }
+                        .map { it.id }
+                        .toSet(),
+                    error = deckListState.error,
+                    onDismissError = deckListViewModel::clearError,
+                    onCreateDeck = { name, description ->
+                        deckListViewModel.createDeck(name, description)
+                    },
+                    onRenameDeck = { deckId, name, description ->
+                        deckListViewModel.renameDeck(deckId, name, description)
+                    },
+                    onDeleteDeck = { deckId ->
+                        deckListViewModel.deleteDeck(deckId)
+                    },
+                    onManageDeck = { deckId ->
+                        navController.navigate(NavRoute.FlashcardDeckDetail.createRoute(deckId))
+                    }
+                )
+            }
+
+            composable(
+                route = NavRoute.FlashcardDeckDetail.route,
+                arguments = listOf(navArgument("deckId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val encodedDeckId = backStackEntry.arguments?.getString("deckId") ?: ""
+                val deckId = URLDecoder.decode(encodedDeckId, StandardCharsets.UTF_8.toString())
+                val detailViewModel = appViewModel { container ->
+                    FlashcardDeckDetailViewModel(
+                        deckId = deckId,
+                        flashcardRepository = container.flashcardRepository
+                    )
+                }
+                FlashcardDeckDetailScreen(
+                    viewModel = detailViewModel,
+                    onNavigateBack = { navController.popBackStack() },
+                    onPractice = { practiceId ->
+                        navController.navigate(
+                            NavRoute.Flashcards.createRoute(noteId = practiceId, isDemo = true)
                         )
                     }
                 )

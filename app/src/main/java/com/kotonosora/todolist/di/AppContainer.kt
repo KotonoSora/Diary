@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.work.WorkManager
 import com.kotonosora.todolist.data.database.AppDatabase
+import com.kotonosora.todolist.data.database.DeckProgressDatabase
 import com.kotonosora.todolist.data.database.LinkDao
 import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.NoteDao
@@ -20,6 +21,8 @@ import com.kotonosora.todolist.data.file.FileSyncManager
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.VaultManager
 import com.kotonosora.todolist.data.repository.TaskRepositoryImpl
+import com.kotonosora.todolist.data.repository.DeckProgressRepository
+import com.kotonosora.todolist.data.repository.FlashcardRepository
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.data.repository.VaultRepositoryImpl
 import com.kotonosora.todolist.domain.repository.TaskRepository
@@ -49,6 +52,25 @@ class AppContainer(private val applicationContext: Context) {
 
     val userPreferencesRepository: UserPreferencesRepository by lazy {
         UserPreferencesRepository(applicationContext)
+    }
+
+    val deckProgressRepository: DeckProgressRepository by lazy {
+        DeckProgressRepository(
+            DeckProgressDatabase.getDatabase(applicationContext).deckProgressDao()
+        )
+    }
+
+    private val deckProgressDatabase: DeckProgressDatabase by lazy {
+        DeckProgressDatabase.getDatabase(applicationContext)
+    }
+
+    val flashcardRepository: FlashcardRepository by lazy {
+        FlashcardRepository(
+            database = deckProgressDatabase,
+            deckDao = deckProgressDatabase.flashcardDeckDao(),
+            cardDao = deckProgressDatabase.flashcardCardDao(),
+            progressDao = deckProgressDatabase.deckProgressDao()
+        )
     }
 
     val vaultManager: VaultManager by lazy {
