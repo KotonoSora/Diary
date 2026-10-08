@@ -4,9 +4,9 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
-import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.VaultNode
+import com.kotonosora.todolist.domain.repository.PreferencesRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
@@ -14,7 +14,7 @@ import java.io.File
 
 class VaultManager(
     private val context: Context,
-    private val userPreferencesRepository: UserPreferencesRepository? = null
+    private val userPreferencesRepository: PreferencesRepository? = null
 ) {
 
     fun getDefaultStorageDir(): File {

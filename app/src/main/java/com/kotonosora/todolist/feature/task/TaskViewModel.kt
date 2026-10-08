@@ -2,15 +2,11 @@ package com.kotonosora.todolist.feature.task
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
 import com.kotonosora.todolist.data.native.MainNativeHelper
-import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.usecase.NotificationUseCases
+import com.kotonosora.todolist.domain.usecase.PreferencesUseCases
 import com.kotonosora.todolist.domain.usecase.TaskUseCases
-import com.kotonosora.todolist.notification.AppReminderWorker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,15 +15,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 
+/**
+ * DDD: task CRUD via [TaskUseCases], reminders via [NotificationUseCases],
+ * settings via [PreferencesUseCases] — never WorkManager or repositories
+ * directly.
+ */
 class TaskViewModel(
     private val useCases: TaskUseCases,
-    private val workManager: WorkManager,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val notifications: NotificationUseCases,
+    private val prefs: PreferencesUseCases
 ) : ViewModel() {
 
-    val customFolderUri: StateFlow<String?> = userPreferencesRepository.customStorageFolderUri
+    val customFolderUri: StateFlow<String?> = prefs.observeCustomStorageFolder()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Unfiltered list of all tasks — use this for lookups (e.g. edit screen). */
@@ -56,7 +56,7 @@ class TaskViewModel(
     }
 
     fun saveCustomFolderUri(uriStr: String?) = viewModelScope.launch {
-        userPreferencesRepository.saveCustomStorageFolderUri(uriStr)
+        prefs.saveCustomStorageFolder(uriStr)
     }
 
     fun syncTasks() = viewModelScope.launch {
@@ -72,49 +72,24 @@ class TaskViewModel(
 
     fun addTask(task: TaskItem) = viewModelScope.launch {
         useCases.addTask(task)
-        task.reminderTime?.let { scheduleReminder(task) }
+        task.reminderTime?.let { notifications.scheduleReminder(task) }
     }
 
     fun updateTask(task: TaskItem) = viewModelScope.launch {
         useCases.updateTask(task)
         if (task.reminderTime != null) {
-            scheduleReminder(task)
+            notifications.scheduleReminder(task)
         } else {
-            cancelReminder(task.id)
+            notifications.cancelReminder(task.id)
         }
     }
 
     fun deleteTask(task: TaskItem) = viewModelScope.launch {
         useCases.deleteTask(task)
-        cancelReminder(task.id)
+        notifications.cancelReminder(task.id)
     }
 
     fun toggleTask(task: TaskItem) = viewModelScope.launch {
         updateTask(task.copy(isCompleted = !task.isCompleted))
-    }
-
-    private fun scheduleReminder(task: TaskItem) {
-        val delay = (task.reminderTime ?: return) - System.currentTimeMillis()
-        if (delay <= 0) return
-
-        val data = workDataOf(
-            AppReminderWorker.KEY_TASK_ID to task.id,
-            AppReminderWorker.KEY_TASK_TITLE to task.title
-        )
-
-        val request = OneTimeWorkRequestBuilder<AppReminderWorker>()
-            .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setInputData(data)
-            .build()
-
-        workManager.enqueueUniqueWork(
-            "reminder_${task.id}",
-            ExistingWorkPolicy.REPLACE,
-            request
-        )
-    }
-
-    private fun cancelReminder(taskId: String) {
-        workManager.cancelUniqueWork("reminder_$taskId")
     }
 }

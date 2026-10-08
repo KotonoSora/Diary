@@ -50,7 +50,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
-import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import com.kotonosora.todolist.ui.theme.AppTheme
 import com.kotonosora.todolist.ui.theme.NoteTypeColors
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -71,7 +71,7 @@ data class GraphUiState(
 )
 
 class GraphViewModel(
-    private val vaultRepository: VaultRepository
+    private val useCases: VaultUseCases
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GraphUiState())
@@ -83,11 +83,11 @@ class GraphViewModel(
 
     fun loadGraph() {
         viewModelScope.launch {
-            val notes = vaultRepository.getAllNotes().firstOrNull() ?: emptyList()
+            val notes = useCases.observeNotes().firstOrNull() ?: emptyList()
             val edges = mutableListOf<GraphEdge>()
             for (note in notes) {
                 val outgoing =
-                    vaultRepository.getOutgoingLinks(note.id).firstOrNull() ?: emptyList()
+                    useCases.outgoingLinks(note.id).firstOrNull() ?: emptyList()
                 for (targetTitle in outgoing) {
                     edges.add(GraphEdge(sourceId = note.id, targetTitle = targetTitle))
                 }

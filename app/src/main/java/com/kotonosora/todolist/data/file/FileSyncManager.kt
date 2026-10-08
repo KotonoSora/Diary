@@ -7,8 +7,8 @@ import androidx.documentfile.provider.DocumentFile
 import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.data.database.TaskDao
 import com.kotonosora.todolist.data.database.TaskEntity
-import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
 import java.text.SimpleDateFormat
@@ -19,7 +19,7 @@ import java.text.SimpleDateFormat
 class FileSyncManager(
     private val context: Context,
     private val taskDao: TaskDao,
-    private val userPreferencesRepository: UserPreferencesRepository? = null
+    private val userPreferencesRepository: PreferencesRepository? = null
 ) {
 
     private fun getStorageDir(): File {

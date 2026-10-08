@@ -64,8 +64,8 @@ import com.kotonosora.todolist.ui.theme.AppTheme
 fun VaultWorkspaceScreen(
     viewModel: VaultViewModel = appViewModel { container ->
         VaultViewModel(
-            container.vaultRepository,
-            container.userPreferencesRepository
+            container.vaultUseCases,
+            container.preferencesUseCases
         )
     },
     onNoteSelect: (String) -> Unit,

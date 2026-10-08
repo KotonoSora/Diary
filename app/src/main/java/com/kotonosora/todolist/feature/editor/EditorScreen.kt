@@ -71,6 +71,7 @@ import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.StampParser
 import com.kotonosora.todolist.domain.model.description
 import com.kotonosora.todolist.domain.model.displayName
+import com.kotonosora.todolist.domain.model.generateZettelContent
 import com.kotonosora.todolist.feature.flashcard.MarkdownParser
 import com.kotonosora.todolist.feature.vault.formatCleanDisplayName
 import com.kotonosora.todolist.ui.theme.AppTheme
@@ -433,7 +434,7 @@ fun EditorContent(
                                         .fillMaxWidth()
                                         .clickable {
                                             val templateContent =
-                                                ZettelTemplatePicker.generateContentForTemplate(
+                                                generateZettelContent(
                                                     noteType = type,
                                                     title = uiState.note.title
                                                 )

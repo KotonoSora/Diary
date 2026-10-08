@@ -226,8 +226,8 @@ fun AppNavGraph() {
                 } else {
                     val vaultViewModel = appViewModel { container ->
                         VaultViewModel(
-                            container.vaultRepository,
-                            container.userPreferencesRepository
+                            container.vaultUseCases,
+                            container.preferencesUseCases
                         )
                     }
                     VaultWorkspaceScreen(
@@ -254,7 +254,7 @@ fun AppNavGraph() {
                     )
                 } else {
                     val graphViewModel = appViewModel { container ->
-                        GraphViewModel(container.vaultRepository)
+                        GraphViewModel(container.vaultUseCases)
                     }
                     KnowledgeGraphScreen(
                         viewModel = graphViewModel,
@@ -290,7 +290,7 @@ fun AppNavGraph() {
                     val noteId =
                         URLDecoder.decode(encodedNoteId, StandardCharsets.UTF_8.toString())
                     val editorViewModel = appViewModel { container ->
-                        EditorViewModel(container.vaultRepository)
+                        EditorViewModel(container.vaultUseCases)
                     }
                     EditorScreen(
                         noteId = noteId,
@@ -323,8 +323,8 @@ fun AppNavGraph() {
 
                 val viewModel = appViewModel { container ->
                     FlashcardViewModel(
-                        container.vaultRepository,
-                        container.flashcardRepository
+                        container.vaultUseCases,
+                        container.flashcardUseCases
                     )
                 }
                 LaunchedEffect(noteId) {
@@ -347,9 +347,8 @@ fun AppNavGraph() {
             composable(NavRoute.FlashcardDecks.route) {
                 val deckListViewModel = appViewModel { container ->
                     FlashcardDeckListViewModel(
-                        flashcardRepository = container.flashcardRepository,
-                        deckProgressRepository = container.deckProgressRepository,
-                        userPreferencesRepository = container.userPreferencesRepository
+                        useCases = container.flashcardUseCases,
+                        prefs = container.preferencesUseCases
                     )
                 }
                 val deckProgress by deckListViewModel.progress.collectAsState()
@@ -406,7 +405,7 @@ fun AppNavGraph() {
                 val detailViewModel = appViewModel { container ->
                     FlashcardDeckDetailViewModel(
                         deckId = deckId,
-                        flashcardRepository = container.flashcardRepository
+                        useCases = container.flashcardUseCases
                     )
                 }
                 FlashcardDeckDetailScreen(
@@ -431,8 +430,8 @@ fun AppNavGraph() {
                     val taskViewModel = appViewModel { container ->
                         TaskViewModel(
                             container.taskUseCases,
-                            container.workManager,
-                            container.userPreferencesRepository
+                            container.notificationUseCases,
+                            container.preferencesUseCases
                         )
                     }
                     TaskListScreen(
@@ -462,8 +461,8 @@ fun AppNavGraph() {
                     val taskViewModel = appViewModel { container ->
                         TaskViewModel(
                             container.taskUseCases,
-                            container.workManager,
-                            container.userPreferencesRepository
+                            container.notificationUseCases,
+                            container.preferencesUseCases
                         )
                     }
                     AddEditTaskScreen(
@@ -486,7 +485,7 @@ fun AppNavGraph() {
                     )
                 } else {
                     val calendarViewModel = appViewModel { container ->
-                        CalendarViewModel(container.taskUseCases, container.vaultRepository)
+                        CalendarViewModel(container.taskUseCases, container.vaultUseCases)
                     }
                     CalendarScreen(
                         viewModel = calendarViewModel,
@@ -503,7 +502,7 @@ fun AppNavGraph() {
                     MoodTimelineContent(days = emptyList())
                 } else {
                     val moodViewModel = appViewModel { container ->
-                        MoodTimelineViewModel(container.vaultRepository)
+                        MoodTimelineViewModel(container.vaultUseCases)
                     }
                     MoodTimelineScreen(
                         viewModel = moodViewModel,
@@ -516,7 +515,6 @@ fun AppNavGraph() {
             }
 
             composable(NavRoute.Media.route) {
-                val context = LocalContext.current
                 if (LocalInspectionMode.current) {
                     MediaScreenContent(
                         capturedPhotos = emptyList(),
@@ -527,11 +525,11 @@ fun AppNavGraph() {
                 } else {
                     val mediaViewModel = appViewModel { container ->
                         MediaViewModel(
-                            context = context.applicationContext,
-                            mediaDao = container.mediaDao,
-                            userPreferencesRepository = container.userPreferencesRepository,
+                            media = container.mediaUseCases,
+                            prefs = container.preferencesUseCases,
+                            pdf = container.pdfUseCases,
                             mediaFileManager = container.mediaFileManager,
-                            pdfReaderDao = container.pdfReaderDao
+                            audioCapture = container.newAudioCaptureService()
                         )
                     }
                     MediaScreen(
@@ -552,7 +550,7 @@ fun AppNavGraph() {
                     )
                 } else {
                     val settingsViewModel = appViewModel { container ->
-                        SettingsViewModel(container.userPreferencesRepository)
+                        SettingsViewModel(container.preferencesUseCases)
                     }
                     SettingsScreen(
                         viewModel = settingsViewModel,

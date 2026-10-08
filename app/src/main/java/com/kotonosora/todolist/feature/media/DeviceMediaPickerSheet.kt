@@ -57,8 +57,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.kotonosora.todolist.common.AppConstants
-import com.kotonosora.todolist.data.file.DeviceMediaItem
-import com.kotonosora.todolist.data.file.DeviceMediaStore
+import com.kotonosora.todolist.domain.model.DeviceMediaFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -82,11 +81,11 @@ fun DeviceMediaPickerSheet(
     initialTab: DeviceMediaTab,
     onDismiss: () -> Unit,
     onImport: (List<Uri>) -> Unit,
-    onBrowsePdfs: (() -> Unit)? = null
+    onBrowsePdfs: (() -> Unit)? = null,
+    queryDeviceMedia: suspend () -> List<DeviceMediaFile>
 ) {
-    val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var allItems by remember { mutableStateOf<List<DeviceMediaItem>?>(null) }
+    var allItems by remember { mutableStateOf<List<DeviceMediaFile>?>(null) }
     var tab by remember { mutableStateOf(initialTab) }
     var selected by remember { mutableStateOf(setOf<Uri>()) }
     var query by remember { mutableStateOf("") }
@@ -94,7 +93,7 @@ fun DeviceMediaPickerSheet(
     LaunchedEffect(Unit) {
         allItems = withContext(Dispatchers.IO) {
             try {
-                DeviceMediaStore.queryDeviceMedia(context.applicationContext)
+                queryDeviceMedia()
             } catch (_: Exception) {
                 emptyList()
             }
@@ -374,7 +373,7 @@ fun DeviceMediaPickerSheet(
 
 @Composable
 private fun PickerPhotoTile(
-    item: DeviceMediaItem,
+    item: DeviceMediaFile,
     isSelected: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
@@ -410,7 +409,7 @@ private fun PickerPhotoTile(
  */
 @Composable
 private fun PickerVideoTile(
-    item: DeviceMediaItem,
+    item: DeviceMediaFile,
     isSelected: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
@@ -502,7 +501,7 @@ private fun PickerSelectedBadge(modifier: Modifier = Modifier) {
 
 @Composable
 private fun PickerDocRow(
-    item: DeviceMediaItem,
+    item: DeviceMediaFile,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     isSelected: Boolean,
     onToggle: () -> Unit

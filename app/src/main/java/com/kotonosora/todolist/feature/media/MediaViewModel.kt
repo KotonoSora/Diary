@@ -1,24 +1,16 @@
 package com.kotonosora.todolist.feature.media
 
-import android.content.Context
-import android.media.MediaRecorder
 import android.net.Uri
-import android.os.Build
-import android.os.ParcelFileDescriptor
-import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kotonosora.todolist.data.database.MediaDao
-import com.kotonosora.todolist.data.database.MediaEntity
-import com.kotonosora.todolist.data.database.PdfReaderDao
-import com.kotonosora.todolist.data.factory.MediaRecorderFactory
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.MediaOutputLocation
-import com.kotonosora.todolist.data.repository.UserPreferencesRepository
+import com.kotonosora.todolist.domain.service.AudioCaptureService
+import com.kotonosora.todolist.domain.usecase.MediaUseCases
+import com.kotonosora.todolist.domain.usecase.PdfUseCases
+import com.kotonosora.todolist.domain.usecase.PreferencesUseCases
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,16 +20,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.IOException
 
+/**
+ * DDD: media index via [MediaUseCases], PDF reader state via [PdfUseCases],
+ * settings via [PreferencesUseCases], recording via [AudioCaptureService],
+ * file I/O via [MediaFileManager]. Never repositories, WorkManager or
+ * `MediaRecorder` directly.
+ */
 class MediaViewModel(
-    private val context: Context,
-    private val mediaDao: MediaDao,
-    private val userPreferencesRepository: UserPreferencesRepository? = null,
-    private val mediaFileManager: MediaFileManager? = null,
-    private val mediaRecorderFactory: MediaRecorderFactory? = null,
-    private val pdfReaderDao: PdfReaderDao? = null,
+    private val media: MediaUseCases,
+    private val prefs: PreferencesUseCases,
+    private val pdf: PdfUseCases,
+    private val mediaFileManager: MediaFileManager,
+    private val audioCapture: AudioCaptureService,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
@@ -53,14 +48,11 @@ class MediaViewModel(
     private val _pdfDocumentPaths = MutableStateFlow<List<String>>(emptyList())
     val pdfDocumentPaths: StateFlow<List<String>> = _pdfDocumentPaths.asStateFlow()
 
-    private val _isRecording = MutableStateFlow(false)
-    val isRecording: StateFlow<Boolean> = _isRecording.asStateFlow()
-
-    private val _isPaused = MutableStateFlow(false)
-    val isPaused: StateFlow<Boolean> = _isPaused.asStateFlow()
-
-    private val _recordingDurationSeconds = MutableStateFlow(0)
-    val recordingDurationSeconds: StateFlow<Int> = _recordingDurationSeconds.asStateFlow()
+    val isRecording: StateFlow<Boolean> = audioCapture.isRecording
+    val isPaused: StateFlow<Boolean> = audioCapture.isPaused
+    val recordingDurationSeconds: StateFlow<Int> = audioCapture.durationSeconds
+    val currentAmplitude: StateFlow<Int> = audioCapture.amplitude
+    val recordingError: StateFlow<String?> = audioCapture.error
 
     private val _importError = MutableStateFlow<String?>(null)
     val importError: StateFlow<String?> = _importError.asStateFlow()
@@ -71,30 +63,15 @@ class MediaViewModel(
     private val _lastImportSummary = MutableStateFlow<String?>(null)
     val lastImportSummary: StateFlow<String?> = _lastImportSummary.asStateFlow()
 
-    private val _recordingError = MutableStateFlow<String?>(null)
-    val recordingError: StateFlow<String?> = _recordingError.asStateFlow()
-
     private val _isVaultSyncing = MutableStateFlow(false)
     val isVaultSyncing: StateFlow<Boolean> = _isVaultSyncing.asStateFlow()
 
-    private val _currentAmplitude = MutableStateFlow(0)
-    val currentAmplitude: StateFlow<Int> = _currentAmplitude.asStateFlow()
-
-    val customFolderUri: StateFlow<String?> = userPreferencesRepository?.customStorageFolderUri
-        ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-        ?: MutableStateFlow(null)
-
-    private var mediaRecorder: MediaRecorder? = null
-    private var currentPfd: ParcelFileDescriptor? = null
-    private var currentAudioPath: String? = null
-    private var recordingJob: Job? = null
-    private var amplitudeJob: Job? = null
-
-    // In-memory map from filePath -> MediaEntity for deletion lookups
-    private val mediaEntityCache = mutableMapOf<String, MediaEntity>()
+    val customFolderUri: StateFlow<String?> = prefs.observeCustomStorageFolder()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     // Serializes vault reconciliations so concurrent refresh/import calls can't
-    // both pass the guard and insert the same file twice.
+    // both pass the guard and insert the same file twice (the index holds one
+    // row per filePath — see MediaRepository).
     // The `is*` flags always change together with the mutex — only via the
     // acquire/release helpers below, never directly at callsites.
     private val vaultSyncMutex = Mutex()
@@ -128,19 +105,17 @@ class MediaViewModel(
     }
 
     private fun loadMediaFromDb() = viewModelScope.launch {
-        mediaDao.getAllMedia().collect { entities ->
-            mediaEntityCache.clear()
-            entities.forEach { mediaEntityCache[it.filePath] = it }
-            _capturedPhotoPaths.value = entities
+        media.observeAll().collect { items ->
+            _capturedPhotoPaths.value = items
                 .filter { it.type == "photo" }
                 .map { it.filePath }
-            _recordedVideoPaths.value = entities
+            _recordedVideoPaths.value = items
                 .filter { it.type == "video" }
                 .map { it.filePath }
-            _recordedAudioPaths.value = entities
+            _recordedAudioPaths.value = items
                 .filter { it.type == "audio" }
                 .map { it.filePath }
-            _pdfDocumentPaths.value = entities
+            _pdfDocumentPaths.value = items
                 .filter { it.type == "pdf" }
                 .map { it.filePath }
         }
@@ -153,129 +128,81 @@ class MediaViewModel(
      */
     fun refreshVaultMedia() = viewModelScope.launch {
         // Atomic guard: concurrent refresh calls (init + pull-to-refresh) must
-        // not both enter and insert duplicate rows for the same filePath
-        // (MediaEntity.id is a random UUID, so filePath duplicates aren't
-        // replaced by Room's REPLACE strategy).
+        // not both enter and insert duplicate rows for the same filePath (the
+        // index holds one row per filePath — see MediaRepository).
         if (!acquireVaultSync()) return@launch
         try {
-            val customFolderUriStr =
-                userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
-            if (!customFolderUriStr.isNullOrBlank() && !isSafTreeReadable(customFolderUriStr)) {
+            val customFolderUriStr = prefs.observeCustomStorageFolder().firstOrNull()
+            if (!customFolderUriStr.isNullOrBlank() &&
+                !mediaFileManager.isTreeReadable(customFolderUriStr)
+            ) {
                 // Vault permission lost/revoked: keep the DB index as-is instead
                 // of pruning every SAF row whose file we can no longer see.
                 return@launch
             }
-            val manager = mediaFileManager ?: MediaFileManager(context)
             val vaultFiles = withContext(ioDispatcher) {
                 try {
-                    manager.listVaultMedia(customFolderUriStr)
+                    mediaFileManager.listVaultMedia(customFolderUriStr)
                 } catch (e: Exception) {
                     e.printStackTrace()
                     emptyList()
                 }
             }
-            // Don't rely only on the in-memory cache: on cold start
-            // loadMediaFromDb() may not have emitted yet, so merge the cache
-            // with a direct DAO snapshot to avoid inserting duplicates.
-            val dbPaths = try {
-                mediaDao.getAllMedia().firstOrNull()?.map { it.filePath }?.toSet()
-                    ?: emptySet()
+            // Don't rely only on the in-memory UI state: on cold start the
+            // index flow may not have emitted yet, so merge it with a direct
+            // repository snapshot to avoid inserting duplicates.
+            val knownPaths = try {
+                media.snapshotPaths()
             } catch (e: Exception) {
                 e.printStackTrace()
                 emptySet()
-            }
-            val knownPaths = mediaEntityCache.keys + dbPaths
+            } + _capturedPhotoPaths.value + _recordedVideoPaths.value +
+                    _recordedAudioPaths.value + _pdfDocumentPaths.value
             val vaultPaths = vaultFiles.map { it.pathString }.toSet()
             // Index sideloaded files (e.g. copied via file manager).
             for (found in vaultFiles) {
-                if (!knownPaths.contains(found.pathString) &&
-                    !mediaEntityCache.containsKey(found.pathString)
-                ) {
-                    val entity =
-                        MediaEntity(todoId = null, type = found.type, filePath = found.pathString)
+                if (!knownPaths.contains(found.pathString)) {
                     try {
-                        mediaDao.insertMedia(entity)
+                        media.addMedia(found.type, found.pathString)
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                    mediaEntityCache[found.pathString] = entity
                 }
             }
             // Prune rows whose file vanished from the vault. Rows outside the
             // current vault scan are kept while the file still exists on disk —
             // they stay playable/deletable via the gallery until removed.
-            val stale = mediaEntityCache.keys.filter { cached ->
-                !vaultPaths.contains(cached) && !mediaFileExists(cached)
+            val stale = knownPaths.filter { cached ->
+                !vaultPaths.contains(cached) && !mediaFileManager.storedFileExists(cached)
             }
             for (path in stale) {
-                val removed = mediaEntityCache.remove(path)
                 try {
-                    mediaDao.deleteByPath(path)
+                    media.removeByPath(path)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
                 // PDFs deleted externally leave no other cleaner: drop their
-                // bookmarks + resume position with the media row so the PDF
-                // tables can't accumulate unreachable rows.
-                val wasPdf = removed?.type == "pdf" ||
-                    MediaFileManager.typeForFileName(
-                        storedFileNameFromPath(path)
-                    ) == "pdf"
+                // reader state with the media row so the PDF tables can't
+                // accumulate unreachable rows.
+                val wasPdf = MediaFileManager.typeForFileName(
+                    MediaFileManager.storedFileNameFromPath(path)
+                ) == "pdf"
                 if (wasPdf) {
                     try {
-                        pdfReaderDao?.deleteBookmarksForFile(path)
-                        pdfReaderDao?.deleteReadingState(path)
+                        pdf.deleteForFile(path)
                     } catch (_: Exception) {
                     }
                 }
             }
             // Catch-up for orphans that predate the stale-path cleanup above
             // (e.g. PDF removed while its media row was already gone): drop
-            // PDF rows whose file no longer exists anywhere.
+            // reader state whose file no longer exists anywhere.
             try {
-                val dao = pdfReaderDao
-                if (dao != null) {
-                    val tracked = (dao.bookmarkedPaths() + dao.readingStatePaths()).toSet()
-                    for (pdfPath in tracked) {
-                        if (!vaultPaths.contains(pdfPath) && !mediaFileExists(pdfPath)) {
-                            try {
-                                dao.deleteBookmarksForFile(pdfPath)
-                            } catch (_: Exception) {
-                            }
-                            try {
-                                dao.deleteReadingState(pdfPath)
-                            } catch (_: Exception) {
-                            }
-                        }
-                    }
-                }
+                pdf.cleanupOrphans(vaultPaths, mediaFileManager::storedFileExists)
             } catch (_: Exception) {
             }
         } finally {
             releaseVaultSync()
-        }
-    }
-
-    private fun isSafTreeReadable(customFolderUriStr: String): Boolean {
-        return try {
-            val tree = DocumentFile.fromTreeUri(context, Uri.parse(customFolderUriStr))
-            tree != null && tree.canRead()
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun mediaFileExists(path: String): Boolean {
-        return try {
-            if (path.startsWith("content://")) {
-                DocumentFile.fromSingleUri(context, Uri.parse(path))?.exists() == true
-            } else {
-                File(path).exists()
-            }
-        } catch (e: Exception) {
-            // Conservatively keep the row when existence can't be determined
-            // (e.g. revoked SAF permission) instead of wiping the index.
-            true
         }
     }
 
@@ -284,166 +211,31 @@ class MediaViewModel(
     fun onVideoCaptured(path: String) = onMediaCaptured("video", path)
 
     private fun onMediaCaptured(type: String, path: String) = viewModelScope.launch {
-        val entity = MediaEntity(todoId = null, type = type, filePath = path)
         try {
-            mediaDao.insertMedia(entity)
+            media.addMedia(type, path)
         } catch (e: Exception) {
-            android.util.Log.w("MediaViewModel", "insert $type failed", e)
+            e.printStackTrace()
         }
-        mediaEntityCache[path] = entity
     }
 
     fun startRecording() = viewModelScope.launch {
-        if (_isRecording.value) return@launch
-        _recordingError.value = null
-        val customFolderUriStr = userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
-        val manager = mediaFileManager ?: MediaFileManager(context)
-        val location = manager.createAudioOutputLocation(customFolderUriStr)
-
-        val recorder = mediaRecorderFactory?.createMediaRecorder()
-            ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                MediaRecorder(context)
-            } else {
-                @Suppress("DEPRECATION")
-                MediaRecorder()
-            }
-        mediaRecorder = recorder
-
-        try {
-            recorder.apply {
-                setAudioSource(MediaRecorder.AudioSource.MIC)
-                setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-                setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-
-                when (location) {
-                    is MediaOutputLocation.DocumentFileUri -> {
-                        val pfd = context.contentResolver.openFileDescriptor(location.uri, "w")
-                            ?: throw IOException("Couldn't open vault audio file.")
-                        currentPfd = pfd
-                        setOutputFile(pfd.fileDescriptor)
-                        currentAudioPath = location.pathString
-                    }
-
-                    is MediaOutputLocation.LocalFile -> {
-                        setOutputFile(location.file.absolutePath)
-                        currentAudioPath = location.file.absolutePath
-                    }
-                }
-
-                prepare()
-                start()
-            }
-            _isRecording.value = true
-            _isPaused.value = false
-            _recordingDurationSeconds.value = 0
-
-            startRecordingTimer()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            try {
-                recorder.release()
-            } catch (_: Exception) {
-            }
-            try {
-                currentPfd?.close()
-            } catch (_: Exception) {
-            }
-            mediaRecorder = null
-            currentPfd = null
-            currentAudioPath = null
-            // The output file was pre-created before recording started —
-            // remove the empty stub so the vault doesn't fill with dead files.
-            withContext(ioDispatcher) { deleteLocation(location) }
-            _isRecording.value = false
-            _recordingError.value = "Couldn't start recording (${e.message})."
-        }
+        val customFolderUriStr = prefs.observeCustomStorageFolder().firstOrNull()
+        audioCapture.start(customFolderUriStr)
     }
 
-    private fun startRecordingTimer() {
-        recordingJob?.cancel()
-        amplitudeJob?.cancel()
-        recordingJob = viewModelScope.launch {
-            while (_isRecording.value) {
-                delay(1000)
-                if (!_isPaused.value) {
-                    _recordingDurationSeconds.value += 1
-                }
-            }
-        }
-        // Mic level polling stays responsive without inflating the counter.
-        amplitudeJob = viewModelScope.launch {
-            while (_isRecording.value) {
-                delay(200)
-                if (!_isPaused.value) {
-                    try {
-                        _currentAmplitude.value = mediaRecorder?.maxAmplitude ?: 0
-                    } catch (_: Exception) {
-                        // ignore
-                    }
-                }
-            }
-        }
-    }
+    fun pauseRecording() = audioCapture.pause()
 
-    fun pauseRecording() {
-        if (_isRecording.value && !_isPaused.value) {
-            try {
-                mediaRecorder?.pause()
-                _isPaused.value = true
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    fun resumeRecording() {
-        if (_isRecording.value && _isPaused.value) {
-            try {
-                mediaRecorder?.resume()
-                _isPaused.value = false
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
+    fun resumeRecording() = audioCapture.resume()
 
     fun stopRecording() {
-        recordingJob?.cancel()
-        recordingJob = null
-        amplitudeJob?.cancel()
-        amplitudeJob = null
-
-        var stopOk = true
-        try {
-            mediaRecorder?.stop()
-            mediaRecorder?.release()
-            currentPfd?.close()
-        } catch (e: Exception) {
-            e.printStackTrace()
-            stopOk = false
-        } finally {
-            mediaRecorder = null
-            currentPfd = null
-        }
-        val path = currentAudioPath
-        currentAudioPath = null
-        if (path != null) {
-            if (stopOk) {
-                viewModelScope.launch {
-                    val entity = MediaEntity(todoId = null, type = "audio", filePath = path)
-                    mediaDao.insertMedia(entity)
-                    mediaEntityCache[path] = entity
-                }
-            } else {
-                // Short/corrupt clip: discard the file instead of indexing it.
-                viewModelScope.launch(ioDispatcher) { deleteMediaFile(path) }
-                _recordingError.value = "Couldn't save this recording — file was discarded."
+        val path = audioCapture.stop() ?: return
+        viewModelScope.launch {
+            try {
+                media.addMedia("audio", path)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
-        _isRecording.value = false
-        _isPaused.value = false
-        _recordingDurationSeconds.value = 0
-        _currentAmplitude.value = 0
     }
 
     fun deletePhoto(path: String) = deleteMedia(path)
@@ -457,31 +249,22 @@ class MediaViewModel(
             deleteMedia(path).join()
         } catch (_: Exception) {
         }
-        // Bookmarks + resume position are keyed by path — drop them with the
-        // file so the tables can't accumulate unreachable rows.
+        // Reader state is keyed by path — drop it with the file so the
+        // tables can't accumulate unreachable rows.
         withContext(ioDispatcher) {
             try {
-                pdfReaderDao?.deleteBookmarksForFile(path)
-                pdfReaderDao?.deleteReadingState(path)
+                pdf.deleteForFile(path)
             } catch (_: Exception) {
             }
         }
     }
 
     fun deleteMedia(path: String) = viewModelScope.launch {
-        withContext(ioDispatcher) { deleteMediaFile(path) }
-        val removed = mediaEntityCache.remove(path)
+        withContext(ioDispatcher) { mediaFileManager.deleteStoredFile(path) }
         try {
-            mediaDao.deleteByPath(path)
+            media.removeByPath(path)
         } catch (e: Exception) {
-            android.util.Log.w("MediaViewModel", "deleteByPath failed, fallback", e)
-            removed?.let {
-                try {
-                    mediaDao.deleteMedia(it)
-                } catch (e2: Exception) {
-                    android.util.Log.w("MediaViewModel", "deleteMedia fallback failed", e2)
-                }
-            }
+            e.printStackTrace()
         }
     }
 
@@ -510,14 +293,14 @@ class MediaViewModel(
             var success = 0
             var failed = 0
             try {
-                val customFolderUriStr =
-                    userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
-                val manager = mediaFileManager ?: MediaFileManager(context)
+                val customFolderUriStr = prefs.observeCustomStorageFolder().firstOrNull()
                 for (uri in uris) {
                     val stored: Pair<String, String>? = try {
                         withContext(ioDispatcher) {
-                            val location = manager.importMediaDocument(uri, customFolderUriStr)
-                                ?: return@withContext null
+                            val location = mediaFileManager.importMediaDocument(
+                                uri,
+                                customFolderUriStr
+                            ) ?: return@withContext null
                             val path = when (location) {
                                 is MediaOutputLocation.DocumentFileUri -> location.pathString
                                 is MediaOutputLocation.LocalFile -> location.file.absolutePath
@@ -527,7 +310,7 @@ class MediaViewModel(
                             // to .pdf). Deriving the index type from it guarantees the
                             // Room row matches what listVaultMedia() will scan, without
                             // extra ContentResolver queries per file.
-                            val storedName = storedFileNameFromPath(path)
+                            val storedName = MediaFileManager.storedFileNameFromPath(path)
                             val storedType = MediaFileManager.typeForFileName(storedName)
                                 ?: return@withContext null
                             path to storedType
@@ -539,9 +322,7 @@ class MediaViewModel(
                     if (stored != null) {
                         val (path, type) = stored
                         try {
-                            val entity = MediaEntity(todoId = null, type = type, filePath = path)
-                            mediaDao.insertMedia(entity)
-                            mediaEntityCache[path] = entity
+                            media.addMedia(type, path)
                             success++
                         } catch (e: Exception) {
                             e.printStackTrace()
@@ -571,70 +352,24 @@ class MediaViewModel(
         _lastImportSummary.value = null
     }
 
-    fun clearRecordingError() {
-        _recordingError.value = null
-    }
+    /** On-device `MediaStore` listing for the in-app picker. Call off Main. */
+    suspend fun queryDeviceMedia() = media.queryDeviceMedia()
 
-    private fun deleteMediaFile(path: String) {
-        try {
-            if (path.startsWith("content://")) {
-                // SAF tree documents must go through DocumentFile; resolver
-                // delete alone returns 0 and leaves the file behind, which
-                // refreshVaultMedia() would then re-index as a ghost.
-                try {
-                    val doc = DocumentFile.fromSingleUri(context, Uri.parse(path))
-                    if (doc != null && doc.delete()) return
-                } catch (_: Exception) {
-                }
-                try {
-                    context.contentResolver.delete(Uri.parse(path), null, null)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            } else {
-                File(path).delete()
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    private fun deleteLocation(location: MediaOutputLocation) {
-        try {
-            when (location) {
-                is MediaOutputLocation.DocumentFileUri -> location.documentFile.delete()
-                is MediaOutputLocation.LocalFile -> {
-                    if (location.file.exists()) location.file.delete()
-                }
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
+    fun clearRecordingError() = audioCapture.clearError()
 
     override fun onCleared() {
         super.onCleared()
-        if (_isRecording.value) stopRecording()
-    }
-
-    companion object {
-        /**
-         * Extracts the vault filename from a stored path: absolute local path
-         * or `content://` SAF uri. SAF document URIs percent-encode the
-         * subfolder separator (`...%2Fvideos%2FVID_....mp4`), in either upper-
-         * or lower-case hex, so normalize both before taking the last segment.
-         */
-        internal fun storedFileNameFromPath(path: String): String {
-            val lastSegment = path.substringAfterLast("/")
-            val withSeparators = lastSegment
-                .replace("%2F", "/")
-                .replace("%2f", "/")
-            val name = withSeparators.substringAfterLast("/")
-            return try {
-                java.net.URLDecoder.decode(name, "UTF-8")
-            } catch (_: Exception) {
-                name
+        if (audioCapture.isRecording.value) {
+            audioCapture.stop()?.let { path ->
+                viewModelScope.launch {
+                    try {
+                        media.addMedia("audio", path)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
             }
         }
+        audioCapture.close()
     }
 }

@@ -6,10 +6,8 @@ import androidx.work.WorkManager
 import com.kotonosora.todolist.data.database.AppDatabase
 import com.kotonosora.todolist.data.database.DeckProgressDatabase
 import com.kotonosora.todolist.data.database.LinkDao
-import com.kotonosora.todolist.data.database.MediaDao
 import com.kotonosora.todolist.data.database.NoteDao
 import com.kotonosora.todolist.data.database.NoteFtsDao
-import com.kotonosora.todolist.data.database.PdfReaderDao
 import com.kotonosora.todolist.data.database.TagDao
 import com.kotonosora.todolist.data.database.TaskDao
 import com.kotonosora.todolist.data.database.ZettelMetadataDao
@@ -21,20 +19,33 @@ import com.kotonosora.todolist.data.file.AppFileManager
 import com.kotonosora.todolist.data.file.FileSyncManager
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.VaultManager
-import com.kotonosora.todolist.data.repository.DeckProgressRepository
-import com.kotonosora.todolist.data.repository.FlashcardRepository
+import com.kotonosora.todolist.data.media.AudioCaptureServiceImpl
+import com.kotonosora.todolist.data.repository.FlashcardRepositoryImpl
+import com.kotonosora.todolist.data.repository.MediaRepositoryImpl
+import com.kotonosora.todolist.data.repository.PdfReaderRepositoryImpl
 import com.kotonosora.todolist.data.repository.TaskRepositoryImpl
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.data.repository.VaultRepositoryImpl
+import com.kotonosora.todolist.domain.repository.FlashcardRepository
+import com.kotonosora.todolist.domain.repository.MediaRepository
+import com.kotonosora.todolist.domain.repository.PdfReaderRepository
+import com.kotonosora.todolist.domain.repository.PreferencesRepository
 import com.kotonosora.todolist.domain.repository.TaskRepository
 import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.service.AudioCaptureService
 import com.kotonosora.todolist.domain.usecase.AddTaskUseCase
 import com.kotonosora.todolist.domain.usecase.DeleteTaskUseCase
+import com.kotonosora.todolist.domain.usecase.FlashcardUseCases
 import com.kotonosora.todolist.domain.usecase.GetTasksByDateUseCase
 import com.kotonosora.todolist.domain.usecase.GetTasksUseCase
+import com.kotonosora.todolist.domain.usecase.MediaUseCases
+import com.kotonosora.todolist.domain.usecase.NotificationUseCases
+import com.kotonosora.todolist.domain.usecase.PdfUseCases
+import com.kotonosora.todolist.domain.usecase.PreferencesUseCases
 import com.kotonosora.todolist.domain.usecase.SyncTasksUseCase
 import com.kotonosora.todolist.domain.usecase.TaskUseCases
 import com.kotonosora.todolist.domain.usecase.UpdateTaskUseCase
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import com.kotonosora.todolist.notification.AppNotificationManager
 
 class AppContainer(private val applicationContext: Context) {
@@ -44,22 +55,22 @@ class AppContainer(private val applicationContext: Context) {
     }
 
     val taskDao: TaskDao by lazy { appDatabase.taskDao() }
-    val mediaDao: MediaDao by lazy { appDatabase.mediaDao() }
     val noteDao: NoteDao by lazy { appDatabase.noteDao() }
     val linkDao: LinkDao by lazy { appDatabase.linkDao() }
     val tagDao: TagDao by lazy { appDatabase.tagDao() }
     val zettelMetadataDao: ZettelMetadataDao by lazy { appDatabase.zettelMetadataDao() }
     val noteFtsDao: NoteFtsDao by lazy { appDatabase.noteFtsDao() }
-    val pdfReaderDao: PdfReaderDao by lazy { appDatabase.pdfReaderDao() }
 
-    val userPreferencesRepository: UserPreferencesRepository by lazy {
-        UserPreferencesRepository(applicationContext)
+    val pdfReaderRepository: PdfReaderRepository by lazy {
+        PdfReaderRepositoryImpl(appDatabase.pdfReaderDao())
     }
 
-    val deckProgressRepository: DeckProgressRepository by lazy {
-        DeckProgressRepository(
-            DeckProgressDatabase.getDatabase(applicationContext).deckProgressDao()
-        )
+    val mediaRepository: MediaRepository by lazy {
+        MediaRepositoryImpl(applicationContext, appDatabase.mediaDao())
+    }
+
+    val userPreferencesRepository: PreferencesRepository by lazy {
+        UserPreferencesRepository(applicationContext)
     }
 
     private val deckProgressDatabase: DeckProgressDatabase by lazy {
@@ -67,7 +78,7 @@ class AppContainer(private val applicationContext: Context) {
     }
 
     val flashcardRepository: FlashcardRepository by lazy {
-        FlashcardRepository(
+        FlashcardRepositoryImpl(
             database = deckProgressDatabase,
             deckDao = deckProgressDatabase.flashcardDeckDao(),
             cardDao = deckProgressDatabase.flashcardCardDao(),
@@ -117,6 +128,40 @@ class AppContainer(private val applicationContext: Context) {
             syncTasks = SyncTasksUseCase(fileSyncManager, appFileManager)
         )
     }
+
+    val pdfUseCases: PdfUseCases by lazy {
+        PdfUseCases.from(pdfReaderRepository)
+    }
+
+    val vaultUseCases: VaultUseCases by lazy {
+        VaultUseCases.from(vaultRepository)
+    }
+
+    val mediaUseCases: MediaUseCases by lazy {
+        MediaUseCases.from(mediaRepository)
+    }
+
+    val flashcardUseCases: FlashcardUseCases by lazy {
+        FlashcardUseCases.from(flashcardRepository)
+    }
+
+    val preferencesUseCases: PreferencesUseCases by lazy {
+        PreferencesUseCases.from(userPreferencesRepository)
+    }
+
+    val notificationUseCases: NotificationUseCases by lazy {
+        NotificationUseCases.from(workManager, taskRepository)
+    }
+
+    /**
+     * Per-ViewModel audio recorder (owns its own polling scope — never a
+     * singleton, so state can't leak across `MediaViewModel` instances).
+     */
+    fun newAudioCaptureService(): AudioCaptureService = AudioCaptureServiceImpl(
+        applicationContext,
+        mediaFileManager,
+        mediaRecorderFactory
+    )
 
     val workManager: WorkManager by lazy {
         WorkManager.getInstance(applicationContext)

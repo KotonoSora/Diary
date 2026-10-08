@@ -59,7 +59,7 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.data.database.PdfBookmarkEntity
+import com.kotonosora.todolist.domain.model.PdfBookmark
 import com.kotonosora.todolist.feature.media.PdfReaderViewModel
 import com.kotonosora.todolist.ui.components.pdf.PdfAddBookmarkDialog
 import com.kotonosora.todolist.ui.components.pdf.PdfBookmarkSheet
@@ -181,7 +181,7 @@ fun PdfReaderDialog(
     var showBookmarks by remember(filePath) { mutableStateOf(false) }
     var showAddBookmark by remember(filePath) { mutableStateOf(false) }
     var bookmarks by remember(filePath) {
-        mutableStateOf(emptyList<PdfBookmarkEntity>())
+        mutableStateOf(emptyList<PdfBookmark>())
     }
     LaunchedEffect(filePath, readerViewModel) {
         readerViewModel?.bookmarks?.collect { bookmarks = it }

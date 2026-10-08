@@ -295,7 +295,7 @@ fun MediaScreen(
     // bookmarks + resume position, keyed by path).
     selectedPdfPath?.let { pdfPath ->
         val pdfReaderViewModel = appViewModel(key = "pdfReader/$pdfPath") { container ->
-            PdfReaderViewModel(pdfPath, container.pdfReaderDao)
+            PdfReaderViewModel(pdfPath, container.pdfUseCases)
         }
         PdfReaderDialog(
             filePath = pdfPath,
@@ -379,7 +379,8 @@ fun MediaScreen(
             onBrowsePdfs = {
                 devicePickerTab = null
                 pdfPickerLauncher.launch(arrayOf("application/pdf"))
-            }
+            },
+            queryDeviceMedia = { viewModel.queryDeviceMedia() }
         )
     }
 

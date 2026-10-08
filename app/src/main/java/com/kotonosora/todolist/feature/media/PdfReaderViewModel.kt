@@ -2,9 +2,8 @@ package com.kotonosora.todolist.feature.media
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kotonosora.todolist.data.database.PdfBookmarkEntity
-import com.kotonosora.todolist.data.database.PdfReaderDao
-import com.kotonosora.todolist.data.database.PdfReadingStateEntity
+import com.kotonosora.todolist.domain.model.PdfBookmark
+import com.kotonosora.todolist.domain.usecase.PdfUseCases
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,18 +15,17 @@ import kotlinx.coroutines.launch
  * Reader state for one PDF ([filePath] is the vault path or SAF uri string,
  * same key the reader opens): named bookmarks plus the auto-saved resume
  * position. One instance per open document (keyed `pdfReader/<path>`).
+ *
+ * DDD: depends on [PdfUseCases] (application layer), never on the DAO or
+ * entities directly.
  */
 class PdfReaderViewModel(
     private val filePath: String,
-    private val dao: PdfReaderDao?
+    private val useCases: PdfUseCases
 ) : ViewModel() {
 
-    val bookmarks: StateFlow<List<PdfBookmarkEntity>> = if (dao != null) {
-        dao.bookmarks(filePath)
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    } else {
-        MutableStateFlow<List<PdfBookmarkEntity>>(emptyList()).asStateFlow()
-    }
+    val bookmarks: StateFlow<List<PdfBookmark>> = useCases.observeBookmarks(filePath)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** True once the saved position (or its absence) has loaded. */
     private val _positionLoaded = MutableStateFlow(false)
@@ -37,66 +35,46 @@ class PdfReaderViewModel(
     val savedPage: StateFlow<Int?> = _savedPage.asStateFlow()
 
     init {
-        if (dao != null) {
-            viewModelScope.launch {
-                try {
-                    _savedPage.value = dao.readingStateOnce(filePath)?.lastPageIndex
-                } catch (_: Exception) {
-                }
-                _positionLoaded.value = true
+        viewModelScope.launch {
+            try {
+                _savedPage.value = useCases.getReadingPosition(filePath)?.lastPageIndex
+            } catch (_: Exception) {
             }
-        } else {
             _positionLoaded.value = true
         }
     }
 
     fun savePage(pageIndex: Int) {
-        val dao = dao ?: return
         viewModelScope.launch {
             try {
-                dao.saveReadingState(
-                    PdfReadingStateEntity(
-                        filePath = filePath,
-                        lastPageIndex = pageIndex.coerceAtLeast(0)
-                    )
-                )
+                useCases.saveReadingPosition(filePath, pageIndex)
             } catch (_: Exception) {
             }
         }
     }
 
     fun addBookmark(pageIndex: Int, label: String) {
-        val dao = dao ?: return
-        val trimmed = label.trim().take(80).ifBlank { "Page ${pageIndex + 1}" }
         viewModelScope.launch {
             try {
-                dao.replaceBookmarkForPage(
-                    PdfBookmarkEntity(
-                        filePath = filePath,
-                        pageIndex = pageIndex,
-                        label = trimmed
-                    )
-                )
+                useCases.addBookmark(filePath, pageIndex, label)
             } catch (_: Exception) {
             }
         }
     }
 
     fun removeBookmark(id: Long) {
-        val dao = dao ?: return
         viewModelScope.launch {
             try {
-                dao.deleteBookmark(id)
+                useCases.removeBookmark(id)
             } catch (_: Exception) {
             }
         }
     }
 
     fun removeBookmarkAt(pageIndex: Int) {
-        val dao = dao ?: return
         viewModelScope.launch {
             try {
-                dao.deleteBookmarkAt(filePath, pageIndex)
+                useCases.removeBookmarkAt(filePath, pageIndex)
             } catch (_: Exception) {
             }
         }

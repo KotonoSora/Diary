@@ -42,7 +42,7 @@ import java.util.Date
 @Composable
 fun MoodTimelineScreen(
     viewModel: MoodTimelineViewModel = appViewModel { container ->
-        MoodTimelineViewModel(container.vaultRepository)
+        MoodTimelineViewModel(container.vaultUseCases)
     },
     onNoteClick: (String) -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null

@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.TaskItem
-import com.kotonosora.todolist.domain.repository.VaultRepository
 import com.kotonosora.todolist.domain.usecase.TaskUseCases
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -15,10 +15,16 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
+/**
+ * DDD: tasks via [TaskUseCases], notes via [VaultUseCases] — never
+ * repositories directly.
+ */
 class CalendarViewModel(
     private val useCases: TaskUseCases,
-    private val vaultRepository: VaultRepository? = null
+    vaultUseCases: VaultUseCases
 ) : ViewModel() {
+
+    private val notesFlow = vaultUseCases.observeNotes()
 
     private val _currentYear = MutableStateFlow(Calendar.getInstance().get(Calendar.YEAR))
     private val _currentMonth = MutableStateFlow(Calendar.getInstance().get(Calendar.MONTH))
@@ -36,9 +42,8 @@ class CalendarViewModel(
     val allTodos: StateFlow<List<TaskItem>> = useCases.getTasks()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val allNotes: StateFlow<List<NoteItem>> = vaultRepository?.getAllNotes()
-        ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-        ?: MutableStateFlow(emptyList())
+    val allNotes: StateFlow<List<NoteItem>> = notesFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val todosForSelectedDate: StateFlow<List<TaskItem>> = combine(
         _selectedDateMillis, allTodos

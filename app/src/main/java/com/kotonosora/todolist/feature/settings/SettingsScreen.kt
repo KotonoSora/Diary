@@ -46,7 +46,7 @@ import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = appViewModel { container -> SettingsViewModel(container.userPreferencesRepository) },
+    viewModel: SettingsViewModel = appViewModel { container -> SettingsViewModel(container.preferencesUseCases) },
     onNavigateToGuide: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null
 ) {

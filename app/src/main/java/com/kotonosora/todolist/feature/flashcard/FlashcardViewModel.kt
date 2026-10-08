@@ -2,8 +2,8 @@ package com.kotonosora.todolist.feature.flashcard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kotonosora.todolist.data.repository.FlashcardRepository
-import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.usecase.FlashcardUseCases
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -12,8 +12,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class FlashcardViewModel(
-    private val vaultRepository: VaultRepository,
-    private val flashcardRepository: FlashcardRepository? = null
+    private val vaultUseCases: VaultUseCases,
+    private val flashcardUseCases: FlashcardUseCases? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FlashcardUiState())
@@ -47,7 +47,7 @@ class FlashcardViewModel(
             // Exceptions are surfaced as a load error, not silently downgraded to
             // "no such deck" (which would show unrelated demo cards).
             val deck = try {
-                flashcardRepository?.getDeckById(noteId)
+                flashcardUseCases?.getDeck(noteId)
             } catch (e: Exception) {
                 _uiState.update {
                     it.copy(isLoading = false, error = e.message ?: "Cannot load deck")
@@ -56,7 +56,7 @@ class FlashcardViewModel(
             }
             if (deck != null) {
                 val dbCards = try {
-                    flashcardRepository?.getCardsOnce(noteId).orEmpty()
+                    flashcardUseCases?.getCardsOnce(noteId).orEmpty().map { it.toUi() }
                 } catch (e: Exception) {
                     _uiState.update {
                         it.copy(isLoading = false, error = e.message ?: "Cannot load cards")
@@ -70,7 +70,7 @@ class FlashcardViewModel(
                 val (deckTitle, demoCards) = DemoFlashcardData.demoCards(noteId)
                 setSession(title = deckTitle, cards = demoCards)
             } else {
-                val note = vaultRepository.getNoteById(noteId)
+                val note = vaultUseCases.getNoteById(noteId)
                 val markdownText = note?.content ?: ""
                 val cards = MarkdownParser.parseMarkdownFlashcards(markdownText)
                 setSession(title = note?.title ?: "Note Flashcards", cards = cards)
@@ -183,7 +183,7 @@ class FlashcardViewModel(
         }
         viewModelScope.launch {
             try {
-                flashcardRepository?.saveFullRun(
+                flashcardUseCases?.saveFullRun(
                     deckId,
                     effectiveMastered,
                     fullDeckSize

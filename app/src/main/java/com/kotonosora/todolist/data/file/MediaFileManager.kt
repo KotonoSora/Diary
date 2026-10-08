@@ -301,6 +301,78 @@ class MediaFileManager(
         }
     }
 
+    /**
+     * True when the custom SAF tree is present and readable. A vault folder
+     * whose permission was lost/revoked must never trigger index pruning —
+     * callers keep the DB index as-is instead.
+     */
+    fun isTreeReadable(customFolderUriStr: String): Boolean {
+        return try {
+            val tree = DocumentFile.fromTreeUri(context, Uri.parse(customFolderUriStr))
+            tree != null && tree.canRead()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * True when a stored media path still exists (SAF `content://` uri or
+     * absolute local path). Returns true when existence can't be determined
+     * (e.g. revoked SAF permission) so callers conservatively keep the row
+     * instead of wiping the index.
+     */
+    fun storedFileExists(path: String): Boolean {
+        return try {
+            if (path.startsWith("content://")) {
+                DocumentFile.fromSingleUri(context, Uri.parse(path))?.exists() == true
+            } else {
+                File(path).exists()
+            }
+        } catch (_: Exception) {
+            true
+        }
+    }
+
+    /**
+     * Deletes one stored media file. SAF tree documents go through
+     * DocumentFile (resolver delete alone returns 0 and leaves the file
+     * behind, which a later vault scan would re-index as a ghost).
+     */
+    fun deleteStoredFile(path: String) {
+        try {
+            if (path.startsWith("content://")) {
+                try {
+                    val doc = DocumentFile.fromSingleUri(context, Uri.parse(path))
+                    if (doc != null && doc.delete()) return
+                } catch (_: Exception) {
+                }
+                try {
+                    context.contentResolver.delete(Uri.parse(path), null, null)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            } else {
+                File(path).delete()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /** Deletes a pre-created capture output (empty stub cleanup). */
+    fun deleteLocation(location: MediaOutputLocation) {
+        try {
+            when (location) {
+                is MediaOutputLocation.DocumentFileUri -> location.documentFile.delete()
+                is MediaOutputLocation.LocalFile -> {
+                    if (location.file.exists()) location.file.delete()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun copyBuffered(input: InputStream, output: OutputStream) {
         val buffer = ByteArray(IMPORT_BUFFER_SIZE)
         while (true) {
@@ -606,6 +678,25 @@ class MediaFileManager(
 
         /** English-locale lowercase helper for filenames from any device locale. */
         internal fun String.lowerEnglish(): String = lowercase(AppConstants.APP_LOCALE)
+
+        /**
+         * Extracts the vault filename from a stored path: absolute local path
+         * or `content://` SAF uri. SAF document URIs percent-encode the
+         * subfolder separator (`...%2Fvideos%2FVID_....mp4`), in either upper-
+         * or lower-case hex, so normalize both before taking the last segment.
+         */
+        fun storedFileNameFromPath(path: String): String {
+            val lastSegment = path.substringAfterLast("/")
+            val withSeparators = lastSegment
+                .replace("%2F", "/")
+                .replace("%2f", "/")
+            val name = withSeparators.substringAfterLast("/")
+            return try {
+                java.net.URLDecoder.decode(name, "UTF-8")
+            } catch (_: Exception) {
+                name
+            }
+        }
 
         @Suppress("unused")
         internal fun localeForTests(): Locale = AppConstants.APP_LOCALE

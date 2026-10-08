@@ -2,10 +2,11 @@ package com.kotonosora.todolist.feature.flashcard
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kotonosora.todolist.data.repository.FlashcardRepository
+import com.kotonosora.todolist.domain.usecase.FlashcardUseCases
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 data class DeckDetailUiState(
@@ -18,9 +19,13 @@ data class DeckDetailUiState(
     val error: String? = null
 )
 
+/**
+ * DDD: depends on [FlashcardUseCases] (application layer). The
+ * repository-based secondary constructor is kept for backward compatibility.
+ */
 class FlashcardDeckDetailViewModel(
     private val deckId: String,
-    private val flashcardRepository: FlashcardRepository
+    private val useCases: FlashcardUseCases
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DeckDetailUiState(deckId = deckId))
@@ -29,8 +34,10 @@ class FlashcardDeckDetailViewModel(
     init {
         viewModelScope.launch {
             combine(
-                flashcardRepository.observeDeck(deckId),
-                flashcardRepository.observeCards(deckId)
+                useCases.observeDeck(deckId),
+                useCases.observeCards(deckId).map { cards ->
+                    cards.map { it.toUi() }
+                }
             ) { deck, cards ->
                 if (deck == null) {
                     DeckDetailUiState(deckId = deckId, isLoading = false, notFound = true)
@@ -50,7 +57,7 @@ class FlashcardDeckDetailViewModel(
     fun renameDeck(name: String, description: String) {
         viewModelScope.launch {
             try {
-                flashcardRepository.renameDeck(deckId, name, description)
+                useCases.renameDeck(deckId, name, description)
                 _uiState.value = _uiState.value.copy(error = null)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message ?: "Cannot rename deck")
@@ -61,7 +68,7 @@ class FlashcardDeckDetailViewModel(
     fun addCard(word: String, definition: String, phonetic: String, example: String) {
         viewModelScope.launch {
             try {
-                flashcardRepository.addCard(deckId, word, definition, phonetic, example)
+                useCases.addCard(deckId, word, definition, phonetic, example)
                 _uiState.value = _uiState.value.copy(error = null)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message ?: "Cannot add card")
@@ -72,7 +79,7 @@ class FlashcardDeckDetailViewModel(
     fun updateCard(card: Flashcard) {
         viewModelScope.launch {
             try {
-                flashcardRepository.updateCard(
+                useCases.updateCard(
                     card.id, deckId, card.word, card.definition, card.phonetic, card.example
                 )
                 _uiState.value = _uiState.value.copy(error = null)
@@ -85,7 +92,7 @@ class FlashcardDeckDetailViewModel(
     fun deleteCard(cardId: String) {
         viewModelScope.launch {
             try {
-                flashcardRepository.deleteCard(cardId)
+                useCases.deleteCard(cardId)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(error = e.message ?: "Cannot delete card")
             }

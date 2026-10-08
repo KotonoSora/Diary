@@ -3,15 +3,13 @@ package com.kotonosora.todolist.feature.vault
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.domain.model.ActionStamp
 import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.NoteType
 import com.kotonosora.todolist.domain.model.VaultNode
-import com.kotonosora.todolist.domain.model.ZettelUidGenerator
-import com.kotonosora.todolist.domain.repository.VaultRepository
-import com.kotonosora.todolist.feature.editor.ZettelTemplatePicker
+import com.kotonosora.todolist.domain.usecase.PreferencesUseCases
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,9 +23,14 @@ data class VaultUiState(
     val isLoading: Boolean = false
 )
 
+/**
+ * DDD: depends on [VaultUseCases] (application layer), never on the
+ * repository directly. The repository-based secondary constructor is kept
+ * for backward compatibility and delegates to the use-case bundle.
+ */
 class VaultViewModel(
-    private val vaultRepository: VaultRepository,
-    private val userPreferencesRepository: UserPreferencesRepository? = null
+    private val useCases: VaultUseCases,
+    private val prefs: PreferencesUseCases
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(VaultUiState())
@@ -37,11 +40,11 @@ class VaultViewModel(
 
     init {
         viewModelScope.launch {
-            val savedUri = userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
+            val savedUri = prefs.observeCustomStorageFolder().firstOrNull()
             if (!savedUri.isNullOrBlank()) {
                 currentVaultUri = Uri.parse(savedUri)
             }
-            vaultRepository.getAllNotes().collect { notes ->
+            useCases.observeNotes().collect { notes ->
                 _uiState.value = _uiState.value.copy(notes = notes)
             }
         }
@@ -52,20 +55,20 @@ class VaultViewModel(
         if (overrideUri != null) {
             currentVaultUri = overrideUri
             viewModelScope.launch {
-                userPreferencesRepository?.saveCustomStorageFolderUri(overrideUri.toString())
+                prefs.saveCustomStorageFolder(overrideUri.toString())
             }
         }
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
             val startTime = System.currentTimeMillis()
             if (currentVaultUri == null) {
-                val savedUriStr = userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
+                val savedUriStr = prefs.observeCustomStorageFolder().firstOrNull()
                 if (!savedUriStr.isNullOrBlank()) {
                     currentVaultUri = Uri.parse(savedUriStr)
                 }
             }
-            vaultRepository.syncVaultFilesToDb(currentVaultUri)
-            val tree = vaultRepository.getVaultTree(currentVaultUri)
+            useCases.syncVault(currentVaultUri)
+            val tree = useCases.getVaultTree(currentVaultUri)
             val elapsedTime = System.currentTimeMillis() - startTime
             if (elapsedTime < 600) {
                 delay(600 - elapsedTime)
@@ -84,35 +87,18 @@ class VaultViewModel(
         actions: List<ActionStamp> = emptyList(),
         onCreated: (String) -> Unit
     ) {
-        if (title.isBlank()) return
-        val uid = ZettelUidGenerator.generateUid()
-        val filename = "$uid-$title.md"
-        val relativePath = if (folderPath.isBlank()) filename else "$folderPath/$filename"
-        val content = ZettelTemplatePicker.generateContentForTemplate(
-            noteType = noteType,
-            title = title,
-            author = author,
-            sourceUrl = sourceUrl,
-            emotion = emotion,
-            actions = actions
-        )
-
-        val note = NoteItem(
-            id = relativePath,
-            uid = uid,
-            title = title,
-            noteType = noteType,
-            relativePath = folderPath,
-            content = content,
-            author = author,
-            sourceUrl = sourceUrl,
-            emotion = emotion,
-            actions = actions
-        )
-
         viewModelScope.launch {
-            val success = vaultRepository.saveNote(note, currentVaultUri)
-            if (success) {
+            val relativePath = useCases.createZettelNote(
+                folderPath = folderPath,
+                title = title,
+                noteType = noteType,
+                author = author,
+                sourceUrl = sourceUrl,
+                emotion = emotion,
+                actions = actions,
+                overrideUri = currentVaultUri
+            )
+            if (relativePath != null) {
                 loadVault()
                 onCreated(relativePath)
             }
@@ -124,7 +110,7 @@ class VaultViewModel(
         val folderPath =
             if (parentFolderPath.isBlank()) folderName.trim() else "$parentFolderPath/${folderName.trim()}"
         viewModelScope.launch {
-            val success = vaultRepository.createFolder(folderPath, currentVaultUri)
+            val success = useCases.createFolder(folderPath, currentVaultUri)
             if (success) {
                 loadVault()
             }
@@ -133,7 +119,7 @@ class VaultViewModel(
 
     fun moveNote(oldRelativePath: String, destFolderPath: String) {
         viewModelScope.launch {
-            val success = vaultRepository.moveNote(oldRelativePath, destFolderPath, currentVaultUri)
+            val success = useCases.moveNote(oldRelativePath, destFolderPath, currentVaultUri)
             if (success) {
                 loadVault()
             }
@@ -143,7 +129,7 @@ class VaultViewModel(
     fun moveFolder(oldRelativePath: String, destFolderPath: String) {
         viewModelScope.launch {
             val success =
-                vaultRepository.moveFolder(oldRelativePath, destFolderPath, currentVaultUri)
+                useCases.moveFolder(oldRelativePath, destFolderPath, currentVaultUri)
             if (success) {
                 loadVault()
             }
@@ -152,7 +138,7 @@ class VaultViewModel(
 
     fun deleteNote(relativePath: String) {
         viewModelScope.launch {
-            val success = vaultRepository.deleteNote(relativePath, currentVaultUri)
+            val success = useCases.deleteNote(relativePath, currentVaultUri)
             if (success) {
                 loadVault()
             }
@@ -162,7 +148,7 @@ class VaultViewModel(
     fun deleteFolder(folderPath: String) {
         if (folderPath.isBlank()) return
         viewModelScope.launch {
-            val success = vaultRepository.deleteFolder(folderPath, currentVaultUri)
+            val success = useCases.deleteFolder(folderPath, currentVaultUri)
             if (success) {
                 loadVault()
             }

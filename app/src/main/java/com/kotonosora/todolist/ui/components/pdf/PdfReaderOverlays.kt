@@ -36,7 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.data.database.PdfBookmarkEntity
+import com.kotonosora.todolist.domain.model.PdfBookmark
 
 /**
  * Jump-to-page dialog: numeric field plus a slider for long documents.
@@ -96,7 +96,7 @@ internal fun PdfGoToPageDialog(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PdfBookmarkSheet(
-    bookmarks: List<PdfBookmarkEntity>,
+    bookmarks: List<PdfBookmark>,
     onJump: (Int) -> Unit,
     onDelete: (Long) -> Unit,
     onDismiss: () -> Unit

@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.NoteItem
-import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import com.kotonosora.todolist.navigation.appViewModel
 import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.Job
@@ -52,7 +52,7 @@ data class SearchUiState(
 )
 
 class SearchViewModel(
-    private val vaultRepository: VaultRepository
+    private val useCases: VaultUseCases
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -72,7 +72,7 @@ class SearchViewModel(
         _uiState.value = _uiState.value.copy(isSearching = true)
         searchJob = viewModelScope.launch {
             delay(250)
-            val results = vaultRepository.searchNotes(newQuery).firstOrNull() ?: emptyList()
+            val results = useCases.searchNotes(newQuery).firstOrNull() ?: emptyList()
             // Drop results if the query changed while we were searching.
             if (_uiState.value.query != newQuery) return@launch
             _uiState.value = _uiState.value.copy(searchResults = results, isSearching = false)
@@ -87,7 +87,7 @@ class SearchViewModel(
 
 @Composable
 fun SearchScreen(
-    viewModel: SearchViewModel = appViewModel { container -> SearchViewModel(container.vaultRepository) },
+    viewModel: SearchViewModel = appViewModel { container -> SearchViewModel(container.vaultUseCases) },
     onNoteClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()

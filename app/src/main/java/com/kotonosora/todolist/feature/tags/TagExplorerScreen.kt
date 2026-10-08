@@ -29,7 +29,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.data.native.MdNativeHelper
 import com.kotonosora.todolist.domain.model.NoteItem
-import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import com.kotonosora.todolist.navigation.appViewModel
 import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,7 +46,7 @@ data class TagUiState(
 )
 
 class TagViewModel(
-    private val vaultRepository: VaultRepository
+    private val useCases: VaultUseCases
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TagUiState())
@@ -54,12 +54,12 @@ class TagViewModel(
 
     init {
         viewModelScope.launch {
-            vaultRepository.getAllTags().collect { tags ->
+            useCases.observeTags().collect { tags ->
                 _uiState.value = _uiState.value.copy(tags = tags)
             }
         }
         viewModelScope.launch {
-            vaultRepository.getAllNotes().collect { notes ->
+            useCases.observeNotes().collect { notes ->
                 val counts = mutableMapOf<String, Int>()
                 for (note in notes) {
                     for (tag in noteTags(note.content)) {
@@ -76,7 +76,7 @@ class TagViewModel(
             val selected = if (_uiState.value.selectedTag == tag) null else tag
             _uiState.value = _uiState.value.copy(selectedTag = selected)
             if (selected != null) {
-                val allNotes = vaultRepository.getAllNotes().firstOrNull() ?: emptyList()
+                val allNotes = useCases.observeNotes().firstOrNull() ?: emptyList()
                 val matched = allNotes.filter { note -> selected in noteTags(note.content) }
                 _uiState.value = _uiState.value.copy(taggedNotes = matched)
             } else {
@@ -100,7 +100,7 @@ class TagViewModel(
 
 @Composable
 fun TagExplorerScreen(
-    viewModel: TagViewModel = appViewModel { container -> TagViewModel(container.vaultRepository) },
+    viewModel: TagViewModel = appViewModel { container -> TagViewModel(container.vaultUseCases) },
     onNoteClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()

@@ -2,10 +2,12 @@ package com.kotonosora.todolist.feature.editor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kotonosora.todolist.domain.model.ActionStamp
+import com.kotonosora.todolist.domain.model.EmotionStamp
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.TEMPLATE_PLACEHOLDER_TITLE
 import com.kotonosora.todolist.domain.model.renamedId
-import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +27,7 @@ data class EditorUiState(
 )
 
 class EditorViewModel(
-    private val vaultRepository: VaultRepository
+    private val useCases: VaultUseCases
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -37,7 +39,7 @@ class EditorViewModel(
         if (noteId.isBlank()) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
-            val note = vaultRepository.getNoteById(noteId) ?: NoteItem(
+            val note = useCases.getNoteById(noteId) ?: NoteItem(
                 id = noteId,
                 title = noteId.substringBeforeLast(".").substringAfterLast("/"),
                 relativePath = "",
@@ -96,7 +98,7 @@ class EditorViewModel(
         autocompleteJob = viewModelScope.launch {
             delay(250)
             val searchResult = try {
-                vaultRepository.searchNotes(query).firstOrNull() ?: emptyList()
+                useCases.searchNotes(query).firstOrNull() ?: emptyList()
             } catch (e: Exception) {
                 emptyList()
             }
@@ -128,7 +130,7 @@ class EditorViewModel(
         if (newTitle.isBlank() || currentNote.id.isBlank()) return
 
         viewModelScope.launch {
-            val success = vaultRepository.renameNote(currentNote.id, newTitle)
+            val success = useCases.renameNote(currentNote.id, newTitle)
             if (success) {
                 val newNoteId = currentNote.renamedId(newTitle)
                 loadNote(newNoteId)
@@ -141,15 +143,30 @@ class EditorViewModel(
         val note = _uiState.value.note
         if (note.id.isBlank()) return
         viewModelScope.launch {
-            vaultRepository.saveNote(note)
+            useCases.saveNote(note)
             onSaved()
+        }
+    }
+
+    /**
+     * Mood-stamp CRUD for the open note: rewrites the frontmatter stamps via
+     * [com.kotonosora.todolist.domain.usecase.UpdateNoteStampsUseCase] and
+     * reloads so the metadata bar reflects the change.
+     */
+    fun updateStamps(emotion: EmotionStamp?, actions: List<ActionStamp> = emptyList()) {
+        val noteId = _uiState.value.note.id
+        if (noteId.isBlank()) return
+        viewModelScope.launch {
+            if (useCases.updateNoteStamps(noteId, emotion, actions)) {
+                loadNote(noteId)
+            }
         }
     }
 
     fun loadCustomTemplates() {
         viewModelScope.launch {
             val names = try {
-                vaultRepository.getCustomTemplateNames()
+                useCases.templateNames()
             } catch (e: Exception) {
                 emptyList()
             }
@@ -160,7 +177,7 @@ class EditorViewModel(
     fun applyCustomTemplate(name: String) {
         viewModelScope.launch {
             val raw = try {
-                vaultRepository.getCustomTemplateContent(name)
+                useCases.templateContent(name)
             } catch (e: Exception) {
                 null
             } ?: return@launch
@@ -191,7 +208,7 @@ class EditorViewModel(
         if (content.isBlank()) return
         viewModelScope.launch {
             val success = try {
-                vaultRepository.saveCustomTemplate(name, content)
+                useCases.saveTemplate(name, content)
             } catch (e: Exception) {
                 false
             }
@@ -205,7 +222,7 @@ class EditorViewModel(
     fun deleteCustomTemplate(name: String) {
         viewModelScope.launch {
             try {
-                vaultRepository.deleteCustomTemplate(name)
+                useCases.deleteTemplate(name)
             } catch (e: Exception) {
                 e.printStackTrace()
             }

@@ -3,7 +3,7 @@ package com.kotonosora.todolist.feature.mood
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kotonosora.todolist.domain.model.EmotionStamp
-import com.kotonosora.todolist.domain.repository.VaultRepository
+import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -23,11 +23,16 @@ data class MoodDay(
     val entries: List<MoodEntry>
 )
 
+/**
+ * DDD: reads notes through [VaultUseCases] (application layer). Grouping by
+ * day is presentation logic and stays here — no new DAO needed since stamps
+ * rehydrate in `entityToDomain` on every read.
+ */
 class MoodTimelineViewModel(
-    vaultRepository: VaultRepository
+    vaultUseCases: VaultUseCases
 ) : ViewModel() {
 
-    val timeline: StateFlow<List<MoodDay>> = vaultRepository.getAllNotes()
+    val timeline: StateFlow<List<MoodDay>> = vaultUseCases.observeNotes()
         .map { notes ->
             notes.asSequence()
                 .filter { it.emotion != null }
