@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.components.pdf
 
+import android.content.res.Configuration
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -35,8 +36,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.domain.model.PdfBookmark
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 /**
  * Jump-to-page dialog: numeric field plus a slider for long documents.
@@ -199,4 +202,145 @@ internal fun PdfAddBookmarkDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+}
+
+// ── PREVIEWS ──
+
+private fun previewPdfBookmarks() = listOf(
+    PdfBookmark(id = 1, filePath = "preview_sample.pdf", pageIndex = 2, label = "Chapter 1"),
+    PdfBookmark(id = 2, filePath = "preview_sample.pdf", pageIndex = 7, label = "Page 8")
+)
+
+@Preview(
+    showBackground = true,
+    name = "1. PdfBookmarkSheet Empty - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PdfBookmarkSheetEmptyPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        PdfBookmarkSheet(
+            bookmarks = emptyList(),
+            onJump = {},
+            onDelete = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. PdfBookmarkSheet Empty - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun PdfBookmarkSheetEmptyPreview_Light() {
+    AppTheme(darkTheme = false) {
+        PdfBookmarkSheet(
+            bookmarks = emptyList(),
+            onJump = {},
+            onDelete = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. PdfBookmarkSheet Populated - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PdfBookmarkSheetPopulatedPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        PdfBookmarkSheet(
+            bookmarks = previewPdfBookmarks(),
+            onJump = {},
+            onDelete = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. PdfBookmarkSheet Populated - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun PdfBookmarkSheetPopulatedPreview_Light() {
+    AppTheme(darkTheme = false) {
+        PdfBookmarkSheet(
+            bookmarks = previewPdfBookmarks(),
+            onJump = {},
+            onDelete = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. PdfGoToPage - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PdfGoToPagePreview_Dark() {
+    AppTheme(darkTheme = true) {
+        PdfGoToPageDialog(
+            pageCount = 12,
+            initialPage = 1,
+            onGo = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. PdfGoToPage - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun PdfGoToPagePreview_Light() {
+    AppTheme(darkTheme = false) {
+        PdfGoToPageDialog(
+            pageCount = 12,
+            initialPage = 1,
+            onGo = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "7. PdfAddBookmark - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PdfAddBookmarkPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        PdfAddBookmarkDialog(
+            pageIndex = 3,
+            onConfirm = {},
+            onDismiss = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "8. PdfAddBookmark - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun PdfAddBookmarkPreview_Light() {
+    AppTheme(darkTheme = false) {
+        PdfAddBookmarkDialog(
+            pageIndex = 3,
+            onConfirm = {},
+            onDismiss = {}
+        )
+    }
 }

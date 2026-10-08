@@ -623,3 +623,121 @@ fun CalendarScreenPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Calendar Screen - Empty Day Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun CalendarScreenPreview_EmptyDay_Dark() {
+    AppTheme(darkTheme = true) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = System.currentTimeMillis(),
+            allTodos = emptyList(),
+            todosForDate = emptyList(),
+            notesForDate = emptyList()
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Calendar Screen - Empty Day Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun CalendarScreenPreview_EmptyDay_Light() {
+    AppTheme(darkTheme = false) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = System.currentTimeMillis(),
+            allTodos = emptyList(),
+            todosForDate = emptyList(),
+            notesForDate = emptyList()
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Calendar Screen - Tasks and Note Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun CalendarScreenPreview_TasksAndNote_Dark() {
+    val sampleDate = System.currentTimeMillis()
+    val sampleTodos = listOf(
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        ),
+        TaskItem("2", "Review PR #42", "Check unit test coverage", sampleDate, null, true)
+    )
+    val sampleNotes = listOf(
+        com.kotonosora.todolist.domain.model.NoteItem(
+            "Daily/2026-03-15.md",
+            "Daily Note",
+            "Daily",
+            "Shipped the calendar agenda and reviewed open tasks."
+        )
+    )
+
+    AppTheme(darkTheme = true) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = sampleDate,
+            allTodos = sampleTodos,
+            todosForDate = sampleTodos,
+            notesForDate = sampleNotes
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Calendar Screen - Tasks and Note Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun CalendarScreenPreview_TasksAndNote_Light() {
+    val sampleDate = System.currentTimeMillis()
+    val sampleTodos = listOf(
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        ),
+        TaskItem("2", "Review PR #42", "Check unit test coverage", sampleDate, null, true)
+    )
+    val sampleNotes = listOf(
+        com.kotonosora.todolist.domain.model.NoteItem(
+            "Daily/2026-03-15.md",
+            "Daily Note",
+            "Daily",
+            "Shipped the calendar agenda and reviewed open tasks."
+        )
+    )
+
+    AppTheme(darkTheme = false) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = sampleDate,
+            allTodos = sampleTodos,
+            todosForDate = sampleTodos,
+            notesForDate = sampleNotes
+        )
+    }
+}

@@ -237,3 +237,135 @@ fun SearchScreenPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Search - Empty Query - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun SearchScreenPreview_EmptyQuery_Dark() {
+    AppTheme(darkTheme = true) {
+        SearchContent(
+            uiState = SearchUiState(query = "", searchResults = emptyList()),
+            onQueryChange = {},
+            onClearQuery = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Search - Empty Query - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun SearchScreenPreview_EmptyQuery_Light() {
+    AppTheme(darkTheme = false) {
+        SearchContent(
+            uiState = SearchUiState(query = "", searchResults = emptyList()),
+            onQueryChange = {},
+            onClearQuery = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Search - No Results - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun SearchScreenPreview_NoResults_Dark() {
+    AppTheme(darkTheme = true) {
+        SearchContent(
+            uiState = SearchUiState(query = "xyz", searchResults = emptyList()),
+            onQueryChange = {},
+            onClearQuery = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Search - No Results - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun SearchScreenPreview_NoResults_Light() {
+    AppTheme(darkTheme = false) {
+        SearchContent(
+            uiState = SearchUiState(query = "xyz", searchResults = emptyList()),
+            onQueryChange = {},
+            onClearQuery = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "7. Search - Populated (road) - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun SearchScreenPreview_PopulatedRoad_Dark() {
+    val results = listOf(
+        NoteItem(
+            "Trips/RoadTrip.md",
+            "Road Trip Plan",
+            "Trips",
+            "Scenic road route through the mountains with fuel stops."
+        ),
+        NoteItem(
+            "Work/Roadmap.md",
+            "Road Repair Schedule",
+            "Work",
+            "Road resurfacing starts on Monday near the office."
+        )
+    )
+
+    AppTheme(darkTheme = true) {
+        SearchContent(
+            uiState = SearchUiState(query = "road", searchResults = results),
+            onQueryChange = {},
+            onClearQuery = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "8. Search - Populated (road) - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun SearchScreenPreview_PopulatedRoad_Light() {
+    val results = listOf(
+        NoteItem(
+            "Trips/RoadTrip.md",
+            "Road Trip Plan",
+            "Trips",
+            "Scenic road route through the mountains with fuel stops."
+        ),
+        NoteItem(
+            "Work/Roadmap.md",
+            "Road Repair Schedule",
+            "Work",
+            "Road resurfacing starts on Monday near the office."
+        )
+    )
+
+    AppTheme(darkTheme = false) {
+        SearchContent(
+            uiState = SearchUiState(query = "road", searchResults = results),
+            onQueryChange = {},
+            onClearQuery = {},
+            onNoteClick = {}
+        )
+    }
+}

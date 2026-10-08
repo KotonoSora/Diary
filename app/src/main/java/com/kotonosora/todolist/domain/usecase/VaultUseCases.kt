@@ -59,7 +59,11 @@ class RenameNoteUseCase(private val repository: VaultRepository) {
         newTitle: String,
         overrideUri: Uri? = null
     ): Boolean {
-        return !(oldNoteId.isBlank() || newTitle.isBlank()) && repository.renameNote(oldNoteId, newTitle, overrideUri)
+        return !(oldNoteId.isBlank() || newTitle.isBlank()) && repository.renameNote(
+            oldNoteId,
+            newTitle,
+            overrideUri
+        )
     }
 }
 
@@ -69,7 +73,11 @@ class MoveNoteUseCase(private val repository: VaultRepository) {
         destFolderPath: String,
         overrideUri: Uri? = null
     ): Boolean {
-        return oldRelativePath.isNotBlank() && repository.moveNote(oldRelativePath, destFolderPath, overrideUri)
+        return oldRelativePath.isNotBlank() && repository.moveNote(
+            oldRelativePath,
+            destFolderPath,
+            overrideUri
+        )
     }
 }
 
@@ -79,7 +87,11 @@ class MoveFolderUseCase(private val repository: VaultRepository) {
         destFolderPath: String,
         overrideUri: Uri? = null
     ): Boolean {
-        return oldRelativePath.isNotBlank() && repository.moveFolder(oldRelativePath, destFolderPath, overrideUri)
+        return oldRelativePath.isNotBlank() && repository.moveFolder(
+            oldRelativePath,
+            destFolderPath,
+            overrideUri
+        )
     }
 }
 
@@ -128,7 +140,11 @@ class GetTemplateContentUseCase(private val repository: VaultRepository) {
 
 class SaveTemplateUseCase(private val repository: VaultRepository) {
     suspend operator fun invoke(name: String, content: String, overrideUri: Uri? = null): Boolean {
-        return !(name.isBlank() || content.isBlank()) && repository.saveCustomTemplate(name, content, overrideUri)
+        return !(name.isBlank() || content.isBlank()) && repository.saveCustomTemplate(
+            name,
+            content,
+            overrideUri
+        )
     }
 }
 

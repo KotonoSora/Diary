@@ -331,3 +331,35 @@ fun KnowledgeGraphScreenPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Knowledge Graph - Empty - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun KnowledgeGraphScreenPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        KnowledgeGraphContent(
+            uiState = GraphUiState(notes = emptyList(), edges = emptyList()),
+            onBack = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Knowledge Graph - Empty - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun KnowledgeGraphScreenPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        KnowledgeGraphContent(
+            uiState = GraphUiState(notes = emptyList(), edges = emptyList()),
+            onBack = {},
+            onNoteClick = {}
+        )
+    }
+}

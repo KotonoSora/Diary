@@ -237,3 +237,39 @@ fun EditorMetadataBarPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Editor Metadata Bar No Stamps - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun EditorMetadataBarPreview_NoStamps_Dark() {
+    AppTheme(darkTheme = true) {
+        EditorMetadataBar(
+            relativePath = "Projects/Roadmap.md",
+            content = "Sample content for Zettelkasten note with several words and characters.",
+            noteType = NoteType.PERMANENT,
+            emotion = null,
+            actions = emptyList()
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Editor Metadata Bar No Stamps - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun EditorMetadataBarPreview_NoStamps_Light() {
+    AppTheme(darkTheme = false) {
+        EditorMetadataBar(
+            relativePath = "Projects/Roadmap.md",
+            content = "Sample content for Zettelkasten note with several words and characters.",
+            noteType = NoteType.PERMANENT,
+            emotion = null,
+            actions = emptyList()
+        )
+    }
+}

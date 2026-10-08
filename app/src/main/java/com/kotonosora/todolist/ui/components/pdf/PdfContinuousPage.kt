@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.components.pdf
 
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -18,7 +19,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -86,5 +89,81 @@ internal fun PdfContinuousPage(
         ) {
             CircularProgressIndicator()
         }
+    }
+}
+
+// ── PREVIEWS: static replicas of the loading/error states only — the real
+// composable needs a PdfRenderer handle + page cache, so it cannot render in
+// the IDE preview. Production code above is untouched. ──
+
+@Preview(
+    showBackground = true,
+    name = "1. PdfContinuousPage Loading - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PdfContinuousPageLoadingPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f / 1.414f),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. PdfContinuousPage Loading - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun PdfContinuousPageLoadingPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f / 1.414f),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. PdfContinuousPage Error - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun PdfContinuousPageErrorPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Text(
+            text = "Couldn't render page 3.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(24.dp)
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. PdfContinuousPage Error - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun PdfContinuousPageErrorPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Text(
+            text = "Couldn't render page 3.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(24.dp)
+        )
     }
 }

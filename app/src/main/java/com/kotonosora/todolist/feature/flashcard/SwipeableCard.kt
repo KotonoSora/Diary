@@ -395,3 +395,52 @@ fun SwipeableCardPreview_Back_Light() {
         }
     }
 }
+
+@Preview(showBackground = true, name = "3. SwipeableCard - Front (Light)")
+@Composable
+fun SwipeableCardPreview_Front_Light() {
+    AppTheme(darkTheme = false) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            SwipeableCard(
+                flashcard = Flashcard(
+                    word = "Serendipity",
+                    phonetic = "/ˌser.ənˈdɪp.ə.ti/",
+                    definition = "Finding valuable things by chance in a happy way."
+                ),
+                isFlipped = false,
+                onFlip = {},
+                onSwipeLeft = {},
+                onSwipeRight = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "4. SwipeableCard - Back (Dark)")
+@Composable
+fun SwipeableCardPreview_Back_Dark() {
+    AppTheme(darkTheme = true) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            SwipeableCard(
+                flashcard = Flashcard(
+                    word = "Serendipity",
+                    phonetic = "/ˌser.ənˈdɪp.ə.ti/",
+                    definition = "Finding valuable things by chance in a happy or beneficial way.",
+                    example = "Finding the lost key in an old coat was pure serendipity."
+                ),
+                isFlipped = true,
+                onFlip = {},
+                onSwipeLeft = {},
+                onSwipeRight = {}
+            )
+        }
+    }
+}

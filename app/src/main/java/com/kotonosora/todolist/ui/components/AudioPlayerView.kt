@@ -63,7 +63,8 @@ import java.io.File
 @Composable
 fun AudioPlayerView(
     filePath: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    previewIsPlaying: Boolean = false
 ) {
     if (LocalInspectionMode.current) {
         // Preview placeholder for IDE layout renderer
@@ -74,13 +75,13 @@ fun AudioPlayerView(
             )
         ) {
             Column(modifier = Modifier.padding(8.dp)) {
-                AudioWaveformBars(isPlaying = false)
+                AudioWaveformBars(isPlaying = previewIsPlaying)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {}, modifier = Modifier.size(40.dp)) {
                         Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = "Play",
+                            if (previewIsPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (previewIsPlaying) "Pause" else "Play",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -394,5 +395,29 @@ fun AudioPlayerViewPreview_Dark() {
 fun AudioPlayerViewPreview_Light() {
     AppTheme(darkTheme = false) {
         AudioPlayerView(filePath = "preview_sample.m4a")
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Audio Player Playing - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun AudioPlayerViewPreview_Playing_Dark() {
+    AppTheme(darkTheme = true) {
+        AudioPlayerView(filePath = "preview_sample.m4a", previewIsPlaying = true)
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Audio Player Playing - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun AudioPlayerViewPreview_Playing_Light() {
+    AppTheme(darkTheme = false) {
+        AudioPlayerView(filePath = "preview_sample.m4a", previewIsPlaying = true)
     }
 }

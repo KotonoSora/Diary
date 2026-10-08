@@ -120,3 +120,78 @@ fun MarkdownViewPreview_Light() {
         MarkdownView(content = MARKDOWN_PREVIEW_SAMPLE)
     }
 }
+
+private const val MARKDOWN_TABLE_PREVIEW_SAMPLE = """# Vocabulary Table
+
+| Word | Reading | Meaning |
+| --- | --- | --- |
+| 学校 | がっこう | school |
+| 先生 | せんせい | teacher |
+| 学生 | がくせい | student |
+
+See [[Grammar Notes]] for details.
+"""
+
+private val MARKDOWN_CODE_PREVIEW_SAMPLE = """# Code Sample
+
+Inline `val x = 1` plus a fenced block:
+
+```kotlin
+fun greet(name: String): String {
+    return "Hello, ${"$"}name"
+}
+```
+
+```python
+def atomic():
+    return "evergreen note"
+```
+"""
+
+@Preview(
+    showBackground = true,
+    name = "3. Markdown View Table - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun MarkdownViewPreview_Table_Dark() {
+    AppTheme(darkTheme = true) {
+        MarkdownView(content = MARKDOWN_TABLE_PREVIEW_SAMPLE)
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Markdown View Table - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun MarkdownViewPreview_Table_Light() {
+    AppTheme(darkTheme = false) {
+        MarkdownView(content = MARKDOWN_TABLE_PREVIEW_SAMPLE)
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Markdown View Fenced Code - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun MarkdownViewPreview_Code_Dark() {
+    AppTheme(darkTheme = true) {
+        MarkdownView(content = MARKDOWN_CODE_PREVIEW_SAMPLE)
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Markdown View Fenced Code - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun MarkdownViewPreview_Code_Light() {
+    AppTheme(darkTheme = false) {
+        MarkdownView(content = MARKDOWN_CODE_PREVIEW_SAMPLE)
+    }
+}

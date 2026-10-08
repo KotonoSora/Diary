@@ -203,3 +203,57 @@ fun MoodTimelinePreview_Light() {
         MoodTimelineContent(days = emptyList())
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Mood Timeline - Empty - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun MoodTimelinePreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        MoodTimelineContent(days = emptyList())
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Mood Timeline - Single Entry - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun MoodTimelinePreview_SingleEntry_Dark() {
+    AppTheme(darkTheme = true) {
+        MoodTimelineContent(
+            days = listOf(
+                MoodDay(
+                    dayStartMillis = System.currentTimeMillis(),
+                    entries = listOf(
+                        MoodEntry("a.md", "Morning pages", EmotionStamp.REFLECTIVE, 0L)
+                    )
+                )
+            )
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Mood Timeline - Single Entry - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun MoodTimelinePreview_SingleEntry_Light() {
+    AppTheme(darkTheme = false) {
+        MoodTimelineContent(
+            days = listOf(
+                MoodDay(
+                    dayStartMillis = System.currentTimeMillis(),
+                    entries = listOf(
+                        MoodEntry("a.md", "Morning pages", EmotionStamp.REFLECTIVE, 0L)
+                    )
+                )
+            )
+        )
+    }
+}

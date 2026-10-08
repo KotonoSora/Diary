@@ -154,3 +154,47 @@ fun EditorTabStripPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Editor Tab Strip Single Tab - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun EditorTabStripPreview_SingleTab_Dark() {
+    val tabs = listOf(
+        EditorTabItem("1", "Project Roadmap")
+    )
+
+    AppTheme(darkTheme = true) {
+        EditorTabStrip(
+            openTabs = tabs,
+            activeTabId = "1",
+            onTabSelect = {},
+            onTabClose = {},
+            onNewTab = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Editor Tab Strip Single Tab - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun EditorTabStripPreview_SingleTab_Light() {
+    val tabs = listOf(
+        EditorTabItem("1", "Project Roadmap")
+    )
+
+    AppTheme(darkTheme = false) {
+        EditorTabStrip(
+            openTabs = tabs,
+            activeTabId = "1",
+            onTabSelect = {},
+            onTabClose = {},
+            onNewTab = {}
+        )
+    }
+}

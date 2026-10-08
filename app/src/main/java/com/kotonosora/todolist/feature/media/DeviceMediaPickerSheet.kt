@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.media
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -54,10 +56,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.DeviceMediaFile
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -617,3 +621,334 @@ fun hasDeviceMediaAccess(
         androidx.core.content.ContextCompat.checkSelfPermission(context, it) ==
                 android.content.pm.PackageManager.PERMISSION_GRANTED
     }
+
+// ── PREVIEWS: static replicas only — the sheet itself queries MediaStore via
+// a suspend lambda (spinner in preview) and photo tiles load Coil images, so
+// previews render the stateless row/body pieces instead. ──
+
+private fun previewPickerAudio(): DeviceMediaFile = DeviceMediaFile(
+    uri = Uri.parse("content://preview/audio1.mp3"),
+    displayName = "audio1.mp3",
+    mimeType = "audio/mpeg",
+    type = "audio",
+    dateAddedSec = 1750000000L,
+    sizeBytes = 2500000L,
+    durationMs = 95000L
+)
+
+private fun previewPickerPdf(): DeviceMediaFile = DeviceMediaFile(
+    uri = Uri.parse("content://preview/notes.pdf"),
+    displayName = "notes.pdf",
+    mimeType = "application/pdf",
+    type = "pdf",
+    dateAddedSec = 1750000000L,
+    sizeBytes = 1200000L
+)
+
+@Preview(
+    showBackground = true,
+    name = "1. DeviceMediaPicker Audio Selected - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun DeviceMediaPickerAudioSelectedPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PickerDocRow(
+                    item = previewPickerAudio(),
+                    icon = Icons.Default.AudioFile,
+                    isSelected = true,
+                    onToggle = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. DeviceMediaPicker Audio Selected - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun DeviceMediaPickerAudioSelectedPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PickerDocRow(
+                    item = previewPickerAudio(),
+                    icon = Icons.Default.AudioFile,
+                    isSelected = true,
+                    onToggle = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. DeviceMediaPicker Pdf Unselected - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun DeviceMediaPickerPdfUnselectedPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PickerDocRow(
+                    item = previewPickerPdf(),
+                    icon = Icons.Default.PictureAsPdf,
+                    isSelected = false,
+                    onToggle = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. DeviceMediaPicker Pdf Unselected - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun DeviceMediaPickerPdfUnselectedPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PickerDocRow(
+                    item = previewPickerPdf(),
+                    icon = Icons.Default.PictureAsPdf,
+                    isSelected = false,
+                    onToggle = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. DeviceMediaPicker Sheet Body - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun DeviceMediaPickerBodyPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Pick from this device",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Text(
+                    text = "Only files stored on this device are shown.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PickerDocRow(
+                        item = previewPickerAudio(),
+                        icon = Icons.Default.AudioFile,
+                        isSelected = true,
+                        onToggle = {}
+                    )
+                    PickerDocRow(
+                        item = previewPickerPdf(),
+                        icon = Icons.Default.PictureAsPdf,
+                        isSelected = false,
+                        onToggle = {}
+                    )
+                }
+                Button(
+                    onClick = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .height(50.dp)
+                ) {
+                    Text("Import 1 file(s) in this view")
+                }
+            }
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. DeviceMediaPicker Sheet Body - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun DeviceMediaPickerBodyPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Pick from this device",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Text(
+                    text = "Only files stored on this device are shown.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    PickerDocRow(
+                        item = previewPickerAudio(),
+                        icon = Icons.Default.AudioFile,
+                        isSelected = true,
+                        onToggle = {}
+                    )
+                    PickerDocRow(
+                        item = previewPickerPdf(),
+                        icon = Icons.Default.PictureAsPdf,
+                        isSelected = false,
+                        onToggle = {}
+                    )
+                }
+                Button(
+                    onClick = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .height(50.dp)
+                ) {
+                    Text("Import 1 file(s) in this view")
+                }
+            }
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "7. DeviceMediaPicker Empty State - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun DeviceMediaPickerEmptyPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Pick from this device",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Text(
+                    text = "Only files stored on this device are shown.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Nothing on this device yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Button(
+                    onClick = {},
+                    enabled = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .height(50.dp)
+                ) {
+                    Text("Select files to import")
+                }
+            }
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "8. DeviceMediaPicker Empty State - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun DeviceMediaPickerEmptyPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Pick from this device",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Text(
+                    text = "Only files stored on this device are shown.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Nothing on this device yet.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Button(
+                    onClick = {},
+                    enabled = false,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .height(50.dp)
+                ) {
+                    Text("Select files to import")
+                }
+            }
+        }
+    }
+}

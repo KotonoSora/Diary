@@ -52,7 +52,8 @@ import java.io.File
 fun VideoPlayerView(
     filePath: String,
     modifier: Modifier = Modifier,
-    fullscreen: Boolean = false
+    fullscreen: Boolean = false,
+    previewError: String? = null
 ) {
     if (LocalInspectionMode.current) {
         // Preview placeholder for IDE layout renderer (ExoPlayer needs a real context)
@@ -69,12 +70,22 @@ fun VideoPlayerView(
                     .height(220.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.PlayCircleOutline,
-                    contentDescription = "Video preview",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(48.dp)
-                )
+                val previewErr = previewError
+                if (previewErr != null) {
+                    Text(
+                        text = "Couldn't play this video ($previewErr).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.PlayCircleOutline,
+                        contentDescription = "Video preview",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(48.dp)
+                    )
+                }
             }
         }
         return
@@ -180,5 +191,35 @@ fun VideoPlayerViewPreview_Dark() {
 fun VideoPlayerViewPreview_Light() {
     AppTheme(darkTheme = false) {
         VideoPlayerView(filePath = "preview_sample.mp4")
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Video Player Error - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun VideoPlayerViewPreview_Error_Dark() {
+    AppTheme(darkTheme = true) {
+        VideoPlayerView(
+            filePath = "preview_sample.mp4",
+            previewError = "Unsupported video format"
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Video Player Error - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun VideoPlayerViewPreview_Error_Light() {
+    AppTheme(darkTheme = false) {
+        VideoPlayerView(
+            filePath = "preview_sample.mp4",
+            previewError = "Unsupported video format"
+        )
     }
 }

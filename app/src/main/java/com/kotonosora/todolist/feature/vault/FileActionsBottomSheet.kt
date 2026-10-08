@@ -305,3 +305,33 @@ fun FileActionsBottomSheetPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. File Actions Sheet - Long Filename Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun FileActionsBottomSheetPreview_LongFilename_Dark() {
+    AppTheme(darkTheme = true) {
+        FileActionsSheetContent(
+            fileName = "202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md",
+            filePath = "Projects/2026/Q1/202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md"
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. File Actions Sheet - Long Filename Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun FileActionsBottomSheetPreview_LongFilename_Light() {
+    AppTheme(darkTheme = false) {
+        FileActionsSheetContent(
+            fileName = "202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md",
+            filePath = "Projects/2026/Q1/202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md"
+        )
+    }
+}

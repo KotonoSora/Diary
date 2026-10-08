@@ -507,3 +507,55 @@ fun AddEditTaskScreenPreview_Existing_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "5. Add/Edit Task - Long Description (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun AddEditTaskScreenPreview_LongDescription_Dark() {
+    val sampleTask = TaskItem(
+        id = "2",
+        title = "Quarterly planning session",
+        description = "# Agenda\n- Review last quarter outcomes and carry-over items\n" +
+                "- Draft roadmap milestones for the next three months with owners\n" +
+                "- Confirm resourcing, risks, and open questions before sign-off\n" +
+                "Notes: bring the printed scorecard and the stakeholder feedback summary.",
+        dueDate = System.currentTimeMillis() + 172800000L,
+        filePath = null,
+        isCompleted = false
+    )
+
+    AppTheme(darkTheme = true) {
+        AddEditTaskContent(
+            existingTask = sampleTask
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Add/Edit Task - Long Description (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun AddEditTaskScreenPreview_LongDescription_Light() {
+    val sampleTask = TaskItem(
+        id = "2",
+        title = "Quarterly planning session",
+        description = "# Agenda\n- Review last quarter outcomes and carry-over items\n" +
+                "- Draft roadmap milestones for the next three months with owners\n" +
+                "- Confirm resourcing, risks, and open questions before sign-off\n" +
+                "Notes: bring the printed scorecard and the stakeholder feedback summary.",
+        dueDate = System.currentTimeMillis() + 172800000L,
+        filePath = null,
+        isCompleted = false
+    )
+
+    AppTheme(darkTheme = false) {
+        AddEditTaskContent(
+            existingTask = sampleTask
+        )
+    }
+}

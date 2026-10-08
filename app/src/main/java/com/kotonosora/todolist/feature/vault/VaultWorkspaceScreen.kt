@@ -415,3 +415,99 @@ fun VaultWorkspaceScreenPreview_Populated_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Vault Workspace - Empty Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(
+                rootNode = VaultNode.FolderNode(
+                    name = "My Personal Vault",
+                    relativePath = ""
+                ),
+                notes = emptyList()
+            ),
+            onNoteSelect = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Vault Workspace - Empty Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(
+                rootNode = VaultNode.FolderNode(
+                    name = "My Personal Vault",
+                    relativePath = ""
+                ),
+                notes = emptyList()
+            ),
+            onNoteSelect = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Vault Workspace - Loading Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Loading_Dark() {
+    val sampleTree = VaultNode.FolderNode(
+        name = "My Personal Vault",
+        relativePath = "",
+        children = listOf(
+            VaultNode.FileNode("Welcome.md", "Welcome.md", "md", 1024, System.currentTimeMillis())
+        )
+    )
+
+    val sampleNotes = listOf(
+        NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!")
+    )
+
+    AppTheme(darkTheme = true) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes, isLoading = true),
+            onNoteSelect = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Vault Workspace - Loading Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Loading_Light() {
+    val sampleTree = VaultNode.FolderNode(
+        name = "My Personal Vault",
+        relativePath = "",
+        children = listOf(
+            VaultNode.FileNode("Welcome.md", "Welcome.md", "md", 1024, System.currentTimeMillis())
+        )
+    )
+
+    val sampleNotes = listOf(
+        NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!")
+    )
+
+    AppTheme(darkTheme = false) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes, isLoading = true),
+            onNoteSelect = {}
+        )
+    }
+}

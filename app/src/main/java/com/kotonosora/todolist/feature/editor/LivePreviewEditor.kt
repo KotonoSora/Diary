@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.feature.editor
 
+import android.content.res.Configuration
 import android.os.Environment
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -567,7 +568,11 @@ private fun insertMarkdownSymbol(currentContent: String, prefix: String, suffix:
 
 // ── FULL CASE-BY-CASE PREVIEWS ──
 
-@Preview(showBackground = true, name = "Obsidian Single View Live Editor with Mermaid (Dark)")
+@Preview(
+    showBackground = true,
+    name = "1. Live Preview Editor Mermaid - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 fun LivePreviewEditorPreview_Dark() {
     AppTheme(darkTheme = true) {
@@ -589,7 +594,11 @@ fun LivePreviewEditorPreview_Dark() {
     }
 }
 
-@Preview(showBackground = true, name = "Obsidian Single View Live Editor with Mermaid (Light)")
+@Preview(
+    showBackground = true,
+    name = "2. Live Preview Editor Mermaid - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
 @Composable
 fun LivePreviewEditorPreview_Light() {
     AppTheme(darkTheme = false) {
@@ -607,6 +616,98 @@ fun LivePreviewEditorPreview_Light() {
             """.trimIndent(),
             onContentChange = {},
             onWikiLinkClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Live Preview Editor Empty - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun LivePreviewEditorPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        LivePreviewEditor(
+            content = "",
+            onContentChange = {},
+            onWikiLinkClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Live Preview Editor Empty - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun LivePreviewEditorPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        LivePreviewEditor(
+            content = "",
+            onContentChange = {},
+            onWikiLinkClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Live Preview Editor Reading Table and Code - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun LivePreviewEditorPreview_ReadingTableCode_Dark() {
+    AppTheme(darkTheme = true) {
+        LivePreviewEditor(
+            content = """
+                # Vocabulary Review
+
+                | Word | Reading | Meaning |
+                | --- | --- | --- |
+                | 学校 | がっこう | school |
+                | 先生 | せんせい | teacher |
+
+                ```kotlin
+                fun greet(name: String) = "Hello, ${"$"}name"
+                ```
+
+                See [[Grammar]] for details.
+            """.trimIndent(),
+            onContentChange = {},
+            onWikiLinkClick = {},
+            viewMode = EditorViewMode.READING
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Live Preview Editor Reading Table and Code - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun LivePreviewEditorPreview_ReadingTableCode_Light() {
+    AppTheme(darkTheme = false) {
+        LivePreviewEditor(
+            content = """
+                # Vocabulary Review
+
+                | Word | Reading | Meaning |
+                | --- | --- | --- |
+                | 学校 | がっこう | school |
+                | 先生 | せんせい | teacher |
+
+                ```kotlin
+                fun greet(name: String) = "Hello, ${"$"}name"
+                ```
+
+                See [[Grammar]] for details.
+            """.trimIndent(),
+            onContentChange = {},
+            onWikiLinkClick = {},
+            viewMode = EditorViewMode.READING
         )
     }
 }

@@ -224,3 +224,33 @@ fun ParaExplorerViewPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. PARA Explorer - Empty Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun ParaExplorerViewPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        ParaExplorerView(
+            notes = emptyList(),
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. PARA Explorer - Empty Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun ParaExplorerViewPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        ParaExplorerView(
+            notes = emptyList(),
+            onNoteClick = {}
+        )
+    }
+}

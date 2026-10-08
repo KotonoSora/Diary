@@ -925,3 +925,105 @@ fun EditorScreenPreview_FocusMode_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "5. Editor Screen - Empty Note (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun EditorScreenPreview_EmptyNote_Dark() {
+    val sampleNote = NoteItem(
+        id = "Projects/Untitled.md",
+        title = "Untitled Note",
+        relativePath = "Projects",
+        content = ""
+    )
+
+    AppTheme(darkTheme = true) {
+        EditorContent(
+            uiState = EditorUiState(note = sampleNote, openTabs = emptyList(), isFocusMode = false),
+            onBack = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Editor Screen - Empty Note (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun EditorScreenPreview_EmptyNote_Light() {
+    val sampleNote = NoteItem(
+        id = "Projects/Untitled.md",
+        title = "Untitled Note",
+        relativePath = "Projects",
+        content = ""
+    )
+
+    AppTheme(darkTheme = false) {
+        EditorContent(
+            uiState = EditorUiState(note = sampleNote, openTabs = emptyList(), isFocusMode = false),
+            onBack = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "7. Editor Screen - Backlinks Open (Dark)",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun EditorScreenPreview_BacklinksOpen_Dark() {
+    val sampleNote = NoteItem(
+        id = "Projects/Vocabulary.md",
+        title = "Japanese Vocabulary",
+        relativePath = "Projects",
+        content = "# Japanese Vocabulary\n\nSee [[Grammar]] and [[Kanji Basics]] for details.",
+        links = listOf("Grammar.md", "Kanji Basics.md", "Projects/Roadmap.md")
+    )
+
+    val sampleTabs = listOf(
+        EditorTabItem("Projects/Vocabulary.md", "Japanese Vocabulary")
+    )
+
+    AppTheme(darkTheme = true) {
+        EditorContent(
+            uiState = EditorUiState(note = sampleNote, openTabs = sampleTabs, isFocusMode = false),
+            onBack = {},
+            onSave = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "8. Editor Screen - Backlinks Open (Light)",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun EditorScreenPreview_BacklinksOpen_Light() {
+    val sampleNote = NoteItem(
+        id = "Projects/Vocabulary.md",
+        title = "Japanese Vocabulary",
+        relativePath = "Projects",
+        content = "# Japanese Vocabulary\n\nSee [[Grammar]] and [[Kanji Basics]] for details.",
+        links = listOf("Grammar.md", "Kanji Basics.md", "Projects/Roadmap.md")
+    )
+
+    val sampleTabs = listOf(
+        EditorTabItem("Projects/Vocabulary.md", "Japanese Vocabulary")
+    )
+
+    AppTheme(darkTheme = false) {
+        EditorContent(
+            uiState = EditorUiState(note = sampleNote, openTabs = sampleTabs, isFocusMode = false),
+            onBack = {},
+            onSave = {}
+        )
+    }
+}

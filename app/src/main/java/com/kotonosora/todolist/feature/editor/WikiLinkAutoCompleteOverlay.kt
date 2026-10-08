@@ -115,3 +115,33 @@ fun WikiLinkAutoCompleteOverlayPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. WikiLink Autocomplete Single Suggestion - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun WikiLinkAutoCompleteOverlayPreview_Single_Dark() {
+    AppTheme(darkTheme = true) {
+        WikiLinkAutoCompleteOverlay(
+            suggestions = listOf("Project Roadmap"),
+            onSuggestionSelected = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. WikiLink Autocomplete Single Suggestion - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun WikiLinkAutoCompleteOverlayPreview_Single_Light() {
+    AppTheme(darkTheme = false) {
+        WikiLinkAutoCompleteOverlay(
+            suggestions = listOf("Project Roadmap"),
+            onSuggestionSelected = {}
+        )
+    }
+}

@@ -403,3 +403,87 @@ fun TaskListScreenPreview_Populated_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Task List - Empty Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun TaskListScreenPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        TaskListContent(
+            tasks = emptyList(),
+            searchQuery = ""
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Task List - Empty Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun TaskListScreenPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        TaskListContent(
+            tasks = emptyList(),
+            searchQuery = ""
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Task List - Loading Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun TaskListScreenPreview_Loading_Dark() {
+    val sampleTasks = listOf(
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        )
+    )
+
+    AppTheme(darkTheme = true) {
+        TaskListContent(
+            tasks = sampleTasks,
+            searchQuery = "",
+            isLoading = true
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Task List - Loading Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun TaskListScreenPreview_Loading_Light() {
+    val sampleTasks = listOf(
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        )
+    )
+
+    AppTheme(darkTheme = false) {
+        TaskListContent(
+            tasks = sampleTasks,
+            searchQuery = "",
+            isLoading = true
+        )
+    }
+}

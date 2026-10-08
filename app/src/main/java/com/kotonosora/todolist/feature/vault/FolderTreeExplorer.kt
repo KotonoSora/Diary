@@ -980,3 +980,47 @@ fun FolderMoveSheetPreview_Light() {
         }
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "7. Folder Tree Explorer - Empty Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun FolderTreeExplorerPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        FolderTreeExplorer(
+            rootNode = VaultNode.FolderNode(
+                name = "My Personal Vault",
+                relativePath = ""
+            ),
+            onNoteSelect = {},
+            onCreateNote = {},
+            onCreateFolder = { _, _ -> },
+            onDeleteNote = {},
+            onDeleteFolder = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "8. Folder Tree Explorer - Empty Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun FolderTreeExplorerPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        FolderTreeExplorer(
+            rootNode = VaultNode.FolderNode(
+                name = "My Personal Vault",
+                relativePath = ""
+            ),
+            onNoteSelect = {},
+            onCreateNote = {},
+            onCreateFolder = { _, _ -> },
+            onDeleteNote = {},
+            onDeleteFolder = {}
+        )
+    }
+}

@@ -917,3 +917,107 @@ fun FlashcardDetailDeckRenameSheetPreview_Light() {
         }
     }
 }
+
+@Preview(showBackground = true, name = "7. Card Sheet Add - Light")
+@Composable
+fun FlashcardCardAddSheetPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            CardEditSheetContent(
+                title = "Add word",
+                onDismiss = {},
+                onConfirm = { _, _, _, _ -> }
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "8. Card Sheet Edit - Dark")
+@Composable
+fun FlashcardCardEditSheetPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            CardEditSheetContent(
+                title = "Edit word",
+                initial = Flashcard(
+                    word = "Serendipity",
+                    definition = "Finding something good by chance",
+                    phonetic = "/ˌser.ənˈdɪp.ə.ti/",
+                    example = "Finding the key was pure serendipity."
+                ),
+                onDismiss = {},
+                onConfirm = { _, _, _, _ -> }
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "9. Deck Loading - Dark")
+@Composable
+fun FlashcardDeckDetailLoadingPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardDeckDetailContent(
+            uiState = DeckDetailUiState(
+                deckId = "deck_1",
+                isLoading = true
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "10. Deck Loading - Light")
+@Composable
+fun FlashcardDeckDetailLoadingPreview_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardDeckDetailContent(
+            uiState = DeckDetailUiState(
+                deckId = "deck_1",
+                isLoading = true
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "11. Deck Not Found - Dark")
+@Composable
+fun FlashcardDeckDetailNotFoundPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardDeckDetailContent(
+            uiState = DeckDetailUiState(
+                deckId = "deck_1",
+                isLoading = false,
+                notFound = true
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "12. Deck Not Found - Light")
+@Composable
+fun FlashcardDeckDetailNotFoundPreview_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardDeckDetailContent(
+            uiState = DeckDetailUiState(
+                deckId = "deck_1",
+                isLoading = false,
+                notFound = true
+            )
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "13. Deck Empty Words - Dark")
+@Composable
+fun FlashcardDeckDetailEmptyPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardDeckDetailContent(
+            uiState = DeckDetailUiState(
+                deckId = "deck_1",
+                name = "My Japanese Deck",
+                description = "Words I am learning",
+                isLoading = false,
+                cards = emptyList()
+            )
+        )
+    }
+}

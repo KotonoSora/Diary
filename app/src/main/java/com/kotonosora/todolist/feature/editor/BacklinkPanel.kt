@@ -37,9 +37,10 @@ import com.kotonosora.todolist.ui.theme.AppTheme
 fun BacklinkPanel(
     incomingLinks: List<String>,
     onNoteClick: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    startExpanded: Boolean = false
 ) {
-    var isExpanded by remember { mutableStateOf(false) }
+    var isExpanded by remember { mutableStateOf(startExpanded) }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -152,6 +153,68 @@ fun BacklinkPanelPreview_Empty_Light() {
         BacklinkPanel(
             incomingLinks = emptyList(),
             onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Backlink Panel With Links - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun BacklinkPanelPreview_WithLinks_Light() {
+    AppTheme(darkTheme = false) {
+        BacklinkPanel(
+            incomingLinks = listOf("Projects/Roadmap.md", "Ideas/Concepts.md", "Work/Meeting.md"),
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Backlink Panel Empty - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun BacklinkPanelPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        BacklinkPanel(
+            incomingLinks = emptyList(),
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Backlink Panel Expanded - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun BacklinkPanelPreview_Expanded_Dark() {
+    AppTheme(darkTheme = true) {
+        BacklinkPanel(
+            incomingLinks = listOf("Projects/Roadmap.md", "Ideas/Concepts.md", "Work/Meeting.md"),
+            onNoteClick = {},
+            startExpanded = true
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Backlink Panel Expanded - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun BacklinkPanelPreview_Expanded_Light() {
+    AppTheme(darkTheme = false) {
+        BacklinkPanel(
+            incomingLinks = listOf("Projects/Roadmap.md", "Ideas/Concepts.md", "Work/Meeting.md"),
+            onNoteClick = {},
+            startExpanded = true
         )
     }
 }

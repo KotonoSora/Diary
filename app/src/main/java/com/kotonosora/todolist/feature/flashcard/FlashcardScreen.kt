@@ -690,7 +690,8 @@ fun FlashcardScreenPreview_Active_Dark() {
                 deckTitle = "Basic Vocabulary",
                 cards = sampleCards,
                 totalCardsCount = 5,
-                currentCardIndex = 2
+                currentCardIndex = 2,
+                isLoading = false
             ),
             onNavigateBack = {}
         )
@@ -707,7 +708,144 @@ fun FlashcardScreenPreview_Summary_Light() {
                 totalCardsCount = 10,
                 masteredCards = List(8) { Flashcard(word = "Word $it") },
                 reviewCards = List(2) { Flashcard(word = "Review $it") },
-                isFinished = true
+                isFinished = true,
+                isLoading = false
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "3. Active Card Session (Light)")
+@Composable
+fun FlashcardScreenPreview_Active_Light() {
+    val sampleCards = listOf(
+        Flashcard(
+            word = "Serendipity",
+            phonetic = "/ˌser.ənˈdɪp.ə.ti/",
+            definition = "Finding valuable or agreeable things by chance.",
+            example = "Meeting an old friend was a stroke of serendipity."
+        ),
+        Flashcard(
+            word = "Ephemeral",
+            phonetic = "/ɪˈfem.ər.əl/",
+            definition = "Lasting for a very short time."
+        )
+    )
+    AppTheme(darkTheme = false) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "Basic Vocabulary",
+                cards = sampleCards,
+                totalCardsCount = 5,
+                currentCardIndex = 2,
+                isLoading = false
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "4. Completed Summary (Dark)")
+@Composable
+fun FlashcardScreenPreview_Summary_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "Tech Terminology",
+                totalCardsCount = 10,
+                masteredCards = List(8) { Flashcard(word = "Word $it") },
+                reviewCards = List(2) { Flashcard(word = "Review $it") },
+                isFinished = true,
+                isLoading = false
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "5. Loading (Dark)")
+@Composable
+fun FlashcardScreenPreview_Loading_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "Basic Vocabulary",
+                isLoading = true
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "6. Loading (Light)")
+@Composable
+fun FlashcardScreenPreview_Loading_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "Basic Vocabulary",
+                isLoading = true
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "7. Load Error (Dark)")
+@Composable
+fun FlashcardScreenPreview_Error_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "Basic Vocabulary",
+                isLoading = false,
+                error = "Failed to load deck"
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "8. Load Error (Light)")
+@Composable
+fun FlashcardScreenPreview_Error_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "Basic Vocabulary",
+                isLoading = false,
+                error = "Failed to load deck"
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "9. Empty Deck (Dark)")
+@Composable
+fun FlashcardScreenPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "New Deck",
+                totalCardsCount = 0,
+                isLoading = false
+            ),
+            onNavigateBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "10. Empty Deck (Light)")
+@Composable
+fun FlashcardScreenPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardScreenContent(
+            uiState = FlashcardUiState(
+                deckTitle = "New Deck",
+                totalCardsCount = 0,
+                isLoading = false
             ),
             onNavigateBack = {}
         )

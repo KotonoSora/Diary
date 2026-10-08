@@ -435,3 +435,49 @@ fun MermaidDiagramViewPreview_Sequence_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Mermaid Flowchart Diagram - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun MermaidDiagramViewPreview_Flowchart_Light() {
+    val flowchartCode = """
+        graph TD
+            A[Start: Note Created] --> B{Contains #flashcard?}
+            B -- Yes --> C[Parse Flashcards]
+            B -- No --> D[Normal Note]
+            C --> E[Start Flashcard Session]
+    """.trimIndent()
+
+    AppTheme(darkTheme = false) {
+        MermaidDiagramView(
+            mermaidCode = flowchartCode,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Mermaid UML Sequence Diagram - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun MermaidDiagramViewPreview_Sequence_Dark() {
+    val sequenceCode = """
+        sequenceDiagram
+            User->>Editor: Type [[WikiLink]]
+            Editor->>VaultRepository: Search Matching Notes
+            VaultRepository-->>Editor: Return Suggestions
+            Editor-->>User: Show AutoComplete Overlay
+    """.trimIndent()
+
+    AppTheme(darkTheme = true) {
+        MermaidDiagramView(
+            mermaidCode = sequenceCode,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+}

@@ -642,3 +642,33 @@ fun MediaGalleryGridPreview_Light() {
         }
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Gallery Grid Empty - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun MediaGalleryGridEmptyPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Column(Modifier.padding(12.dp)) {
+            MediaFilterRow(selected = MediaFilter.All, onSelect = {})
+            MediaGalleryGrid(items = emptyList())
+        }
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Gallery Grid Empty - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun MediaGalleryGridEmptyPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Column(Modifier.padding(12.dp)) {
+            MediaFilterRow(selected = MediaFilter.All, onSelect = {})
+            MediaGalleryGrid(items = emptyList())
+        }
+    }
+}

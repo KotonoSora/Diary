@@ -230,3 +230,91 @@ fun TagExplorerScreenPreview_Light() {
         )
     }
 }
+
+@Preview(
+    showBackground = true,
+    name = "3. Tag Explorer - No Tags - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun TagExplorerScreenPreview_NoTags_Dark() {
+    AppTheme(darkTheme = true) {
+        TagExplorerContent(
+            uiState = TagUiState(
+                tags = emptyList(),
+                tagCounts = emptyMap(),
+                selectedTag = null,
+                taggedNotes = emptyList()
+            ),
+            onSelectTag = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Tag Explorer - No Tags - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun TagExplorerScreenPreview_NoTags_Light() {
+    AppTheme(darkTheme = false) {
+        TagExplorerContent(
+            uiState = TagUiState(
+                tags = emptyList(),
+                tagCounts = emptyMap(),
+                selectedTag = null,
+                taggedNotes = emptyList()
+            ),
+            onSelectTag = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Tag Explorer - Selected Tag Empty - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun TagExplorerScreenPreview_SelectedTagEmpty_Dark() {
+    val sampleTags = listOf("#ideas", "#architecture", "#roadmap")
+
+    AppTheme(darkTheme = true) {
+        TagExplorerContent(
+            uiState = TagUiState(
+                tags = sampleTags,
+                tagCounts = mapOf("#ideas" to 2, "#architecture" to 1, "#roadmap" to 0),
+                selectedTag = "#roadmap",
+                taggedNotes = emptyList()
+            ),
+            onSelectTag = {},
+            onNoteClick = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Tag Explorer - Selected Tag Empty - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun TagExplorerScreenPreview_SelectedTagEmpty_Light() {
+    val sampleTags = listOf("#ideas", "#architecture", "#roadmap")
+
+    AppTheme(darkTheme = false) {
+        TagExplorerContent(
+            uiState = TagUiState(
+                tags = sampleTags,
+                tagCounts = mapOf("#ideas" to 2, "#architecture" to 1, "#roadmap" to 0),
+                selectedTag = "#roadmap",
+                taggedNotes = emptyList()
+            ),
+            onSelectTag = {},
+            onNoteClick = {}
+        )
+    }
+}

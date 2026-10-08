@@ -387,7 +387,8 @@ fun FlashcardDeckSelectionContent(
     onCreateDeck: () -> Unit = {},
     onRenameDeck: (FlashcardDeck) -> Unit = {},
     onDeleteDeck: (FlashcardDeck) -> Unit = {},
-    onManageDeck: (String) -> Unit = {}
+    onManageDeck: (String) -> Unit = {},
+    error: String? = null
 ) {
     val totalWords = decks.sumOf { it.cardCount }
     if (isLoading && decks.isEmpty()) {
@@ -414,6 +415,23 @@ fun FlashcardDeckSelectionContent(
                 deckCount = decks.size,
                 totalWords = totalWords
             )
+        }
+
+        if (error != null) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Text(
+                        text = error,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            }
         }
 
         if (decks.isEmpty() && crudEnabled) {
@@ -739,5 +757,109 @@ fun FlashcardDeckRenameSheetPreview_Light() {
                 onConfirm = { _, _ -> }
             )
         }
+    }
+}
+
+@Preview(showBackground = true, name = "5. Deck Sheet New - Light")
+@Composable
+fun FlashcardDeckNewSheetPreview_Light() {
+    AppTheme(darkTheme = false) {
+        Surface {
+            DeckEditSheetContent(
+                title = "New deck",
+                isCreate = true,
+                onDismiss = {},
+                onConfirm = { _, _ -> }
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "6. Deck Sheet Rename - Dark")
+@Composable
+fun FlashcardDeckRenameSheetPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        Surface {
+            DeckEditSheetContent(
+                title = "Rename deck",
+                isCreate = false,
+                initialName = "Basic Vocabulary",
+                initialDescription = "Common everyday words.",
+                onDismiss = {},
+                onConfirm = { _, _ -> }
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "7. Deck List Empty - Dark")
+@Composable
+fun FlashcardDeckEmptyPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardDeckSelectionContent(
+            decks = emptyList(),
+            onDeckSelected = {},
+            crudEnabled = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "8. Deck List Empty - Light")
+@Composable
+fun FlashcardDeckEmptyPreview_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardDeckSelectionContent(
+            decks = emptyList(),
+            onDeckSelected = {},
+            crudEnabled = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "9. Deck List Loading - Dark")
+@Composable
+fun FlashcardDeckLoadingPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardDeckSelectionContent(
+            decks = emptyList(),
+            onDeckSelected = {},
+            isLoading = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "10. Deck List Loading - Light")
+@Composable
+fun FlashcardDeckLoadingPreview_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardDeckSelectionContent(
+            decks = emptyList(),
+            onDeckSelected = {},
+            isLoading = true
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "11. Deck List Error - Dark")
+@Composable
+fun FlashcardDeckErrorPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        FlashcardDeckSelectionContent(
+            decks = demoDecks,
+            onDeckSelected = {},
+            error = "Couldn't load decks — check your vault and retry."
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "12. Deck List Error - Light")
+@Composable
+fun FlashcardDeckErrorPreview_Light() {
+    AppTheme(darkTheme = false) {
+        FlashcardDeckSelectionContent(
+            decks = demoDecks,
+            onDeckSelected = {},
+            error = "Couldn't load decks — check your vault and retry."
+        )
     }
 }
