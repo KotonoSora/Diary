@@ -3,7 +3,8 @@ package com.kotonosora.todolist.data.native
 import kotlin.math.max
 
 /**
- * Pure Kotlin helper replacing former Markdown C++ parsing & text analytics functions.
+ * Pure Kotlin helper for Markdown parsing & text analytics.
+ * (Historically named "*Native" when backed by C++; now 100% Kotlin.)
  */
 object MdNativeHelper {
 
@@ -11,6 +12,19 @@ object MdNativeHelper {
     private val tagRegex = Regex("(?:^|\\s)#([a-zA-Z_][a-zA-Z0-9_\\-]*)")
     private val titleRegex =
         Regex("^title:\\s*[\"']?([^\"'\\n\\r]+)[\"']?", RegexOption.IGNORE_CASE)
+    private val emotionRegex =
+        Regex(
+            "^\\s*emotion:\\s*[\"']?(\\w+)[\"']?",
+            setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE)
+        )
+    private val actionsRegex =
+        Regex(
+            "^\\s*actions:\\s*\\[([^\\]\n]*)]",
+            setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE)
+        )
+    private val frontmatterTagsRegex =
+        Regex("^\\s*tags\\s*:\\s*(.+)$", setOf(RegexOption.MULTILINE, RegexOption.IGNORE_CASE))
+    private val tagNameRegex = Regex("^[A-Za-z_][A-Za-z0-9_\\-]*$")
 
     /**
      * Extracts WikiLink target titles (e.g. [[Target Note]]) from Markdown text.
@@ -71,10 +85,69 @@ object MdNativeHelper {
     }
 
     /**
+     * Returns the YAML frontmatter block (lines between the leading `---` markers),
+     * or empty string when the document has none. Stamp keys are only read from
+     * here so body text like "emotion: happy" is never mistaken for metadata.
+     */
+    private fun frontmatterBlock(mdContent: String): String {
+        val lines = mdContent.lines()
+        if (lines.firstOrNull()?.trim() != "---") return ""
+        val end = lines.drop(1).indexOfFirst { it.trim() == "---" }
+        if (end == -1) return ""
+        return lines.drop(1).take(end).joinToString("\n")
+    }
+
+    /**
+     * Reads the frontmatter `emotion:` stamp name (e.g. `emotion: HAPPY`).
+     * Returns null when absent. Callers map the name to EmotionStamp.
+     */
+    fun parseEmotionName(mdContent: String): String? {
+        return emotionRegex.find(frontmatterBlock(mdContent))
+            ?.groupValues?.getOrNull(1)?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    /**
+     * Reads the frontmatter `actions:` stamp names (e.g. `actions: [WORK, EXERCISE]`).
+     * The list must sit on one line; wrapped lists only parse the first line.
+     * Returns empty list when absent. Callers map names to ActionStamp.
+     */
+    fun parseActionNames(mdContent: String): List<String> {
+        val raw = actionsRegex.find(frontmatterBlock(mdContent))
+            ?.groupValues?.getOrNull(1) ?: return emptyList()
+        return raw.split(",")
+            .map { it.trim().removeSurrounding("\"").removeSurrounding("'").trim() }
+            .filter { it.isNotEmpty() }
+    }
+
+    /**
+     * Reads the frontmatter `tags:` list (e.g. `tags: [diary, journal]` or
+     * `tags: diary`). Names are normalized to the `#tag` form used by
+     * [extractTags] so body tags and frontmatter tags merge cleanly.
+     * Returns empty list when absent. Body `#tags` are never included here.
+     */
+    fun parseFrontmatterTags(mdContent: String): List<String> {
+        val raw = frontmatterTagsRegex.find(frontmatterBlock(mdContent))
+            ?.groupValues?.getOrNull(1)?.trim() ?: return emptyList()
+        val inner = if (raw.startsWith("[") && raw.endsWith("]")) {
+            raw.substring(1, raw.length - 1)
+        } else {
+            raw
+        }
+        return inner.split(",")
+            .map {
+                it.trim().removeSurrounding("\"").removeSurrounding("'")
+                    .trim().removePrefix("#").trim()
+            }
+            .filter { it.matches(tagNameRegex) }
+            .map { "#$it" }
+            .distinct()
+    }
+
+    /**
      * Text Stats Analytics.
      * Returns IntArray(4): [wordCount, charCount, lineCount, readingTimeMinutes]
      */
-    fun calculateTextStatsNative(mdContent: String): IntArray {
+    fun calculateTextStats(mdContent: String): IntArray {
         if (mdContent.isEmpty()) {
             return intArrayOf(0, 0, 0, 0)
         }

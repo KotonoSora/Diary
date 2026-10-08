@@ -23,6 +23,11 @@ configure<ApplicationExtension> {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // No build-time locale filter: androidResources.localeFilters is @Incubating
+    // and resConfigs is deprecated with no stable replacement. English-only is
+    // enforced at runtime instead (localeConfig + setApplicationLocales("en-US")
+    // in MainApplication), so bundled extra languages stay unused.
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -122,9 +127,17 @@ dependencies {
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
+    implementation(libs.camerax.video)
     implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
+    implementation(libs.coil.gif)
+    // Video-frame thumbnails for the media gallery grid (MediaMetadataRetriever +
+    // Coil memory/disk cache, off Main). Avoids spinning up an ExoPlayer per cell.
+    implementation(libs.coil.video)
 
-    // Media3 ExoPlayer Audio Playback
+    // Media3 ExoPlayer Audio Playback (MP3/AAC/Vorbis/Opus/FLAC/WAV/AMR/MIDI
+    // via platform codecs + bundled extractors; undecodable files surface an
+    // inline error instead of crashing — see AudioPlayerView/VideoPlayerView).
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.ui)
 
@@ -138,6 +151,8 @@ dependencies {
 
     // MikePenz Multiplatform Markdown Renderer M3
     implementation(libs.markdown.renderer)
+    implementation(libs.markdown.code)
+    implementation(libs.markdown.coil3)
 
     // JGraphT Graph & Force Layout Core
     implementation(libs.jgrapht.core)
@@ -148,12 +163,4 @@ dependencies {
     ksp(libs.room.compiler)
 
     implementation(libs.androidx.startup)
-
-    testImplementation(libs.junit)
-    testImplementation(libs.mockk)
-    testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.room.testing)
-    androidTestImplementation(libs.kotlinx.coroutines.test)
 }

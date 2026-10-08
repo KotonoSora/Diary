@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Flip
 import androidx.compose.material.icons.filled.Refresh
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -44,7 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -54,7 +56,8 @@ fun SwipeableCard(
     onFlip: () -> Unit,
     onSwipeLeft: () -> Unit,
     onSwipeRight: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSpeak: () -> Unit = {}
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = with(LocalDensity.current) { configuration.screenWidthDp.dp.toPx() }
@@ -121,7 +124,7 @@ fun SwipeableCard(
             containerColor = if (animatedRotationY <= 90f) {
                 MaterialTheme.colorScheme.surface
             } else {
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+                MaterialTheme.colorScheme.primaryContainer
             }
         )
     ) {
@@ -132,7 +135,6 @@ fun SwipeableCard(
             contentAlignment = Alignment.Center
         ) {
             if (animatedRotationY <= 90f) {
-                // Front side: Word & Phonetic
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -156,14 +158,33 @@ fun SwipeableCard(
                         textAlign = TextAlign.Center
                     )
 
-                    if (flashcard.phonetic.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = flashcard.phonetic,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontStyle = FontStyle.Italic,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
+                    if (flashcard.phonetic.isNotBlank() || flashcard.word.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (flashcard.phonetic.isNotBlank()) {
+                                Text(
+                                    text = flashcard.phonetic,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontStyle = FontStyle.Italic,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                                Spacer(modifier = Modifier.size(4.dp))
+                            }
+                            IconButton(
+                                onClick = onSpeak,
+                                modifier = Modifier.size(44.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                                    contentDescription = "Play pronunciation of ${flashcard.word}",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -192,7 +213,6 @@ fun SwipeableCard(
                     }
                 }
             } else {
-                // Back side: Definition & Example (Flipped rotation for correct text reading)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -268,7 +288,6 @@ fun SwipeableCard(
                 }
             }
 
-            // Drag overlay badge - Mastered (Right)
             if (dragProgress > 0.2f) {
                 Box(
                     modifier = Modifier
@@ -296,7 +315,6 @@ fun SwipeableCard(
                 }
             }
 
-            // Drag overlay badge - Need Practice (Left)
             if (dragProgress < -0.2f) {
                 Box(
                     modifier = Modifier
@@ -332,7 +350,7 @@ fun SwipeableCard(
 @Preview(showBackground = true, name = "1. SwipeableCard - Front (Dark)")
 @Composable
 fun SwipeableCardPreview_Front_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -356,7 +374,56 @@ fun SwipeableCardPreview_Front_Dark() {
 @Preview(showBackground = true, name = "2. SwipeableCard - Back (Light)")
 @Composable
 fun SwipeableCardPreview_Back_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            SwipeableCard(
+                flashcard = Flashcard(
+                    word = "Serendipity",
+                    phonetic = "/ˌser.ənˈdɪp.ə.ti/",
+                    definition = "Finding valuable things by chance in a happy or beneficial way.",
+                    example = "Finding the lost key in an old coat was pure serendipity."
+                ),
+                isFlipped = true,
+                onFlip = {},
+                onSwipeLeft = {},
+                onSwipeRight = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "3. SwipeableCard - Front (Light)")
+@Composable
+fun SwipeableCardPreview_Front_Light() {
+    AppTheme(darkTheme = false) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            SwipeableCard(
+                flashcard = Flashcard(
+                    word = "Serendipity",
+                    phonetic = "/ˌser.ənˈdɪp.ə.ti/",
+                    definition = "Finding valuable things by chance in a happy way."
+                ),
+                isFlipped = false,
+                onFlip = {},
+                onSwipeLeft = {},
+                onSwipeRight = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "4. SwipeableCard - Back (Dark)")
+@Composable
+fun SwipeableCardPreview_Back_Dark() {
+    AppTheme(darkTheme = true) {
         Box(
             modifier = Modifier
                 .fillMaxSize()

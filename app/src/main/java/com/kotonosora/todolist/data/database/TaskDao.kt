@@ -28,6 +28,9 @@ interface TaskDao {
     @Delete
     suspend fun deleteTask(task: TaskEntity)
 
+    @Query("DELETE FROM todo_items WHERE id = :id")
+    suspend fun deleteTaskById(id: String)
+
     @Query("SELECT * FROM todo_items")
     suspend fun getAllTasksOnce(): List<TaskEntity>
 }

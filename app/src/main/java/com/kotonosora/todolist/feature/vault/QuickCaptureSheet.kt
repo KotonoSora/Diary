@@ -57,7 +57,7 @@ import com.kotonosora.todolist.domain.model.defaultTitlePrefix
 import com.kotonosora.todolist.domain.model.description
 import com.kotonosora.todolist.domain.model.displayName
 import com.kotonosora.todolist.ui.components.StampPickerSheet
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -84,10 +84,12 @@ fun QuickCaptureDialog(
 @Composable
 fun QuickCaptureSheetContent(
     onDismiss: () -> Unit = {},
-    onConfirm: (title: String, noteType: NoteType, author: String?, url: String?, emotion: EmotionStamp?, actions: List<ActionStamp>) -> Unit = { _, _, _, _, _, _ -> }
+    onConfirm: (title: String, noteType: NoteType, author: String?, url: String?, emotion: EmotionStamp?, actions: List<ActionStamp>) -> Unit = { _, _, _, _, _, _ -> },
+    initialTitle: String? = null,
+    initialType: NoteType = NoteType.FLEETING
 ) {
-    var selectedType by remember { mutableStateOf(NoteType.FLEETING) }
-    var title by remember { mutableStateOf(selectedType.defaultTitlePrefix) }
+    var selectedType by remember { mutableStateOf(initialType) }
+    var title by remember { mutableStateOf(initialTitle ?: initialType.defaultTitlePrefix) }
     var author by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
 
@@ -343,7 +345,7 @@ fun QuickCaptureSheetContent(
 )
 @Composable
 fun QuickCaptureDialogPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         QuickCaptureSheetContent()
     }
 }
@@ -355,7 +357,37 @@ fun QuickCaptureDialogPreview_Dark() {
 )
 @Composable
 fun QuickCaptureDialogPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         QuickCaptureSheetContent()
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Quick Capture Sheet - Filled Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun QuickCaptureSheetPreview_Filled_Dark() {
+    AppTheme(darkTheme = true) {
+        QuickCaptureSheetContent(
+            initialTitle = "Atomic Habits",
+            initialType = NoteType.LITERATURE
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Quick Capture Sheet - Filled Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun QuickCaptureSheetPreview_Filled_Light() {
+    AppTheme(darkTheme = false) {
+        QuickCaptureSheetContent(
+            initialTitle = "Atomic Habits",
+            initialType = NoteType.LITERATURE
+        )
     }
 }

@@ -14,8 +14,32 @@ interface VaultRepository {
     suspend fun getNoteById(id: String): NoteItem?
     suspend fun getVaultTree(overrideUri: Uri? = null): VaultNode.FolderNode
     suspend fun syncVaultFilesToDb(overrideUri: Uri? = null)
+    suspend fun createFolder(folderPath: String, overrideUri: Uri? = null): Boolean
     suspend fun saveNote(note: NoteItem, overrideUri: Uri? = null): Boolean
     suspend fun renameNote(oldNoteId: String, newTitle: String, overrideUri: Uri? = null): Boolean
+    suspend fun moveNote(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri? = null
+    ): Boolean
+
+    suspend fun moveFolder(
+        oldRelativePath: String,
+        destFolderPath: String,
+        overrideUri: Uri? = null
+    ): Boolean
+
     suspend fun deleteNote(relativePath: String, overrideUri: Uri? = null): Boolean
+    suspend fun deleteFolder(folderPath: String, overrideUri: Uri? = null): Boolean
     suspend fun searchNotes(query: String): Flow<List<NoteItem>>
+
+    suspend fun getCustomTemplateNames(overrideUri: Uri? = null): List<String>
+    suspend fun getCustomTemplateContent(name: String, overrideUri: Uri? = null): String?
+    suspend fun saveCustomTemplate(
+        name: String,
+        content: String,
+        overrideUri: Uri? = null
+    ): Boolean
+
+    suspend fun deleteCustomTemplate(name: String, overrideUri: Uri? = null): Boolean
 }

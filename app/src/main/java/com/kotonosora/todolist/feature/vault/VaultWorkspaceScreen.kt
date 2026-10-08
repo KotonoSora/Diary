@@ -4,34 +4,29 @@ import android.content.Intent
 import android.content.res.Configuration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Hub
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -41,6 +36,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,11 +58,16 @@ import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.feature.search.SearchScreen
 import com.kotonosora.todolist.feature.tags.TagExplorerScreen
 import com.kotonosora.todolist.navigation.appViewModel
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun VaultWorkspaceScreen(
-    viewModel: VaultViewModel = appViewModel { container -> VaultViewModel(container.vaultRepository) },
+    viewModel: VaultViewModel = appViewModel { container ->
+        VaultViewModel(
+            container.vaultUseCases,
+            container.preferencesUseCases
+        )
+    },
     onNoteSelect: (String) -> Unit,
     onOpenGraph: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null
@@ -106,12 +108,28 @@ fun VaultWorkspaceScreen(
                 onCreated
             )
         },
+        onCreateFolder = { parentFolderPath, folderName ->
+            viewModel.createFolder(parentFolderPath, folderName)
+        },
+        onMoveNote = { srcNotePath, destFolderPath ->
+            viewModel.moveNote(srcNotePath, destFolderPath)
+        },
+        onMoveFolder = { srcFolderPath, destFolderPath ->
+            viewModel.moveFolder(srcFolderPath, destFolderPath)
+        },
         onDeleteNote = { relativePath ->
             viewModel.deleteNote(relativePath)
+        },
+        onDeleteFolder = { folderPath ->
+            viewModel.deleteFolder(folderPath)
+        },
+        onRefresh = {
+            viewModel.loadVault()
         }
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VaultWorkspaceContent(
     uiState: VaultUiState,
@@ -120,7 +138,12 @@ fun VaultWorkspaceContent(
     onOpenDrawer: (() -> Unit)? = null,
     onSelectCustomVaultFolder: () -> Unit = {},
     onCreateZettelNote: (String, String, NoteType, String?, String?, EmotionStamp?, List<ActionStamp>, (String) -> Unit) -> Unit = { _, _, _, _, _, _, _, _ -> },
-    onDeleteNote: (String) -> Unit = {}
+    onCreateFolder: (parentFolderPath: String, folderName: String) -> Unit = { _, _ -> },
+    onMoveNote: (srcNotePath: String, destFolderPath: String) -> Unit = { _, _ -> },
+    onMoveFolder: (srcFolderPath: String, destFolderPath: String) -> Unit = { _, _ -> },
+    onDeleteNote: (String) -> Unit = {},
+    onDeleteFolder: (folderPath: String) -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
     var selectedFilterTab by remember { mutableIntStateOf(0) } // 0: Files, 1: Search, 2: Tags
     var showQuickCapture by remember { mutableStateOf(false) }
@@ -252,73 +275,35 @@ fun VaultWorkspaceContent(
 
                 when (selectedFilterTab) {
                     0 -> {
-                        LazyColumn(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        val pullToRefreshState = rememberPullToRefreshState()
+                        PullToRefreshBox(
+                            isRefreshing = uiState.isLoading,
+                            onRefresh = onRefresh,
+                            state = pullToRefreshState,
+                            modifier = Modifier.fillMaxSize()
                         ) {
-                            if (uiState.notes.isNotEmpty()) {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp),
+                                contentPadding = PaddingValues(bottom = 80.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
                                 item {
-                                    LazyRow(
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        items(uiState.notes.take(5), key = { it.id }) { note ->
-                                            Card(
-                                                modifier = Modifier
-                                                    .width(160.dp)
-                                                    .clickable { onNoteSelect(note.id) },
-                                                elevation = CardDefaults.cardElevation(0.dp),
-                                                colors = CardDefaults.cardColors(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                                                        alpha = 0.35f
-                                                    )
-                                                )
-                                            ) {
-                                                Column(modifier = Modifier.padding(10.dp)) {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(
-                                                            imageVector = Icons.Default.Description,
-                                                            contentDescription = null,
-                                                            tint = MaterialTheme.colorScheme.primary,
-                                                            modifier = Modifier.padding(end = 4.dp)
-                                                        )
-                                                        Text(
-                                                            text = note.title,
-                                                            style = MaterialTheme.typography.labelLarge,
-                                                            maxLines = 1
-                                                        )
-                                                    }
-                                                    Spacer(Modifier.height(4.dp))
-                                                    Text(
-                                                        text = note.content.take(60)
-                                                            .replace("\n", " "),
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                        maxLines = 2
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
+                                    FolderTreeExplorer(
+                                        rootNode = uiState.rootNode,
+                                        onNoteSelect = onNoteSelect,
+                                        onCreateNote = { folderPath ->
+                                            targetFolderPath = folderPath
+                                            showQuickCapture = true
+                                        },
+                                        onCreateFolder = onCreateFolder,
+                                        onMoveNote = onMoveNote,
+                                        onMoveFolder = onMoveFolder,
+                                        onDeleteNote = onDeleteNote,
+                                        onDeleteFolder = onDeleteFolder
+                                    )
                                 }
-                                item { HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp)) }
-                            }
-
-                            item {
-                                FolderTreeExplorer(
-                                    rootNode = uiState.rootNode,
-                                    onNoteSelect = onNoteSelect,
-                                    onCreateNote = { folderPath ->
-                                        targetFolderPath = folderPath
-                                        showQuickCapture = true
-                                    },
-                                    onCreateFolder = { folderPath ->
-                                        targetFolderPath = folderPath
-                                        showQuickCapture = true
-                                    },
-                                    onDeleteNote = onDeleteNote
-                                )
                             }
                         }
                     }
@@ -396,7 +381,7 @@ fun VaultWorkspaceScreenPreview_Populated_Dark() {
         )
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         VaultWorkspaceContent(
             uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes),
             onNoteSelect = {}
@@ -423,9 +408,105 @@ fun VaultWorkspaceScreenPreview_Populated_Light() {
         NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!")
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         VaultWorkspaceContent(
             uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes),
+            onNoteSelect = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Vault Workspace - Empty Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(
+                rootNode = VaultNode.FolderNode(
+                    name = "My Personal Vault",
+                    relativePath = ""
+                ),
+                notes = emptyList()
+            ),
+            onNoteSelect = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Vault Workspace - Empty Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(
+                rootNode = VaultNode.FolderNode(
+                    name = "My Personal Vault",
+                    relativePath = ""
+                ),
+                notes = emptyList()
+            ),
+            onNoteSelect = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Vault Workspace - Loading Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Loading_Dark() {
+    val sampleTree = VaultNode.FolderNode(
+        name = "My Personal Vault",
+        relativePath = "",
+        children = listOf(
+            VaultNode.FileNode("Welcome.md", "Welcome.md", "md", 1024, System.currentTimeMillis())
+        )
+    )
+
+    val sampleNotes = listOf(
+        NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!")
+    )
+
+    AppTheme(darkTheme = true) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes, isLoading = true),
+            onNoteSelect = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Vault Workspace - Loading Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun VaultWorkspaceScreenPreview_Loading_Light() {
+    val sampleTree = VaultNode.FolderNode(
+        name = "My Personal Vault",
+        relativePath = "",
+        children = listOf(
+            VaultNode.FileNode("Welcome.md", "Welcome.md", "md", 1024, System.currentTimeMillis())
+        )
+    )
+
+    val sampleNotes = listOf(
+        NoteItem("Welcome.md", "Welcome", "", "Welcome to your personal Markdown Knowledge Base!")
+    )
+
+    AppTheme(darkTheme = false) {
+        VaultWorkspaceContent(
+            uiState = VaultUiState(rootNode = sampleTree, notes = sampleNotes, isLoading = true),
             onNoteSelect = {}
         )
     }

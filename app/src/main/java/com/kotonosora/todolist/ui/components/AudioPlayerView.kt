@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.components
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
@@ -45,21 +46,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import com.kotonosora.todolist.common.AppConstants
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.delay
 import java.io.File
-import java.util.Locale
 
 @OptIn(UnstableApi::class)
 @Composable
 fun AudioPlayerView(
     filePath: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    previewIsPlaying: Boolean = false
 ) {
     if (LocalInspectionMode.current) {
         // Preview placeholder for IDE layout renderer
@@ -70,13 +75,13 @@ fun AudioPlayerView(
             )
         ) {
             Column(modifier = Modifier.padding(8.dp)) {
-                AudioWaveformBars(isPlaying = false)
+                AudioWaveformBars(isPlaying = previewIsPlaying)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = {}, modifier = Modifier.size(40.dp)) {
                         Icon(
-                            Icons.Default.PlayArrow,
-                            contentDescription = "Play",
+                            if (previewIsPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = if (previewIsPlaying) "Pause" else "Play",
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -92,42 +97,79 @@ fun AudioPlayerView(
     var currentPosition by remember { mutableLongStateOf(0L) }
     var duration by remember { mutableLongStateOf(1L) }
     var playbackSpeed by remember { mutableFloatStateOf(1.0f) }
+    var playbackError by remember(filePath) { mutableStateOf<String?>(null) }
 
-    val exoPlayer = remember(filePath) {
-        ExoPlayer.Builder(context).build().apply {
-            val file = File(filePath)
-            if (file.exists()) {
-                setMediaItem(MediaItem.fromUri(Uri.fromFile(file)))
+    val audioMissing = remember(filePath) {
+        !filePath.startsWith("content://") && !File(filePath).exists()
+    }
+
+    val exoPlayer = remember(filePath, audioMissing) {
+        if (audioMissing) {
+            null
+        } else {
+            ExoPlayer.Builder(context).build().apply {
+                val mediaItem = if (filePath.startsWith("content://")) {
+                    MediaItem.fromUri(Uri.parse(filePath))
+                } else {
+                    val file = File(filePath)
+                    if (!file.exists()) return@apply
+                    MediaItem.fromUri(Uri.fromFile(file))
+                }
+                setMediaItem(mediaItem)
                 prepare()
-            }
-            addListener(object : Player.Listener {
-                override fun onIsPlayingChanged(playing: Boolean) {
-                    isPlaying = playing
-                }
-
-                override fun onPlaybackStateChanged(playbackState: Int) {
-                    if (playbackState == Player.STATE_READY) {
-                        duration = this@apply.duration.coerceAtLeast(1L)
-                    } else if (playbackState == Player.STATE_ENDED) {
-                        isPlaying = false
-                        seekTo(0)
-                        pause()
+                addListener(object : Player.Listener {
+                    override fun onIsPlayingChanged(playing: Boolean) {
+                        isPlaying = playing
                     }
-                }
-            })
+
+                    override fun onPlaybackStateChanged(playbackState: Int) {
+                        if (playbackState == Player.STATE_READY) {
+                            duration = this@apply.duration.coerceAtLeast(1L)
+                            playbackError = null
+                        } else if (playbackState == Player.STATE_ENDED) {
+                            isPlaying = false
+                            seekTo(0)
+                            pause()
+                        }
+                    }
+
+                    override fun onPlayerError(error: PlaybackException) {
+                        playbackError = error.message ?: "Unsupported audio format"
+                    }
+                })
+            }
         }
     }
 
     DisposableEffect(filePath) {
         onDispose {
-            exoPlayer.release()
+            exoPlayer?.release()
         }
     }
 
+    if (audioMissing) {
+        Card(
+            modifier = modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            )
+        ) {
+            Text(
+                text = "Couldn't play this audio — file not found.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
+        return
+    }
+
+    val player = exoPlayer ?: return
+
     LaunchedEffect(isPlaying) {
         while (isPlaying) {
-            currentPosition = exoPlayer.currentPosition.coerceAtLeast(0L)
-            duration = exoPlayer.duration.coerceAtLeast(1L)
+            currentPosition = player.currentPosition.coerceAtLeast(0L)
+            duration = player.duration.coerceAtLeast(1L)
             delay(200)
         }
     }
@@ -143,6 +185,16 @@ fun AudioPlayerView(
                 .fillMaxWidth()
                 .padding(8.dp)
         ) {
+            val error = playbackError
+            if (error != null) {
+                Text(
+                    text = "Couldn't play this audio ($error).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            }
+
             AudioWaveformBars(isPlaying = isPlaying)
 
             Spacer(Modifier.height(6.dp))
@@ -153,8 +205,8 @@ fun AudioPlayerView(
             ) {
                 IconButton(
                     onClick = {
-                        val target = (exoPlayer.currentPosition - 10000L).coerceAtLeast(0L)
-                        exoPlayer.seekTo(target)
+                        val target = (player.currentPosition - 10000L).coerceAtLeast(0L)
+                        player.seekTo(target)
                         currentPosition = target
                     },
                     modifier = Modifier.size(32.dp)
@@ -169,9 +221,9 @@ fun AudioPlayerView(
                 IconButton(
                     onClick = {
                         if (isPlaying) {
-                            exoPlayer.pause()
+                            player.pause()
                         } else {
-                            exoPlayer.play()
+                            player.play()
                         }
                     },
                     modifier = Modifier.size(40.dp)
@@ -186,8 +238,8 @@ fun AudioPlayerView(
 
                 IconButton(
                     onClick = {
-                        val target = (exoPlayer.currentPosition + 10000L).coerceAtMost(duration)
-                        exoPlayer.seekTo(target)
+                        val target = (player.currentPosition + 10000L).coerceAtMost(duration)
+                        player.seekTo(target)
                         currentPosition = target
                     },
                     modifier = Modifier.size(32.dp)
@@ -205,7 +257,7 @@ fun AudioPlayerView(
                     value = currentPosition.toFloat().coerceIn(0f, duration.toFloat()),
                     onValueChange = { newValue ->
                         currentPosition = newValue.toLong()
-                        exoPlayer.seekTo(currentPosition)
+                        player.seekTo(currentPosition)
                     },
                     valueRange = 0f..duration.toFloat(),
                     modifier = Modifier.weight(1f)
@@ -222,7 +274,7 @@ fun AudioPlayerView(
                             1.5f -> 2.0f
                             else -> 1.0f
                         }
-                        exoPlayer.playbackParameters = PlaybackParameters(playbackSpeed)
+                        player.playbackParameters = PlaybackParameters(playbackSpeed)
                     }
                 ) {
                     Text(
@@ -259,9 +311,15 @@ fun AudioPlayerView(
 @Composable
 fun AudioWaveformBars(
     isPlaying: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    amplitude: Int = 0,
+    isLiveMeter: Boolean = false
 ) {
     val barHeights = remember { List(24) { (8..28).random() } }
+    // Live mic level 0..32767 -> 0..1 boost. In live-meter mode (recording)
+    // the bars track the real level so silence stays flat and loud input
+    // pumps; otherwise (playback) they animate decoratively.
+    val level = (amplitude.coerceIn(0, 32767) / 32767f).coerceIn(0f, 1f)
 
     Row(
         modifier = modifier
@@ -274,16 +332,24 @@ fun AudioWaveformBars(
         barHeights.forEachIndexed { index, height ->
             val animatedHeight = remember { Animatable(height.toFloat()) }
 
-            LaunchedEffect(isPlaying) {
-                while (isPlaying) {
-                    val newHeight = (6..28).random().toFloat()
-                    animatedHeight.animateTo(
-                        newHeight,
-                        animationSpec = tween(150 + (index % 5) * 20)
-                    )
-                }
-                if (!isPlaying) {
-                    animatedHeight.animateTo(height.toFloat(), animationSpec = tween(300))
+            LaunchedEffect(isPlaying, isLiveMeter, level) {
+                if (isPlaying && isLiveMeter) {
+                    // Live meter: base height + level boost with slight per-bar variance.
+                    // Silence (level 0) stays flat at the baseline.
+                    val variance = 0.7f + (index % 5) * 0.15f
+                    val target = (8f + level * 22f * variance).coerceIn(6f, 30f)
+                    animatedHeight.animateTo(target, animationSpec = tween(120))
+                } else {
+                    while (isPlaying) {
+                        val newHeight = (6..28).random().toFloat()
+                        animatedHeight.animateTo(
+                            newHeight,
+                            animationSpec = tween(150 + (index % 5) * 20)
+                        )
+                    }
+                    if (!isPlaying) {
+                        animatedHeight.animateTo(height.toFloat(), animationSpec = tween(300))
+                    }
                 }
             }
 
@@ -305,5 +371,53 @@ private fun formatTime(millis: Long): String {
     val totalSeconds = (millis / 1000).coerceAtLeast(0)
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
+    return String.format(AppConstants.APP_LOCALE, "%02d:%02d", minutes, seconds)
+}
+
+@Preview(
+    showBackground = true,
+    name = "1. Audio Player - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun AudioPlayerViewPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        AudioPlayerView(filePath = "preview_sample.m4a")
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. Audio Player - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun AudioPlayerViewPreview_Light() {
+    AppTheme(darkTheme = false) {
+        AudioPlayerView(filePath = "preview_sample.m4a")
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Audio Player Playing - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun AudioPlayerViewPreview_Playing_Dark() {
+    AppTheme(darkTheme = true) {
+        AudioPlayerView(filePath = "preview_sample.m4a", previewIsPlaying = true)
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Audio Player Playing - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun AudioPlayerViewPreview_Playing_Light() {
+    AppTheme(darkTheme = false) {
+        AudioPlayerView(filePath = "preview_sample.m4a", previewIsPlaying = true)
+    }
 }

@@ -4,19 +4,19 @@ import android.content.Context
 import android.net.Uri
 import android.os.Environment
 import androidx.documentfile.provider.DocumentFile
-import com.kotonosora.todolist.data.repository.UserPreferencesRepository
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 class AppFileManager(
     private val context: Context,
-    private val userPreferencesRepository: UserPreferencesRepository? = null
+    private val userPreferencesRepository: PreferencesRepository? = null
 ) {
 
     fun getStorageDir(): File {
@@ -43,7 +43,7 @@ class AppFileManager(
         val fileName = "${task.id}.$extension"
         val oppositeFileName = "${task.id}.$oppositeExtension"
 
-        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
+        val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", AppConstants.APP_LOCALE)
 
         val content = if (extension == "txt") {
             buildString {

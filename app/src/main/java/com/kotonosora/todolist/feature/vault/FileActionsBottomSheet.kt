@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DriveFileRenameOutline
@@ -30,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +42,8 @@ fun FileActionsBottomSheet(
     onOpenNote: () -> Unit,
     onRenameNote: () -> Unit,
     onShareNote: () -> Unit,
-    onDeleteNote: () -> Unit
+    onDeleteNote: () -> Unit,
+    onMoveNote: (() -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState()
 
@@ -58,7 +60,8 @@ fun FileActionsBottomSheet(
             onOpenNote = onOpenNote,
             onRenameNote = onRenameNote,
             onShareNote = onShareNote,
-            onDeleteNote = onDeleteNote
+            onDeleteNote = onDeleteNote,
+            onMoveNote = onMoveNote
         )
     }
 }
@@ -71,7 +74,8 @@ fun FileActionsSheetContent(
     onOpenNote: () -> Unit = {},
     onRenameNote: () -> Unit = {},
     onShareNote: () -> Unit = {},
-    onDeleteNote: () -> Unit = {}
+    onDeleteNote: () -> Unit = {},
+    onMoveNote: (() -> Unit)? = null
 ) {
     val compactShape = RoundedCornerShape(6.dp)
 
@@ -170,6 +174,40 @@ fun FileActionsSheetContent(
                 }
             }
 
+            // Move
+            if (onMoveNote != null) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp),
+                    shape = compactShape,
+                    elevation = CardDefaults.cardElevation(0.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.35f
+                        )
+                    ),
+                    onClick = { onDismiss(); onMoveNote() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.DriveFileMove,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            "Move File",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
             // Share
             Card(
                 modifier = Modifier
@@ -245,7 +283,7 @@ fun FileActionsSheetContent(
 )
 @Composable
 fun FileActionsBottomSheetPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FileActionsSheetContent(
             fileName = "Roadmap.md",
             filePath = "Projects/Roadmap.md"
@@ -260,10 +298,40 @@ fun FileActionsBottomSheetPreview_Dark() {
 )
 @Composable
 fun FileActionsBottomSheetPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FileActionsSheetContent(
             fileName = "Roadmap.md",
             filePath = "Projects/Roadmap.md"
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. File Actions Sheet - Long Filename Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun FileActionsBottomSheetPreview_LongFilename_Dark() {
+    AppTheme(darkTheme = true) {
+        FileActionsSheetContent(
+            fileName = "202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md",
+            filePath = "Projects/2026/Q1/202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md"
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. File Actions Sheet - Long Filename Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun FileActionsBottomSheetPreview_LongFilename_Light() {
+    AppTheme(darkTheme = false) {
+        FileActionsSheetContent(
+            fileName = "202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md",
+            filePath = "Projects/2026/Q1/202603011200-Quarterly-Architecture-Review-and-Local-Vault-Sync-Retrospective.md"
         )
     }
 }

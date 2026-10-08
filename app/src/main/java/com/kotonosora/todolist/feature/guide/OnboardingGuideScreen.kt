@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -68,7 +69,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 
 @Composable
@@ -98,12 +99,10 @@ fun OnboardingGuideScreen(
 
     var notifGranted by remember {
         mutableStateOf(
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-            } else true
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
         )
     }
 
@@ -225,6 +224,7 @@ fun OnboardingGuideContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -892,7 +892,7 @@ private fun PermissionCard(
 )
 @Composable
 fun OnboardingGuide_Slide1_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 0
@@ -907,7 +907,7 @@ fun OnboardingGuide_Slide1_Dark() {
 )
 @Composable
 fun OnboardingGuide_Slide1_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 0
@@ -922,7 +922,7 @@ fun OnboardingGuide_Slide1_Light() {
 )
 @Composable
 fun OnboardingGuide_Slide2_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 1
@@ -937,7 +937,7 @@ fun OnboardingGuide_Slide2_Dark() {
 )
 @Composable
 fun OnboardingGuide_Slide2_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 1
@@ -952,7 +952,7 @@ fun OnboardingGuide_Slide2_Light() {
 )
 @Composable
 fun OnboardingGuide_Slide3_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 2
@@ -967,7 +967,7 @@ fun OnboardingGuide_Slide3_Dark() {
 )
 @Composable
 fun OnboardingGuide_Slide3_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 2
@@ -982,7 +982,7 @@ fun OnboardingGuide_Slide3_Light() {
 )
 @Composable
 fun OnboardingGuide_Slide4_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 3
@@ -997,7 +997,7 @@ fun OnboardingGuide_Slide4_Dark() {
 )
 @Composable
 fun OnboardingGuide_Slide4_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 3
@@ -1012,7 +1012,7 @@ fun OnboardingGuide_Slide4_Light() {
 )
 @Composable
 fun OnboardingGuide_Slide5_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         OnboardingGuideContent(
             cameraGranted = true, micGranted = false, notifGranted = true,
             showBackButton = false, initialPage = 4
@@ -1027,7 +1027,7 @@ fun OnboardingGuide_Slide5_Dark() {
 )
 @Composable
 fun OnboardingGuide_Slide5_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         OnboardingGuideContent(
             cameraGranted = false, micGranted = false, notifGranted = false,
             showBackButton = false, initialPage = 4

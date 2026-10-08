@@ -34,6 +34,16 @@ class DefaultExoPlayerFactory(
     private val context: Context
 ) : ExoPlayerFactory {
     override fun createExoPlayer(): ExoPlayer {
-        return ExoPlayer.Builder(context).build()
+        // Prefer software extension renderers when bundled (e.g. future FFmpeg/
+        // MIDI extensions) and fall back to platform MediaCodec renderers.
+        // No extra repo needed: MIDI-family files already decode via the
+        // platform on the vast majority of devices; the rest surface the
+        // existing inline playback error.
+        val renderersFactory = androidx.media3.exoplayer.DefaultRenderersFactory(context).apply {
+            setExtensionRendererMode(
+                androidx.media3.exoplayer.DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
+            )
+        }
+        return ExoPlayer.Builder(context, renderersFactory).build()
     }
 }

@@ -54,6 +54,7 @@ google-services.json
 # AI
 .agent
 input_images/
+AGENTS.md
 
 # Kotlin
 .kotlin/

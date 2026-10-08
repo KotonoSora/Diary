@@ -42,11 +42,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.navigation.appViewModel
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = appViewModel { container -> SettingsViewModel(container.userPreferencesRepository) },
+    viewModel: SettingsViewModel = appViewModel { container -> SettingsViewModel(container.preferencesUseCases) },
     onNavigateToGuide: () -> Unit = {},
     onOpenDrawer: (() -> Unit)? = null
 ) {
@@ -334,7 +334,7 @@ fun SettingsScreenContent(
 )
 @Composable
 fun SettingsScreenPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         SettingsScreenContent(
             themeMode = "dark",
             customStorageUri = "content://com.android.externalstorage.documents/tree/primary%3ADiaryVault",
@@ -350,7 +350,7 @@ fun SettingsScreenPreview_Dark() {
 )
 @Composable
 fun SettingsScreenPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         SettingsScreenContent(
             themeMode = "light",
             customStorageUri = null,

@@ -23,7 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
 @Composable
 fun WikiLinkAutoCompleteOverlay(
@@ -88,7 +88,7 @@ fun WikiLinkAutoCompleteOverlay(
 )
 @Composable
 fun WikiLinkAutoCompleteOverlayPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         WikiLinkAutoCompleteOverlay(
             suggestions = listOf(
                 "Project Roadmap",
@@ -108,9 +108,39 @@ fun WikiLinkAutoCompleteOverlayPreview_Dark() {
 )
 @Composable
 fun WikiLinkAutoCompleteOverlayPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         WikiLinkAutoCompleteOverlay(
             suggestions = listOf("Project Roadmap", "Meeting Notes"),
+            onSuggestionSelected = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. WikiLink Autocomplete Single Suggestion - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun WikiLinkAutoCompleteOverlayPreview_Single_Dark() {
+    AppTheme(darkTheme = true) {
+        WikiLinkAutoCompleteOverlay(
+            suggestions = listOf("Project Roadmap"),
+            onSuggestionSelected = {}
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. WikiLink Autocomplete Single Suggestion - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun WikiLinkAutoCompleteOverlayPreview_Single_Light() {
+    AppTheme(darkTheme = false) {
+        WikiLinkAutoCompleteOverlay(
+            suggestions = listOf("Project Roadmap"),
             onSuggestionSelected = {}
         )
     }

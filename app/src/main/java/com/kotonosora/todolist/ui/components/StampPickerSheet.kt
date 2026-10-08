@@ -37,7 +37,17 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kotonosora.todolist.domain.model.ActionStamp
 import com.kotonosora.todolist.domain.model.EmotionStamp
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
+
+/**
+ * Readable content color for a selected stamp chip.
+ * Light stamp colors (e.g. yellow) get dark text instead of white.
+ */
+private fun onStampColor(stampColor: Color): Color {
+    val luminance =
+        0.2126f * stampColor.red + 0.7152f * stampColor.green + 0.0722f * stampColor.blue
+    return if (luminance > 0.5f) Color(0xFF1B1C1A) else Color.White
+}
 
 /**
  * Stamp Picker Sheet component for selecting 1 Emotion Vector Stamp and multiple Action Vector Stamps.
@@ -107,14 +117,14 @@ fun StampPickerSheet(
                             Icon(
                                 imageVector = emotion.icon,
                                 contentDescription = emotion.label,
-                                tint = if (isSelected) Color.White else emotion.color,
+                                tint = if (isSelected) onStampColor(emotion.color) else emotion.color,
                                 modifier = Modifier.size(16.dp)
                             )
                         },
                         shape = chipShape,
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = emotion.color,
-                            selectedLabelColor = Color.White,
+                            selectedLabelColor = onStampColor(emotion.color),
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     )
@@ -163,14 +173,14 @@ fun StampPickerSheet(
                             Icon(
                                 imageVector = action.icon,
                                 contentDescription = action.label,
-                                tint = if (isSelected) Color.White else action.color,
+                                tint = if (isSelected) onStampColor(action.color) else action.color,
                                 modifier = Modifier.size(16.dp)
                             )
                         },
                         shape = chipShape,
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = action.color,
-                            selectedLabelColor = Color.White,
+                            selectedLabelColor = onStampColor(action.color),
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                     )
@@ -199,7 +209,7 @@ fun StampPickerSheetPreview_Dark() {
         )
     }
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         Box(modifier = Modifier.padding(16.dp)) {
             StampPickerSheet(
                 selectedEmotion = selectedEmotion,
@@ -227,7 +237,7 @@ fun StampPickerSheetPreview_Light() {
     var selectedEmotion by remember { mutableStateOf<EmotionStamp?>(EmotionStamp.CALM) }
     var selectedActions by remember { mutableStateOf(listOf(ActionStamp.READING)) }
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         Box(modifier = Modifier.padding(16.dp)) {
             StampPickerSheet(
                 selectedEmotion = selectedEmotion,

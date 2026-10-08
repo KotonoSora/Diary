@@ -1,8 +1,8 @@
 package com.kotonosora.todolist.domain.model
 
+import com.kotonosora.todolist.common.AppConstants
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 enum class NoteType {
     FLEETING,    // Ephemeral scratchpad thoughts / voice notes
@@ -44,7 +44,7 @@ val NoteType.description: String
 
 val NoteType.defaultTitlePrefix: String
     get() {
-        val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+        val today = SimpleDateFormat("yyyy-MM-dd", AppConstants.APP_LOCALE).format(Date())
         return when (this) {
             NoteType.DIARY -> "$today Diary"
             NoteType.DAILY -> "$today Daily Note"
@@ -70,7 +70,7 @@ object ZettelUidGenerator {
      * Generates a 12-digit Timestamp UID in format YYYYMMDDHHMM.
      */
     fun generateUid(timestamp: Long = System.currentTimeMillis()): String {
-        val sdf = SimpleDateFormat("yyyyMMddHHmm", Locale.US)
+        val sdf = SimpleDateFormat("yyyyMMddHHmm", AppConstants.APP_LOCALE)
         return sdf.format(Date(timestamp))
     }
 }

@@ -12,14 +12,14 @@ data class TextStats(
 class CalculateTextStatsUseCase {
     operator fun invoke(content: String): TextStats {
         return try {
-            val statsArray = MdNativeHelper.calculateTextStatsNative(content)
+            val statsArray = MdNativeHelper.calculateTextStats(content)
             TextStats(
                 wordCount = statsArray.getOrElse(0) { 0 },
                 charCount = statsArray.getOrElse(1) { 0 },
                 lineCount = statsArray.getOrElse(2) { 0 },
                 readingTimeMinutes = statsArray.getOrElse(3) { 1 }
             )
-        } catch (_: Throwable) {
+        } catch (_: Exception) {
             val words = if (content.isBlank()) 0 else content.trim().split("\\s+".toRegex()).size
             val chars = content.length
             val lines = if (content.isBlank()) 0 else content.lines().size

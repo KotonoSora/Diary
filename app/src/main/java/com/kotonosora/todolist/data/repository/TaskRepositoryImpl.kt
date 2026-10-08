@@ -33,19 +33,14 @@ class TaskRepositoryImpl(
     }
 
     override suspend fun insertTask(task: TaskItem) = withContext(Dispatchers.IO) {
-        // Save to file first
-        appFileManager.saveTaskToFile(task)
-        // Save to Room DB
         taskDao.insertTask(task.toEntity())
     }
 
     override suspend fun updateTask(task: TaskItem) = withContext(Dispatchers.IO) {
-        appFileManager.saveTaskToFile(task)
         taskDao.updateTask(task.toEntity())
     }
 
     override suspend fun deleteTask(task: TaskItem) = withContext(Dispatchers.IO) {
-        appFileManager.deleteTaskFile(task.id)
         taskDao.deleteTask(task.toEntity())
     }
 }

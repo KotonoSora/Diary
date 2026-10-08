@@ -20,16 +20,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -41,10 +38,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -57,12 +58,12 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.navigation.NavRoute
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 @Composable
 fun TaskListScreen(
@@ -73,6 +74,7 @@ fun TaskListScreen(
     val context = LocalContext.current
     val tasks by viewModel.tasks.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
 
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -92,6 +94,8 @@ fun TaskListScreen(
     TaskListContent(
         tasks = tasks,
         searchQuery = searchQuery,
+        isLoading = isLoading,
+        onRefresh = { viewModel.syncTasks() },
         onSearchQueryChange = { viewModel.setSearchQuery(it) },
         onToggle = { viewModel.toggleTask(it) },
         onDelete = { viewModel.deleteTask(it) },
@@ -102,10 +106,13 @@ fun TaskListScreen(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListContent(
     tasks: List<TaskItem>,
     searchQuery: String,
+    isLoading: Boolean = false,
+    onRefresh: () -> Unit = {},
     onSearchQueryChange: (String) -> Unit = {},
     onToggle: (TaskItem) -> Unit = {},
     onDelete: (TaskItem) -> Unit = {},
@@ -155,23 +162,6 @@ fun TaskListContent(
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
-                    IconButton(onClick = { showOptionsMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Options")
-                    }
-
-                    DropdownMenu(
-                        expanded = showOptionsMenu,
-                        onDismissRequest = { showOptionsMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Configure Auto-Save Folder") },
-                            leadingIcon = { Icon(Icons.Default.Folder, contentDescription = null) },
-                            onClick = {
-                                showOptionsMenu = false
-                                onConfigureFolder()
-                            }
-                        )
-                    }
                 }
             }
 
@@ -190,29 +180,70 @@ fun TaskListContent(
                 shape = RoundedCornerShape(24.dp)
             )
 
-            if (tasks.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        if (searchQuery.isBlank()) "No tasks yet.\nTap + to add one."
-                        else "No results for \"$searchQuery\".",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
+            // Status Filter Chips
+            var selectedStatusFilter by remember { mutableIntStateOf(0) } // 0: All, 1: Pending, 2: Completed
+            val filteredTasks = remember(tasks, selectedStatusFilter) {
+                when (selectedStatusFilter) {
+                    1 -> tasks.filter { !it.isCompleted }
+                    2 -> tasks.filter { it.isCompleted }
+                    else -> tasks
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(vertical = 8.dp)
-                ) {
-                    items(tasks, key = { it.id }) { task ->
-                        TaskListItem(
-                            task = task,
-                            onToggle = { onToggle(task) },
-                            onDelete = { onDelete(task) },
-                            onClick = { onClickTask(task.id) }
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = selectedStatusFilter == 0,
+                    onClick = { selectedStatusFilter = 0 },
+                    label = { Text("All (${tasks.size})") }
+                )
+                FilterChip(
+                    selected = selectedStatusFilter == 1,
+                    onClick = { selectedStatusFilter = 1 },
+                    label = { Text("Pending (${tasks.count { !it.isCompleted }})") }
+                )
+                FilterChip(
+                    selected = selectedStatusFilter == 2,
+                    onClick = { selectedStatusFilter = 2 },
+                    label = { Text("Completed (${tasks.count { it.isCompleted }})") }
+                )
+            }
+
+            val pullToRefreshState = rememberPullToRefreshState()
+            PullToRefreshBox(
+                isRefreshing = isLoading,
+                onRefresh = onRefresh,
+                state = pullToRefreshState,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (filteredTasks.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            if (searchQuery.isBlank()) "No tasks here."
+                            else "No results for \"$searchQuery\".",
+                            style = MaterialTheme.typography.bodyLarge
                         )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 4.dp, bottom = 80.dp)
+                    ) {
+                        items(filteredTasks, key = { it.id }) { task ->
+                            TaskListItem(
+                                task = task,
+                                onToggle = { onToggle(task) },
+                                onDelete = { onDelete(task) },
+                                onClick = { onClickTask(task.id) }
+                            )
+                        }
                     }
                 }
             }
@@ -228,16 +259,12 @@ fun TaskListItem(
     onDelete: () -> Unit,
     onClick: () -> Unit
 ) {
-    val formatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val formatter = remember { SimpleDateFormat("MMM d, yyyy", AppConstants.APP_LOCALE) }
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
-            } else false
-        }
-    )
+    val dismissState = rememberSwipeToDismissBoxState()
+    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+        LaunchedEffect(task.id) { onDelete() }
+    }
 
     SwipeToDismissBox(
         state = dismissState,
@@ -300,6 +327,16 @@ fun TaskListItem(
                         )
                     }
                 }
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.padding(start = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Task",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    )
+                }
             }
         }
     }
@@ -333,7 +370,7 @@ fun TaskListScreenPreview_Populated_Dark() {
         )
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         TaskListContent(
             tasks = sampleTasks,
             searchQuery = ""
@@ -359,10 +396,94 @@ fun TaskListScreenPreview_Populated_Light() {
         )
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         TaskListContent(
             tasks = sampleTasks,
             searchQuery = ""
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Task List - Empty Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun TaskListScreenPreview_Empty_Dark() {
+    AppTheme(darkTheme = true) {
+        TaskListContent(
+            tasks = emptyList(),
+            searchQuery = ""
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Task List - Empty Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun TaskListScreenPreview_Empty_Light() {
+    AppTheme(darkTheme = false) {
+        TaskListContent(
+            tasks = emptyList(),
+            searchQuery = ""
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Task List - Loading Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun TaskListScreenPreview_Loading_Dark() {
+    val sampleTasks = listOf(
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        )
+    )
+
+    AppTheme(darkTheme = true) {
+        TaskListContent(
+            tasks = sampleTasks,
+            searchQuery = "",
+            isLoading = true
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Task List - Loading Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun TaskListScreenPreview_Loading_Light() {
+    val sampleTasks = listOf(
+        TaskItem(
+            "1",
+            "Buy groceries",
+            "Milk, Eggs, Bread",
+            System.currentTimeMillis() + 86400000L,
+            null,
+            false
+        )
+    )
+
+    AppTheme(darkTheme = false) {
+        TaskListContent(
+            tasks = sampleTasks,
+            searchQuery = "",
+            isLoading = true
         )
     }
 }

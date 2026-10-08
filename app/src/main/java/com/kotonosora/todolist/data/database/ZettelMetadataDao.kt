@@ -11,6 +11,9 @@ interface ZettelMetadataDao {
     @Query("SELECT * FROM zettel_metadata WHERE noteId = :noteId")
     suspend fun getMetadataForNote(noteId: String): ZettelMetadataEntity?
 
+    @Query("SELECT * FROM zettel_metadata WHERE noteId IN (:noteIds)")
+    suspend fun getMetadataForNotes(noteIds: List<String>): List<ZettelMetadataEntity>
+
     @Query("SELECT * FROM zettel_metadata WHERE uid = :uid LIMIT 1")
     suspend fun getMetadataByUid(uid: String): ZettelMetadataEntity?
 

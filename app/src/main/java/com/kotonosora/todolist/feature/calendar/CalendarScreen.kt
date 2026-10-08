@@ -62,9 +62,9 @@ import com.kizitonwose.calendar.compose.weekcalendar.rememberWeekCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.WeekDay
-import com.kizitonwose.calendar.core.firstDayOfWeekFromLocale
+import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.domain.model.TaskItem
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
@@ -74,7 +74,6 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.TextStyle
 import java.util.Date
-import java.util.Locale
 
 enum class CalendarViewMode {
     MONTH,
@@ -84,13 +83,15 @@ enum class CalendarViewMode {
 @Composable
 fun CalendarScreen(
     viewModel: CalendarViewModel = viewModel(),
-    onOpenDrawer: (() -> Unit)? = null
+    onOpenDrawer: (() -> Unit)? = null,
+    onNoteClick: ((String) -> Unit)? = null
 ) {
     val year by viewModel.currentYear.collectAsState()
     val month by viewModel.currentMonth.collectAsState()
     val selectedDateMillis by viewModel.selectedDateMillis.collectAsState()
     val allTodos by viewModel.allTodos.collectAsState()
     val todosForDate by viewModel.todosForSelectedDate.collectAsState()
+    val notesForDate by viewModel.notesForSelectedDate.collectAsState()
 
     CalendarScreenContent(
         year = year,
@@ -98,11 +99,13 @@ fun CalendarScreen(
         selectedDateMillis = selectedDateMillis,
         allTodos = allTodos,
         todosForDate = todosForDate,
+        notesForDate = notesForDate,
         onSelectDate = { viewModel.selectDate(it) },
         onSelectToday = { viewModel.selectToday() },
         onPreviousMonth = { viewModel.previousMonth() },
         onNextMonth = { viewModel.nextMonth() },
         onToggleTodo = { viewModel.toggleTodoStatus(it) },
+        onNoteClick = onNoteClick,
         onOpenDrawer = onOpenDrawer
     )
 }
@@ -114,17 +117,21 @@ fun CalendarScreenContent(
     selectedDateMillis: Long,
     allTodos: List<TaskItem>,
     todosForDate: List<TaskItem>,
+    notesForDate: List<com.kotonosora.todolist.domain.model.NoteItem> = emptyList(),
     onSelectDate: (Long) -> Unit = {},
     onSelectToday: () -> Unit = {},
     onPreviousMonth: () -> Unit = {},
     onNextMonth: () -> Unit = {},
     onToggleTodo: (TaskItem) -> Unit = {},
+    onNoteClick: ((String) -> Unit)? = null,
     onOpenDrawer: (() -> Unit)? = null
 ) {
     var viewMode by remember { mutableStateOf(CalendarViewMode.MONTH) }
     val scope = rememberCoroutineScope()
 
-    val firstDayOfWeek = remember { firstDayOfWeekFromLocale() }
+    // English (US) week convention: Sunday first. firstDayOfWeekFromLocale()
+    // follows the device locale and would shift the grid on non-English phones.
+    val firstDayOfWeek = remember { DayOfWeek.SUNDAY }
     val selectedLocalDate = remember(selectedDateMillis) {
         Instant.ofEpochMilli(selectedDateMillis).atZone(ZoneId.systemDefault()).toLocalDate()
     }
@@ -165,7 +172,7 @@ fun CalendarScreenContent(
     }
 
     val selectedDateText = remember(selectedDateMillis) {
-        val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.getDefault())
+        val sdf = SimpleDateFormat("EEEE, MMMM d, yyyy", AppConstants.APP_LOCALE)
         sdf.format(Date(selectedDateMillis))
     }
 
@@ -202,7 +209,7 @@ fun CalendarScreenContent(
                         text = "${
                             currentMonth.month.getDisplayName(
                                 TextStyle.FULL,
-                                Locale.getDefault()
+                                AppConstants.APP_LOCALE
                             )
                         } $year",
                         style = MaterialTheme.typography.titleMedium,
@@ -313,7 +320,12 @@ fun CalendarScreenContent(
 
                 SuggestionChip(
                     onClick = {},
-                    label = { Text("${todosForDate.size} Tasks") },
+                    label = {
+                        Text(
+                            if (notesForDate.isEmpty()) "${todosForDate.size} Tasks"
+                            else "${todosForDate.size} Tasks • ${notesForDate.size} Notes"
+                        )
+                    },
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                     )
@@ -321,7 +333,7 @@ fun CalendarScreenContent(
             }
 
             // ── Agenda List ──
-            if (todosForDate.isEmpty()) {
+            if (todosForDate.isEmpty() && notesForDate.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -339,7 +351,7 @@ fun CalendarScreenContent(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(todosForDate, key = { it.id }) { todo ->
+                    items(todosForDate, key = { "task-${it.id}" }) { todo ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -380,6 +392,39 @@ fun CalendarScreenContent(
                             }
                         }
                     }
+                    items(notesForDate, key = { "note-${it.id}" }) { note ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .clickable(enabled = onNoteClick != null) {
+                                    onNoteClick?.invoke(note.id)
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(
+                                    alpha = 0.4f
+                                )
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = note.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = note.content.take(120).replace("\n", " "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -402,7 +447,7 @@ private fun DaysOfWeekHeader(firstDayOfWeek: DayOfWeek) {
         for (dayOfWeek in daysOfWeek) {
             Text(
                 modifier = Modifier.weight(1f),
-                text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                text = dayOfWeek.getDisplayName(TextStyle.SHORT, AppConstants.APP_LOCALE),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -538,7 +583,7 @@ fun CalendarScreenPreview_Dark() {
         TaskItem("2", "Review PR #42", "Check unit test coverage", sampleDate, null, true)
     )
 
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         CalendarScreenContent(
             year = 2026,
             month = 2,
@@ -568,13 +613,131 @@ fun CalendarScreenPreview_Light() {
         )
     )
 
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         CalendarScreenContent(
             year = 2026,
             month = 2,
             selectedDateMillis = sampleDate,
             allTodos = sampleTodos,
             todosForDate = sampleTodos
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "3. Calendar Screen - Empty Day Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun CalendarScreenPreview_EmptyDay_Dark() {
+    AppTheme(darkTheme = true) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = System.currentTimeMillis(),
+            allTodos = emptyList(),
+            todosForDate = emptyList(),
+            notesForDate = emptyList()
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "4. Calendar Screen - Empty Day Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun CalendarScreenPreview_EmptyDay_Light() {
+    AppTheme(darkTheme = false) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = System.currentTimeMillis(),
+            allTodos = emptyList(),
+            todosForDate = emptyList(),
+            notesForDate = emptyList()
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "5. Calendar Screen - Tasks and Note Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun CalendarScreenPreview_TasksAndNote_Dark() {
+    val sampleDate = System.currentTimeMillis()
+    val sampleTodos = listOf(
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        ),
+        TaskItem("2", "Review PR #42", "Check unit test coverage", sampleDate, null, true)
+    )
+    val sampleNotes = listOf(
+        com.kotonosora.todolist.domain.model.NoteItem(
+            "Daily/2026-03-15.md",
+            "Daily Note",
+            "Daily",
+            "Shipped the calendar agenda and reviewed open tasks."
+        )
+    )
+
+    AppTheme(darkTheme = true) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = sampleDate,
+            allTodos = sampleTodos,
+            todosForDate = sampleTodos,
+            notesForDate = sampleNotes
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "6. Calendar Screen - Tasks and Note Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun CalendarScreenPreview_TasksAndNote_Light() {
+    val sampleDate = System.currentTimeMillis()
+    val sampleTodos = listOf(
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        ),
+        TaskItem("2", "Review PR #42", "Check unit test coverage", sampleDate, null, true)
+    )
+    val sampleNotes = listOf(
+        com.kotonosora.todolist.domain.model.NoteItem(
+            "Daily/2026-03-15.md",
+            "Daily Note",
+            "Daily",
+            "Shipped the calendar agenda and reviewed open tasks."
+        )
+    )
+
+    AppTheme(darkTheme = false) {
+        CalendarScreenContent(
+            year = 2026,
+            month = 2,
+            selectedDateMillis = sampleDate,
+            allTodos = sampleTodos,
+            todosForDate = sampleTodos,
+            notesForDate = sampleNotes
         )
     }
 }

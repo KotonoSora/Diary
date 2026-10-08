@@ -41,11 +41,8 @@ import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.feature.editor.EditorContent
 import com.kotonosora.todolist.feature.editor.EditorTabItem
 import com.kotonosora.todolist.feature.editor.EditorUiState
-import com.kotonosora.todolist.ui.theme.TodoListTheme
+import com.kotonosora.todolist.ui.theme.AppTheme
 
-/**
- * Interactive Flow Preview for Case 1: Flow starting from Home Page
- */
 @Composable
 fun FlashcardFlowFromHomeContent() {
     var currentStep by remember { mutableIntStateOf(0) }
@@ -65,7 +62,6 @@ fun FlashcardFlowFromHomeContent() {
     )
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Step Navigation Bar
         Surface(
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.fillMaxWidth()
@@ -113,7 +109,6 @@ fun FlashcardFlowFromHomeContent() {
         Box(modifier = Modifier.weight(1f)) {
             when (currentStep) {
                 0 -> {
-                    // Step 1: Home Page / Deck List Entrance
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
@@ -180,7 +175,6 @@ fun FlashcardFlowFromHomeContent() {
                 }
 
                 1 -> {
-                    // Step 2: Deck Selection Screen
                     FlashcardDeckSelectionScreen(
                         onOpenDrawer = {},
                         onDeckSelected = { currentStep = 2 }
@@ -188,7 +182,6 @@ fun FlashcardFlowFromHomeContent() {
                 }
 
                 2 -> {
-                    // Step 3: Active Flashcard Session
                     FlashcardScreenContent(
                         uiState = FlashcardUiState(
                             deckTitle = "Basic Vocabulary",
@@ -203,7 +196,6 @@ fun FlashcardFlowFromHomeContent() {
                 }
 
                 3 -> {
-                    // Step 4: Summary Screen
                     FlashcardScreenContent(
                         uiState = FlashcardUiState(
                             deckTitle = "Basic Vocabulary",
@@ -221,9 +213,6 @@ fun FlashcardFlowFromHomeContent() {
     }
 }
 
-/**
- * Interactive Flow Preview for Case 2: Flow starting from Editor file type support convert flashcard
- */
 @Composable
 fun FlashcardFlowFromEditorContent() {
     var currentStep by remember { mutableIntStateOf(0) }
@@ -246,7 +235,6 @@ fun FlashcardFlowFromEditorContent() {
     val sampleCards = MarkdownParser.parseMarkdownFlashcards(editorNote.content)
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // Step Navigation Bar
         Surface(
             color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
             modifier = Modifier.fillMaxWidth()
@@ -290,7 +278,6 @@ fun FlashcardFlowFromEditorContent() {
         Box(modifier = Modifier.weight(1f)) {
             when (currentStep) {
                 0 -> {
-                    // Step 1: Editor Screen with Convert Banner
                     EditorContent(
                         uiState = EditorUiState(
                             note = editorNote,
@@ -308,7 +295,6 @@ fun FlashcardFlowFromEditorContent() {
                 }
 
                 1 -> {
-                    // Step 2: Converted Flashcards Session Screen
                     FlashcardScreenContent(
                         uiState = FlashcardUiState(
                             deckTitle = "Japanese Vocabulary",
@@ -323,7 +309,6 @@ fun FlashcardFlowFromEditorContent() {
                 }
 
                 2 -> {
-                    // Step 3: Summary
                     FlashcardScreenContent(
                         uiState = FlashcardUiState(
                             deckTitle = "Japanese Vocabulary",
@@ -350,7 +335,7 @@ fun FlashcardFlowFromEditorContent() {
 )
 @Composable
 fun FlashcardHomeFlowPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FlashcardFlowFromHomeContent()
     }
 }
@@ -362,7 +347,7 @@ fun FlashcardHomeFlowPreview_Dark() {
 )
 @Composable
 fun FlashcardHomeFlowPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FlashcardFlowFromHomeContent()
     }
 }
@@ -374,7 +359,7 @@ fun FlashcardHomeFlowPreview_Light() {
 )
 @Composable
 fun FlashcardEditorFlowPreview_Dark() {
-    TodoListTheme(darkTheme = true) {
+    AppTheme(darkTheme = true) {
         FlashcardFlowFromEditorContent()
     }
 }
@@ -386,7 +371,7 @@ fun FlashcardEditorFlowPreview_Dark() {
 )
 @Composable
 fun FlashcardEditorFlowPreview_Light() {
-    TodoListTheme(darkTheme = false) {
+    AppTheme(darkTheme = false) {
         FlashcardFlowFromEditorContent()
     }
 }

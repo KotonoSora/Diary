@@ -1,5 +1,6 @@
 package com.kotonosora.todolist.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -29,9 +30,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kotonosora.todolist.ui.theme.AppTheme
 import com.mohamedrejeb.richeditor.model.RichTextState
+import com.mohamedrejeb.richeditor.model.rememberRichTextState
 
 @Composable
 fun TextFormatToolbar(
@@ -40,8 +44,9 @@ fun TextFormatToolbar(
 ) {
     Surface(
         modifier = modifier,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        shape = RoundedCornerShape(8.dp)
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(8.dp),
+        tonalElevation = 2.dp
     ) {
         Row(
             modifier = Modifier
@@ -164,5 +169,29 @@ private fun FormatIconButton(
             contentDescription = contentDescription,
             modifier = Modifier.size(20.dp)
         )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "1. Text Format Toolbar - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun TextFormatToolbarPreview_Dark() {
+    AppTheme(darkTheme = true) {
+        TextFormatToolbar(state = rememberRichTextState())
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "2. Text Format Toolbar - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun TextFormatToolbarPreview_Light() {
+    AppTheme(darkTheme = false) {
+        TextFormatToolbar(state = rememberRichTextState())
     }
 }

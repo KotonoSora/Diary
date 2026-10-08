@@ -2,31 +2,16 @@ package com.kotonosora.todolist.feature.flashcard
 
 object MarkdownParser {
 
-    /**
-     * Parses Markdown text into structured [Flashcard] items.
-     * Supports multiple common format patterns:
-     * 1. Bullet lists with delimiters:
-     *    - Word: Definition
-     *    - Word - Definition
-     *    - Word :: Definition
-     *    - Word /phonetic/ - Definition
-     * 2. Markdown tables:
-     *    | Term | Definition | Example |
-     * 3. Simple list items:
-     *    - Just a word
-     */
     fun parseMarkdownFlashcards(text: String): List<Flashcard> {
         if (text.isBlank()) return emptyList()
 
         val cards = mutableListOf<Flashcard>()
 
-        // 1. Try parsing Markdown Table first (| Term | Definition | ... |)
         val tableCards = parseTableFormat(text)
         if (tableCards.isNotEmpty()) {
             return tableCards
         }
 
-        // 2. Parse List items with delimiter
         val lines = text.lines()
         val listRegex = Regex("""^(?:-|\*|\d+\.)\s+(.+)$""")
 
@@ -42,7 +27,6 @@ object MarkdownParser {
             }
         }
 
-        // 3. Fallback: if no list format found, parse non-empty lines
         if (cards.isEmpty()) {
             for (line in lines) {
                 val trimmed = line.trim()
@@ -59,11 +43,9 @@ object MarkdownParser {
     }
 
     private fun parseLineToFlashcard(rawContent: String): Flashcard {
-        // Remove bold / italic markup from word if present: **word** -> word
         val content = rawContent.replace(Regex("""\*\*([^*]+)\*\*"""), "$1")
             .replace(Regex("""\*([^*]+)\*"""), "$1")
 
-        // Look for common delimiters: " :: ", " : ", " - ", " — ", " = "
         val delimiters = listOf(" :: ", " : ", " - ", " — ", " = ", ": ")
         for (delim in delimiters) {
             if (content.contains(delim)) {
@@ -71,7 +53,6 @@ object MarkdownParser {
                 var wordPart = parts[0].trim()
                 val defPart = parts.getOrNull(1)?.trim() ?: ""
 
-                // Extract phonetic if formatted like "word /phonetic/" or "word (phonetic)"
                 var phonetic = ""
                 val phoneticSlashMatch = Regex("""^(.+?)\s*/([^/]+)/$""").find(wordPart)
                 if (phoneticSlashMatch != null) {
@@ -87,7 +68,6 @@ object MarkdownParser {
                     }
                 }
 
-                // Check if definition contains example: "Definition (e.g. Example)"
                 var definition = defPart
                 var example = ""
                 val exampleMatch = Regex(
@@ -108,7 +88,6 @@ object MarkdownParser {
             }
         }
 
-        // If no delimiter, the line itself is the word
         return Flashcard(word = content)
     }
 
@@ -118,7 +97,6 @@ object MarkdownParser {
         if (tableLines.size < 2) return emptyList()
 
         val cards = mutableListOf<Flashcard>()
-        // Skip header and separator line (| --- | --- |)
         for (line in tableLines) {
             if (line.contains("---")) continue
             val cells = line.split("|").map { it.trim() }.filter { it.isNotEmpty() }
