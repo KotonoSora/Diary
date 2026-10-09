@@ -20,25 +20,31 @@ import com.kotonosora.todolist.data.file.FileSyncManager
 import com.kotonosora.todolist.data.file.MediaFileManager
 import com.kotonosora.todolist.data.file.VaultManager
 import com.kotonosora.todolist.data.media.AudioCaptureServiceImpl
+import com.kotonosora.todolist.data.repository.DayMarkerRepositoryImpl
 import com.kotonosora.todolist.data.repository.FlashcardRepositoryImpl
 import com.kotonosora.todolist.data.repository.MediaRepositoryImpl
+import com.kotonosora.todolist.data.repository.MoodRepositoryImpl
 import com.kotonosora.todolist.data.repository.PdfReaderRepositoryImpl
 import com.kotonosora.todolist.data.repository.TaskRepositoryImpl
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.data.repository.VaultRepositoryImpl
 import com.kotonosora.todolist.domain.repository.FlashcardRepository
+import com.kotonosora.todolist.domain.repository.DayMarkerRepository
 import com.kotonosora.todolist.domain.repository.MediaRepository
+import com.kotonosora.todolist.domain.repository.MoodRepository
 import com.kotonosora.todolist.domain.repository.PdfReaderRepository
 import com.kotonosora.todolist.domain.repository.PreferencesRepository
 import com.kotonosora.todolist.domain.repository.TaskRepository
 import com.kotonosora.todolist.domain.repository.VaultRepository
 import com.kotonosora.todolist.domain.service.AudioCaptureService
 import com.kotonosora.todolist.domain.usecase.AddTaskUseCase
+import com.kotonosora.todolist.domain.usecase.DayMarkerUseCases
 import com.kotonosora.todolist.domain.usecase.DeleteTaskUseCase
 import com.kotonosora.todolist.domain.usecase.FlashcardUseCases
 import com.kotonosora.todolist.domain.usecase.GetTasksByDateUseCase
 import com.kotonosora.todolist.domain.usecase.GetTasksUseCase
 import com.kotonosora.todolist.domain.usecase.MediaUseCases
+import com.kotonosora.todolist.domain.usecase.MoodUseCases
 import com.kotonosora.todolist.domain.usecase.NotificationUseCases
 import com.kotonosora.todolist.domain.usecase.PdfUseCases
 import com.kotonosora.todolist.domain.usecase.PreferencesUseCases
@@ -67,6 +73,14 @@ class AppContainer(private val applicationContext: Context) {
 
     val mediaRepository: MediaRepository by lazy {
         MediaRepositoryImpl(applicationContext, appDatabase.mediaDao())
+    }
+
+    val moodRepository: MoodRepository by lazy {
+        MoodRepositoryImpl(appDatabase.moodDao(), dayMarkerRepository)
+    }
+
+    val dayMarkerRepository: DayMarkerRepository by lazy {
+        DayMarkerRepositoryImpl(appDatabase.dayMarkerDao())
     }
 
     val userPreferencesRepository: PreferencesRepository by lazy {
@@ -107,15 +121,23 @@ class AppContainer(private val applicationContext: Context) {
     }
 
     val fileSyncManager: FileSyncManager by lazy {
-        FileSyncManager(applicationContext, taskDao, userPreferencesRepository)
+        FileSyncManager(applicationContext, taskDao, userPreferencesRepository, dayMarkerRepository)
     }
 
     val vaultRepository: VaultRepository by lazy {
-        VaultRepositoryImpl(vaultManager, noteDao, linkDao, tagDao, zettelMetadataDao, noteFtsDao)
+        VaultRepositoryImpl(
+            vaultManager,
+            noteDao,
+            linkDao,
+            tagDao,
+            zettelMetadataDao,
+            noteFtsDao,
+            dayMarkerRepository
+        )
     }
 
     val taskRepository: TaskRepository by lazy {
-        TaskRepositoryImpl(taskDao, appFileManager)
+        TaskRepositoryImpl(taskDao, appFileManager, dayMarkerRepository)
     }
 
     val taskUseCases: TaskUseCases by lazy {
@@ -139,6 +161,14 @@ class AppContainer(private val applicationContext: Context) {
 
     val mediaUseCases: MediaUseCases by lazy {
         MediaUseCases.from(mediaRepository)
+    }
+
+    val moodUseCases: MoodUseCases by lazy {
+        MoodUseCases.from(moodRepository)
+    }
+
+    val dayMarkerUseCases: DayMarkerUseCases by lazy {
+        DayMarkerUseCases.from(dayMarkerRepository)
     }
 
     val flashcardUseCases: FlashcardUseCases by lazy {

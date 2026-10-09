@@ -26,8 +26,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -68,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -85,6 +88,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 import androidx.compose.ui.tooling.preview.Preview as ComposePreview
 
 enum class CaptureMode { PHOTO, VIDEO }
+
+/**
+ * Chrome background for the camera sheet: dark gray instead of pure black so
+ * the white overlay controls keep contrast in previews and while the camera
+ * feed is still starting. (The live feed covers this once bound.)
+ */
+private val CameraChromeBackground = Color(0xFF242424)
 
 /**
  * CameraX Photo + Video Capture View featuring:
@@ -419,7 +429,7 @@ fun CameraCaptureView(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(CameraChromeBackground)
             .pointerInput(Unit) {
                 detectTapGestures { tapOffset ->
                     focusOffset = tapOffset
@@ -520,43 +530,10 @@ fun CameraCaptureView(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (!isRecording) {
-                @OptIn(ExperimentalMaterial3Api::class)
-                SingleChoiceSegmentedButtonRow {
-                    SegmentedButton(
-                        selected = captureMode == CaptureMode.PHOTO,
-                        onClick = { captureMode = CaptureMode.PHOTO },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2),
-                        icon = {
-                            SegmentedButtonDefaults.Icon(
-                                active = captureMode == CaptureMode.PHOTO
-                            ) {
-                                Icon(
-                                    Icons.Default.Camera,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        },
-                        label = { Text("Photo") }
-                    )
-                    SegmentedButton(
-                        selected = captureMode == CaptureMode.VIDEO,
-                        onClick = { captureMode = CaptureMode.VIDEO },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2),
-                        icon = {
-                            SegmentedButtonDefaults.Icon(
-                                active = captureMode == CaptureMode.VIDEO
-                            ) {
-                                Icon(
-                                    Icons.Default.Videocam,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        },
-                        label = { Text("Video") }
-                    )
-                }
+                CaptureModeToggle(
+                    captureMode = captureMode,
+                    onModeChange = { captureMode = it }
+                )
                 Text(
                     text = if (captureMode == CaptureMode.PHOTO) {
                         "Tap preview to focus • Saves to photos/"
@@ -666,18 +643,97 @@ private fun formatElapsed(seconds: Int): String {
 }
 
 /**
+ * Photo/Video mode toggle tuned for readability over the black camera
+ * preview: the selected segment is solid white with black content, and
+ * unselected segments are translucent black with white text and border —
+ * the default M3 surface tones wash out on a dark viewfinder.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CaptureModeToggle(
+    captureMode: CaptureMode,
+    onModeChange: (CaptureMode) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Icons inherit the segment content color via LocalContentColor, so both
+    // icon and label flip together with the selected state — no manual tints.
+    val overlayColors = SegmentedButtonDefaults.colors(
+        activeContainerColor = Color.White,
+        activeContentColor = Color.Black,
+        activeBorderColor = Color.White,
+        inactiveContainerColor = Color.Black.copy(alpha = 0.45f),
+        inactiveContentColor = Color.White,
+        inactiveBorderColor = Color.White.copy(alpha = 0.6f)
+    )
+    SingleChoiceSegmentedButtonRow(modifier = modifier) {
+        SegmentedButton(
+            selected = captureMode == CaptureMode.PHOTO,
+            onClick = { onModeChange(CaptureMode.PHOTO) },
+            shape = SegmentedButtonDefaults.itemShape(0, 2),
+            colors = overlayColors,
+            icon = {
+                SegmentedButtonDefaults.Icon(
+                    active = captureMode == CaptureMode.PHOTO
+                ) {
+                    Icon(
+                        Icons.Default.Camera,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            },
+            label = {
+                Text(
+                    "Photo",
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
+        )
+        SegmentedButton(
+            selected = captureMode == CaptureMode.VIDEO,
+            onClick = { onModeChange(CaptureMode.VIDEO) },
+            shape = SegmentedButtonDefaults.itemShape(1, 2),
+            colors = overlayColors,
+            icon = {
+                SegmentedButtonDefaults.Icon(
+                    active = captureMode == CaptureMode.VIDEO
+                ) {
+                    Icon(
+                        Icons.Default.Videocam,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            },
+            label = {
+                Text(
+                    "Video",
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+            }
+        )
+    }
+}
+
+/**
  * Static camera chrome extracted for @Preview (CameraX needs hardware,
  * so previews render this placeholder instead of binding a real preview).
+ * [captureMode] and [isRecording] mirror the real view's states so every
+ * use case (photo / video / recording) is previewable.
  */
 @Composable
 fun CameraCaptureContent(
     onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    captureMode: CaptureMode = CaptureMode.PHOTO,
+    isRecording: Boolean = false
 ) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(CameraChromeBackground)
     ) {
         Row(
             modifier = Modifier
@@ -690,8 +746,23 @@ fun CameraCaptureContent(
             IconButton(onClick = onDismiss) {
                 Icon(Icons.Default.Close, contentDescription = "Close Camera", tint = Color.White)
             }
-            IconButton(onClick = {}) {
-                Icon(Icons.Default.FlashOff, contentDescription = "Flash Off", tint = Color.White)
+            if (isRecording) {
+                Text(
+                    text = "● 00:07",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .background(Color.Red.copy(alpha = 0.7f), CircleShape)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                )
+            } else if (captureMode == CaptureMode.PHOTO) {
+                IconButton(onClick = {}) {
+                    Icon(
+                        Icons.Default.FlashOff,
+                        contentDescription = "Flash Off",
+                        tint = Color.White
+                    )
+                }
             }
         }
         androidx.compose.foundation.layout.Column(
@@ -700,37 +771,72 @@ fun CameraCaptureContent(
                 .padding(bottom = 32.dp, start = 16.dp, end = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (!isRecording) {
+                CaptureModeToggle(
+                    captureMode = captureMode,
+                    onModeChange = {}
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = if (captureMode == CaptureMode.PHOTO) {
+                        "Tap preview to focus • Saves to photos/"
+                    } else {
+                        "Needs microphone for audio • Saves to videos/"
+                    },
+                    color = Color.White.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {}, modifier = Modifier.padding(end = 24.dp)) {
+                IconButton(
+                    onClick = {},
+                    enabled = !isRecording,
+                    modifier = Modifier.padding(end = 24.dp)
+                ) {
                     Icon(
                         Icons.Default.FlipCameraAndroid,
                         contentDescription = "Switch Camera",
-                        tint = Color.White,
+                        tint = if (isRecording) Color.Gray else Color.White,
                         modifier = Modifier.size(32.dp)
                     )
                 }
                 FloatingActionButton(
                     onClick = {},
                     shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    containerColor = if (isRecording) {
+                        Color.Red
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
                     modifier = Modifier.size(72.dp)
                 ) {
                     Icon(
-                        Icons.Default.Camera,
-                        contentDescription = "Take Photo",
+                        if (isRecording) Icons.Default.Stop else Icons.Default.Camera,
+                        contentDescription = if (isRecording) {
+                            "Stop Recording"
+                        } else {
+                            "Take Photo"
+                        },
                         tint = Color.White,
                         modifier = Modifier.size(36.dp)
                     )
                 }
             }
-            Text(
-                "Photo • Video toggle above shutter • Tap preview to focus",
-                color = Color.White.copy(alpha = 0.7f),
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(top = 8.dp)
-            )
+            if (isRecording) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        "● Recording… tap stop when done",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
         }
     }
 }
@@ -756,5 +862,36 @@ fun CameraCaptureViewPreview_Dark() {
 fun CameraCaptureViewPreview_Light() {
     AppTheme(darkTheme = false) {
         CameraCaptureContent(onDismiss = {})
+    }
+}
+
+@ComposePreview(
+    showBackground = true,
+    name = "3. Camera Capture Video - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun CameraCaptureViewPreview_Video_Dark() {
+    AppTheme(darkTheme = true) {
+        CameraCaptureContent(
+            onDismiss = {},
+            captureMode = CaptureMode.VIDEO
+        )
+    }
+}
+
+@ComposePreview(
+    showBackground = true,
+    name = "4. Camera Capture Recording - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun CameraCaptureViewPreview_Recording_Dark() {
+    AppTheme(darkTheme = true) {
+        CameraCaptureContent(
+            onDismiss = {},
+            captureMode = CaptureMode.VIDEO,
+            isRecording = true
+        )
     }
 }

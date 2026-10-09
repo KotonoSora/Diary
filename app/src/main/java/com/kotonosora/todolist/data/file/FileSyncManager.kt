@@ -8,6 +8,8 @@ import com.kotonosora.todolist.common.AppConstants
 import com.kotonosora.todolist.data.database.TaskDao
 import com.kotonosora.todolist.data.database.TaskEntity
 import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.model.dayKeyOf
+import com.kotonosora.todolist.domain.repository.DayMarkerRepository
 import com.kotonosora.todolist.domain.repository.PreferencesRepository
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
@@ -19,7 +21,8 @@ import java.text.SimpleDateFormat
 class FileSyncManager(
     private val context: Context,
     private val taskDao: TaskDao,
-    private val userPreferencesRepository: PreferencesRepository? = null
+    private val userPreferencesRepository: PreferencesRepository? = null,
+    private val dayMarkers: DayMarkerRepository
 ) {
 
     private fun getStorageDir(): File {
@@ -44,6 +47,9 @@ class FileSyncManager(
     suspend fun syncFilesToDb(customFolderUri: Uri? = null) {
         val resolvedUri = resolveCustomFolderUri(customFolderUri)
         val validTaskIds = mutableSetOf<String>()
+        // Task writes bypass the repository here, so day-markers refresh here
+        // too — otherwise file-driven changes would leave stale dots.
+        val affectedDays = mutableSetOf<String>()
 
         if (resolvedUri != null) {
             try {
@@ -68,6 +74,7 @@ class FileSyncManager(
                                 } else {
                                     parseMdText(text, todoId, doc.uri.toString())
                                 }
+                                dayKeyOf(parsed.dueDate)?.let { affectedDays.add(it) }
                                 taskDao.insertTask(parsed)
                             }
                         }
@@ -77,9 +84,11 @@ class FileSyncManager(
                     val allTasks = taskDao.getAllTasksOnce()
                     for (task in allTasks) {
                         if (task.id !in validTaskIds) {
+                            dayKeyOf(task.dueDate)?.let { affectedDays.add(it) }
                             taskDao.deleteTaskById(task.id)
                         }
                     }
+                    dayMarkers.refreshDays(affectedDays)
                     return
                 }
             } catch (e: Exception) {
@@ -101,6 +110,7 @@ class FileSyncManager(
                         file,
                         todoId
                     )
+                dayKeyOf(parsed.dueDate)?.let { affectedDays.add(it) }
                 taskDao.insertTask(parsed)
             }
         }
@@ -108,9 +118,11 @@ class FileSyncManager(
         val allTasks = taskDao.getAllTasksOnce()
         for (task in allTasks) {
             if (task.id !in validTaskIds) {
+                dayKeyOf(task.dueDate)?.let { affectedDays.add(it) }
                 taskDao.deleteTaskById(task.id)
             }
         }
+        dayMarkers.refreshDays(affectedDays)
     }
 
     /**
