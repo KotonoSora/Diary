@@ -828,7 +828,14 @@ fun CalendarScreenPreview_WithMoods_Dark() {
     val zone = ZoneId.systemDefault()
     val today = Instant.ofEpochMilli(sampleDate).atZone(zone).toLocalDate()
     val sampleTodos = listOf(
-        TaskItem("1", "Architecture Sync Meeting", "Discuss Diary redesign", sampleDate, null, false)
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        )
     )
     val sampleMoods = listOf(
         MoodEntry(

@@ -31,32 +31,32 @@ interface DayMarkerDao {
 
     @Query(
         "SELECT COUNT(*) FROM todo_items " +
-            "WHERE date(dueDate / 1000, 'unixepoch', 'localtime') = :date"
+                "WHERE date(dueDate / 1000, 'unixepoch', 'localtime') = :date"
     )
     suspend fun countTasksOn(date: String): Int
 
     @Query(
         "SELECT COUNT(*) FROM notes " +
-            "WHERE date(updatedAt / 1000, 'unixepoch', 'localtime') = :date"
+                "WHERE date(updatedAt / 1000, 'unixepoch', 'localtime') = :date"
     )
     suspend fun countNotesOn(date: String): Int
 
     @Query(
         "SELECT COUNT(*) FROM mood_entries " +
-            "WHERE date(createdAt / 1000, 'unixepoch', 'localtime') = :date"
+                "WHERE date(createdAt / 1000, 'unixepoch', 'localtime') = :date"
     )
     suspend fun countMoodsOn(date: String): Int
 
     @Query(
         "SELECT emotion FROM mood_entries " +
-            "WHERE date(createdAt / 1000, 'unixepoch', 'localtime') = :date " +
-            "GROUP BY emotion ORDER BY COUNT(*) DESC, MAX(createdAt) DESC LIMIT 1"
+                "WHERE date(createdAt / 1000, 'unixepoch', 'localtime') = :date " +
+                "GROUP BY emotion ORDER BY COUNT(*) DESC, MAX(createdAt) DESC LIMIT 1"
     )
     suspend fun dominantEmotionOn(date: String): String?
 
     @Query(
         "SELECT DISTINCT date(dueDate / 1000, 'unixepoch', 'localtime') FROM todo_items " +
-            "WHERE dueDate IS NOT NULL"
+                "WHERE dueDate IS NOT NULL"
     )
     suspend fun distinctTaskDays(): List<String>
 

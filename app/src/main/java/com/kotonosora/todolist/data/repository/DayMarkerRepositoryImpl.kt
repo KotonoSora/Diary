@@ -25,8 +25,8 @@ class DayMarkerRepositoryImpl(
 
     override suspend fun rebuildAll() = withContext(Dispatchers.IO) {
         val dates = dayMarkerDao.distinctTaskDays() +
-            dayMarkerDao.distinctNoteDays() +
-            dayMarkerDao.distinctMoodDays()
+                dayMarkerDao.distinctNoteDays() +
+                dayMarkerDao.distinctMoodDays()
         dayMarkerDao.clearAll()
         dayMarkerDao.refreshDays(dates.toSet())
     }
@@ -36,8 +36,8 @@ class DayMarkerRepositoryImpl(
         // instead of needing a versioned flag.
         if (dayMarkerDao.markerRowCount() == 0 &&
             (dayMarkerDao.hasAnyTasks() > 0 ||
-                dayMarkerDao.anyNote() != null ||
-                dayMarkerDao.hasAnyMoods() > 0)
+                    dayMarkerDao.anyNote() != null ||
+                    dayMarkerDao.hasAnyMoods() > 0)
         ) {
             rebuildAll()
         }

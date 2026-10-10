@@ -28,8 +28,8 @@ import com.kotonosora.todolist.data.repository.PdfReaderRepositoryImpl
 import com.kotonosora.todolist.data.repository.TaskRepositoryImpl
 import com.kotonosora.todolist.data.repository.UserPreferencesRepository
 import com.kotonosora.todolist.data.repository.VaultRepositoryImpl
-import com.kotonosora.todolist.domain.repository.FlashcardRepository
 import com.kotonosora.todolist.domain.repository.DayMarkerRepository
+import com.kotonosora.todolist.domain.repository.FlashcardRepository
 import com.kotonosora.todolist.domain.repository.MediaRepository
 import com.kotonosora.todolist.domain.repository.MoodRepository
 import com.kotonosora.todolist.domain.repository.PdfReaderRepository
