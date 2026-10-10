@@ -4,7 +4,7 @@
 }
 -keep class androidx.compose.runtime.Recomposer { *; }
 
-# Hilt
+# ViewModels (instantiated through ViewModelFactory — keep the hierarchy)
 -keep class * extends androidx.lifecycle.ViewModel
 
 # Room
@@ -16,34 +16,8 @@
 
 # DataStore
 
-# Retrofit
--keepattributes Signature, InnerClasses, AnnotationDefault
--keepattributes RuntimeVisibleAnnotations, RuntimeVisibleParameterAnnotations
--keepattributes RuntimeVisibleTypeAnnotations, AnnotationDefault
--keepclassmembernames interface * {
-    @retrofit2.http.* <methods>;
-}
--dontwarn retrofit2.**
-
-# Moshi
--keep class com.squareup.moshi.** { *; }
--dontwarn com.squareup.moshi.**
-
-# OkHttp
--keepattributes Signature
--keepattributes *Annotation*
--keep interface okhttp3.** { *; }
--dontwarn okhttp3.**
--dontwarn okio.**
--dontwarn javax.annotation.**
--dontwarn org.conscrypt.**
-
 # Coil
 -dontwarn coil.**
-
-# Google Play Billing
--dontwarn com.android.billingclient.api.**
-
 
 # Game Models (Keep for persistence/serialization)
 -keep class com.kotonosora.todolist.data.** { *; }

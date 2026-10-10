@@ -20,7 +20,9 @@ import com.kotonosora.todolist.domain.model.ParaCategory
 import com.kotonosora.todolist.domain.model.StampParser
 import com.kotonosora.todolist.domain.model.VaultNode
 import com.kotonosora.todolist.domain.model.ZettelUidGenerator
+import com.kotonosora.todolist.domain.model.dayKeyOf
 import com.kotonosora.todolist.domain.model.renamedId
+import com.kotonosora.todolist.domain.repository.DayMarkerRepository
 import com.kotonosora.todolist.domain.repository.VaultRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -35,7 +37,8 @@ class VaultRepositoryImpl(
     private val linkDao: LinkDao,
     private val tagDao: TagDao,
     private val zettelMetadataDao: ZettelMetadataDao,
-    private val noteFtsDao: NoteFtsDao
+    private val noteFtsDao: NoteFtsDao,
+    private val dayMarkers: DayMarkerRepository
 ) : VaultRepository {
 
     override fun getAllNotes(): Flow<List<NoteItem>> {
@@ -99,13 +102,18 @@ class VaultRepositoryImpl(
         val validIds = notesFromFiles.map { it.id }.toSet()
 
         val allDbNotes = noteDao.getAllNotesOnce()
+        val purgedDays = mutableSetOf<String>()
         for (dbNote in allDbNotes) {
             if (dbNote.id !in validIds) {
+                dayKeyOf(dbNote.updatedAt)?.let { purgedDays.add(it) }
                 clearIndex(dbNote.id)
             }
         }
 
-        if (notesFromFiles.isEmpty()) return@withContext
+        if (notesFromFiles.isEmpty()) {
+            dayMarkers.refreshDays(purgedDays)
+            return@withContext
+        }
 
         // Resolve all wikilink targets in one query so per-note indexing
         // doesn't do N title lookups each (previously O(notes x links)).
@@ -156,7 +164,9 @@ class VaultRepositoryImpl(
                 if (outgoing.none { it in newTitles }) continue
             }
             indexNoteToDb(note, globalTitleMap)
+            dayKeyOf(note.updatedAt)?.let { purgedDays.add(it) }
         }
+        dayMarkers.refreshDays(purgedDays)
     }
 
     override suspend fun createFolder(folderPath: String, overrideUri: Uri?): Boolean =
@@ -169,6 +179,7 @@ class VaultRepositoryImpl(
             val success = vaultManager.saveNote(note, overrideUri)
             if (success) {
                 indexNoteToDb(note)
+                dayKeyOf(note.updatedAt)?.let { dayMarkers.refreshDays(setOf(it)) }
             }
             success
         }
@@ -240,6 +251,9 @@ class VaultRepositoryImpl(
                     indexNoteToDb(refactoredNote, titleMap)
                 }
             }
+            dayMarkers.refreshDays(
+                setOfNotNull(dayKeyOf(oldNote.updatedAt), dayKeyOf(updatedNote.updatedAt))
+            )
             return@withContext true
         }
 
@@ -272,6 +286,9 @@ class VaultRepositoryImpl(
                 updatedAt = System.currentTimeMillis()
             )
             indexNoteToDb(updatedNote)
+            dayMarkers.refreshDays(
+                setOfNotNull(dayKeyOf(noteEntity.updatedAt), dayKeyOf(updatedNote.updatedAt))
+            )
             return@withContext true
         }
         return@withContext movedOnDisk
@@ -291,10 +308,12 @@ class VaultRepositoryImpl(
 
     override suspend fun deleteNote(relativePath: String, overrideUri: Uri?): Boolean =
         withContext(Dispatchers.IO) {
+            val deletedDay = noteDao.getNoteById(relativePath)?.updatedAt?.let(::dayKeyOf)
             val success = vaultManager.deleteNote(relativePath, overrideUri)
             // Single-note delete: drop its index rows directly. A full vault
             // re-sync here would re-read every file (O(vault)) for no benefit.
             clearIndex(relativePath)
+            deletedDay?.let { dayMarkers.refreshDays(setOf(it)) }
             return@withContext success
         }
 
@@ -304,14 +323,17 @@ class VaultRepositoryImpl(
             val success = vaultManager.deleteFolder(folderPath, overrideUri)
 
             val allDbNotes = noteDao.getAllNotesOnce()
+            val clearedDays = mutableSetOf<String>()
             for (dbNote in allDbNotes) {
                 if (dbNote.relativePath == folderPath ||
                     dbNote.relativePath.startsWith("$folderPath/") ||
                     dbNote.id.startsWith("$folderPath/")
                 ) {
+                    dayKeyOf(dbNote.updatedAt)?.let { clearedDays.add(it) }
                     clearIndex(dbNote.id)
                 }
             }
+            dayMarkers.refreshDays(clearedDays)
 
             syncVaultFilesToDb(overrideUri)
             return@withContext success

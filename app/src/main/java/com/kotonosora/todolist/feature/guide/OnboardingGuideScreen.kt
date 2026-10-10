@@ -75,7 +75,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun OnboardingGuideScreen(
     showBackButton: Boolean = false,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onFinish: () -> Unit = onBack
 ) {
     val context = LocalContext.current
 
@@ -133,7 +134,8 @@ fun OnboardingGuideScreen(
                 notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         },
-        onBack = onBack
+        onBack = onBack,
+        onFinish = onFinish
     )
 }
 
@@ -147,7 +149,8 @@ fun OnboardingGuideContent(
     onRequestCamera: () -> Unit = {},
     onRequestMic: () -> Unit = {},
     onRequestNotif: () -> Unit = {},
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    onFinish: () -> Unit = onBack
 ) {
     val totalPages =
         5 // 1. Second Brain Goal, 2. Zettelkasten Method, 3. Knowledge Graph, 4. Tasks & Media, 5. Permissions
@@ -293,7 +296,7 @@ fun OnboardingGuideContent(
                     }
                 } else {
                     Button(
-                        onClick = onBack,
+                        onClick = onFinish,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         )

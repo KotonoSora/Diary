@@ -2,8 +2,12 @@ package com.kotonosora.todolist.feature.calendar
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kotonosora.todolist.domain.model.DayMarkers
+import com.kotonosora.todolist.domain.model.MoodEntry
 import com.kotonosora.todolist.domain.model.NoteItem
 import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.usecase.DayMarkerUseCases
+import com.kotonosora.todolist.domain.usecase.MoodUseCases
 import com.kotonosora.todolist.domain.usecase.TaskUseCases
 import com.kotonosora.todolist.domain.usecase.VaultUseCases
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import java.util.Calendar
 
 /**
@@ -21,7 +26,9 @@ import java.util.Calendar
  */
 class CalendarViewModel(
     private val useCases: TaskUseCases,
-    vaultUseCases: VaultUseCases
+    vaultUseCases: VaultUseCases,
+    moodUseCases: MoodUseCases,
+    dayMarkerUseCases: DayMarkerUseCases
 ) : ViewModel() {
 
     private val notesFlow = vaultUseCases.observeNotes()
@@ -44,6 +51,22 @@ class CalendarViewModel(
 
     val allNotes: StateFlow<List<NoteItem>> = notesFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val allMoods: StateFlow<List<MoodEntry>> = moodUseCases.observeMoods()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * Persisted day-markers (single source of truth for calendar dots).
+     * Self-heals on first open: a wiped or pre-marker database rebuilds here
+     * instead of needing a versioned flag.
+     */
+    val dayMarkers: StateFlow<Map<LocalDate, DayMarkers>> =
+        dayMarkerUseCases.observeDayMarkers()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    init {
+        viewModelScope.launch { dayMarkerUseCases.rebuildIfEmpty() }
+    }
 
     val todosForSelectedDate: StateFlow<List<TaskItem>> = combine(
         _selectedDateMillis, allTodos
@@ -69,6 +92,19 @@ class CalendarViewModel(
         val start = cal.timeInMillis
         val end = start + 86_400_000L - 1
         notes.filter { it.updatedAt in start..end }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val moodsForSelectedDate: StateFlow<List<MoodEntry>> = combine(
+        _selectedDateMillis, allMoods
+    ) { dateMillis, moods ->
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = dateMillis
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }
+        val start = cal.timeInMillis
+        val end = start + 86_400_000L - 1
+        moods.filter { it.createdAt in start..end }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun selectDate(dateMillis: Long) {

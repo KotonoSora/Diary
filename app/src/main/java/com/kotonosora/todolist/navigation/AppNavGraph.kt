@@ -31,7 +31,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -68,6 +71,7 @@ import com.kotonosora.todolist.feature.graph.GraphUiState
 import com.kotonosora.todolist.feature.graph.GraphViewModel
 import com.kotonosora.todolist.feature.graph.KnowledgeGraphContent
 import com.kotonosora.todolist.feature.graph.KnowledgeGraphScreen
+import com.kotonosora.todolist.feature.guide.OnboardingGuideContent
 import com.kotonosora.todolist.feature.guide.OnboardingGuideScreen
 import com.kotonosora.todolist.feature.media.MediaScreen
 import com.kotonosora.todolist.feature.media.MediaScreenContent
@@ -89,6 +93,7 @@ import com.kotonosora.todolist.feature.vault.VaultUiState
 import com.kotonosora.todolist.feature.vault.VaultViewModel
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceContent
 import com.kotonosora.todolist.feature.vault.VaultWorkspaceScreen
+import com.kotonosora.todolist.feature.welcome.WelcomeScreen
 import com.kotonosora.todolist.ui.ViewModelFactory
 import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
@@ -111,6 +116,7 @@ inline fun <reified T : ViewModel> appViewModel(
 
 sealed class NavRoute(val route: String) {
     object Splash : NavRoute("splash")
+    object Welcome : NavRoute("welcome")
     object VaultWorkspace : NavRoute("vault_workspace")
     object KnowledgeGraph : NavRoute("knowledge_graph")
     object MarkdownEditor : NavRoute("markdown_editor/{noteId}") {
@@ -205,11 +211,48 @@ fun AppNavGraph() {
                 if (LocalInspectionMode.current) {
                     SplashScreenContent()
                 } else {
+                    val app = LocalContext.current.applicationContext as MainApplication
+                    val hasCompletedOnboarding by app.container.preferencesUseCases
+                        .observeHasCompletedOnboarding()
+                        .collectAsState(initial = null)
+                    var splashDone by remember { mutableStateOf(false) }
                     SplashScreen(
-                        onSplashFinished = {
-                            navController.navigate(NavRoute.VaultWorkspace.route) {
+                        onSplashFinished = { splashDone = true }
+                    )
+                    // Navigate only once BOTH the splash animation and the
+                    // DataStore read have finished — avoids racing the async
+                    // flag read and flashing the wrong screen.
+                    LaunchedEffect(splashDone, hasCompletedOnboarding) {
+                        if (splashDone && hasCompletedOnboarding != null) {
+                            val dest = if (hasCompletedOnboarding == true) {
+                                NavRoute.VaultWorkspace.route
+                            } else {
+                                NavRoute.Welcome.route
+                            }
+                            navController.navigate(dest) {
                                 popUpTo(NavRoute.Splash.route) { inclusive = true }
                             }
+                        }
+                    }
+                }
+            }
+
+            composable(NavRoute.Welcome.route) {
+                if (LocalInspectionMode.current) {
+                    WelcomeScreen()
+                } else {
+                    // First-run funnel is strictly Welcome -> Guide: every
+                    // action advances to the Guide, and only the Guide's
+                    // onFinish saves the flag and opens the Vault.
+                    WelcomeScreen(
+                        onOpenVaultClick = {
+                            navController.navigate(NavRoute.OnboardingGuide.route)
+                        },
+                        onQuickCaptureClick = {
+                            navController.navigate(NavRoute.OnboardingGuide.route)
+                        },
+                        onOpenGuideClick = {
+                            navController.navigate(NavRoute.OnboardingGuide.route)
                         }
                     )
                 }
@@ -479,18 +522,25 @@ fun AppNavGraph() {
                         year = 2025,
                         month = 1,
                         selectedDateMillis = System.currentTimeMillis(),
-                        allTodos = emptyList(),
                         todosForDate = emptyList(),
                         onOpenDrawer = { scope.launch { drawerState.open() } }
                     )
                 } else {
                     val calendarViewModel = appViewModel { container ->
-                        CalendarViewModel(container.taskUseCases, container.vaultUseCases)
+                        CalendarViewModel(
+                            container.taskUseCases,
+                            container.vaultUseCases,
+                            container.moodUseCases,
+                            container.dayMarkerUseCases
+                        )
                     }
                     CalendarScreen(
                         viewModel = calendarViewModel,
                         onNoteClick = { noteId ->
                             navController.navigate(NavRoute.MarkdownEditor.createRoute(noteId))
+                        },
+                        onMoodClick = {
+                            navController.navigate(NavRoute.MoodTimeline.route)
                         },
                         onOpenDrawer = { scope.launch { drawerState.open() } }
                     )
@@ -502,7 +552,7 @@ fun AppNavGraph() {
                     MoodTimelineContent(days = emptyList())
                 } else {
                     val moodViewModel = appViewModel { container ->
-                        MoodTimelineViewModel(container.vaultUseCases)
+                        MoodTimelineViewModel(container.moodUseCases)
                     }
                     MoodTimelineScreen(
                         viewModel = moodViewModel,
@@ -565,9 +615,42 @@ fun AppNavGraph() {
             }
 
             composable(NavRoute.OnboardingGuide.route) {
-                OnboardingGuideScreen(
-                    onBack = { navController.popBackStack() }
-                )
+                if (LocalInspectionMode.current) {
+                    OnboardingGuideContent(
+                        cameraGranted = false,
+                        micGranted = false,
+                        notifGranted = false,
+                        showBackButton = true
+                    )
+                } else {
+                    val app = LocalContext.current.applicationContext as MainApplication
+                    val fromWelcome =
+                        navController.previousBackStackEntry?.destination?.route ==
+                                NavRoute.Welcome.route
+                    if (fromWelcome) {
+                        // First-run entry: finishing the guide completes
+                        // onboarding and clears Welcome/Guide off the stack.
+                        OnboardingGuideScreen(
+                            showBackButton = false,
+                            onBack = { navController.popBackStack() },
+                            onFinish = {
+                                scope.launch {
+                                    app.container.preferencesUseCases
+                                        .saveHasCompletedOnboarding(true)
+                                    navController.navigate(NavRoute.VaultWorkspace.route) {
+                                        popUpTo(NavRoute.Welcome.route) { inclusive = true }
+                                    }
+                                }
+                            }
+                        )
+                    } else {
+                        // Settings/drawer re-entry: plain view, back returns.
+                        OnboardingGuideScreen(
+                            showBackButton = true,
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                }
             }
         }
     }

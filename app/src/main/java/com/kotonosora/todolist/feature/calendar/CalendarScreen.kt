@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SuggestionChipDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +64,9 @@ import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.WeekDay
 import com.kotonosora.todolist.common.AppConstants
+import com.kotonosora.todolist.domain.model.DayMarkerType
+import com.kotonosora.todolist.domain.model.DayMarkers
+import com.kotonosora.todolist.domain.model.MoodEntry
 import com.kotonosora.todolist.domain.model.TaskItem
 import com.kotonosora.todolist.ui.theme.AppTheme
 import kotlinx.coroutines.launch
@@ -84,28 +88,32 @@ enum class CalendarViewMode {
 fun CalendarScreen(
     viewModel: CalendarViewModel = viewModel(),
     onOpenDrawer: (() -> Unit)? = null,
-    onNoteClick: ((String) -> Unit)? = null
+    onNoteClick: ((String) -> Unit)? = null,
+    onMoodClick: (() -> Unit)? = null
 ) {
     val year by viewModel.currentYear.collectAsState()
     val month by viewModel.currentMonth.collectAsState()
     val selectedDateMillis by viewModel.selectedDateMillis.collectAsState()
-    val allTodos by viewModel.allTodos.collectAsState()
     val todosForDate by viewModel.todosForSelectedDate.collectAsState()
     val notesForDate by viewModel.notesForSelectedDate.collectAsState()
+    val moodsForDate by viewModel.moodsForSelectedDate.collectAsState()
+    val markers by viewModel.dayMarkers.collectAsState()
 
     CalendarScreenContent(
         year = year,
         month = month,
         selectedDateMillis = selectedDateMillis,
-        allTodos = allTodos,
         todosForDate = todosForDate,
         notesForDate = notesForDate,
+        moodsForDate = moodsForDate,
+        markers = markers,
         onSelectDate = { viewModel.selectDate(it) },
         onSelectToday = { viewModel.selectToday() },
         onPreviousMonth = { viewModel.previousMonth() },
         onNextMonth = { viewModel.nextMonth() },
         onToggleTodo = { viewModel.toggleTodoStatus(it) },
         onNoteClick = onNoteClick,
+        onMoodClick = onMoodClick,
         onOpenDrawer = onOpenDrawer
     )
 }
@@ -115,15 +123,17 @@ fun CalendarScreenContent(
     year: Int,
     month: Int,
     selectedDateMillis: Long,
-    allTodos: List<TaskItem>,
     todosForDate: List<TaskItem>,
     notesForDate: List<com.kotonosora.todolist.domain.model.NoteItem> = emptyList(),
+    moodsForDate: List<MoodEntry> = emptyList(),
+    markers: Map<LocalDate, DayMarkers> = emptyMap(),
     onSelectDate: (Long) -> Unit = {},
     onSelectToday: () -> Unit = {},
     onPreviousMonth: () -> Unit = {},
     onNextMonth: () -> Unit = {},
     onToggleTodo: (TaskItem) -> Unit = {},
     onNoteClick: ((String) -> Unit)? = null,
+    onMoodClick: (() -> Unit)? = null,
     onOpenDrawer: (() -> Unit)? = null
 ) {
     var viewMode by remember { mutableStateOf(CalendarViewMode.MONTH) }
@@ -158,17 +168,6 @@ fun CalendarScreenContent(
         if (calendarState.firstVisibleMonth.yearMonth != currentMonth) {
             calendarState.animateScrollToMonth(currentMonth)
         }
-    }
-
-    val datesWithTodos = remember(allTodos) {
-        val set = mutableSetOf<LocalDate>()
-        val zone = ZoneId.systemDefault()
-        allTodos.forEach { todo ->
-            todo.dueDate?.let { millis ->
-                set.add(Instant.ofEpochMilli(millis).atZone(zone).toLocalDate())
-            }
-        }
-        set
     }
 
     val selectedDateText = remember(selectedDateMillis) {
@@ -265,7 +264,7 @@ fun CalendarScreenContent(
                             DayContent(
                                 day = day,
                                 isSelected = day.date == selectedLocalDate,
-                                hasEvent = day.date in datesWithTodos,
+                                markers = markers[day.date] ?: DayMarkers(),
                                 onClick = {
                                     val millis =
                                         day.date.atStartOfDay(ZoneId.systemDefault()).toInstant()
@@ -285,7 +284,7 @@ fun CalendarScreenContent(
                             WeekDayContent(
                                 day = day,
                                 isSelected = day.date == selectedLocalDate,
-                                hasEvent = day.date in datesWithTodos,
+                                markers = markers[day.date] ?: DayMarkers(),
                                 onClick = {
                                     val millis =
                                         day.date.atStartOfDay(ZoneId.systemDefault()).toInstant()
@@ -321,10 +320,12 @@ fun CalendarScreenContent(
                 SuggestionChip(
                     onClick = {},
                     label = {
-                        Text(
-                            if (notesForDate.isEmpty()) "${todosForDate.size} Tasks"
-                            else "${todosForDate.size} Tasks • ${notesForDate.size} Notes"
+                        val parts = listOfNotNull(
+                            "${todosForDate.size} Tasks".takeIf { todosForDate.isNotEmpty() },
+                            "${notesForDate.size} Notes".takeIf { notesForDate.isNotEmpty() },
+                            "${moodsForDate.size} Moods".takeIf { moodsForDate.isNotEmpty() }
                         )
+                        Text(parts.joinToString(" • ").ifBlank { "Nothing scheduled" })
                     },
                     colors = SuggestionChipDefaults.suggestionChipColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
@@ -333,7 +334,7 @@ fun CalendarScreenContent(
             }
 
             // ── Agenda List ──
-            if (todosForDate.isEmpty() && notesForDate.isEmpty()) {
+            if (todosForDate.isEmpty() && notesForDate.isEmpty() && moodsForDate.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -341,7 +342,7 @@ fun CalendarScreenContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No scheduled tasks or notes for this date.",
+                        text = "No scheduled tasks, notes, or moods for this date.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -425,6 +426,57 @@ fun CalendarScreenContent(
                             }
                         }
                     }
+                    items(moodsForDate, key = { "mood-${it.id}" }) { mood ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .clickable(enabled = onMoodClick != null) {
+                                    onMoodClick?.invoke()
+                                },
+                            colors = CardDefaults.cardColors(
+                                containerColor = mood.emotion.color.copy(alpha = 0.14f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = mood.emotion.color.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = mood.emotion.icon,
+                                            contentDescription = mood.emotion.label,
+                                            tint = mood.emotion.color,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = mood.emotion.label,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    if (mood.note.isNotBlank()) {
+                                        Text(
+                                            text = mood.note,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -461,7 +513,7 @@ private fun DaysOfWeekHeader(firstDayOfWeek: DayOfWeek) {
 private fun DayContent(
     day: CalendarDay,
     isSelected: Boolean,
-    hasEvent: Boolean,
+    markers: DayMarkers,
     onClick: () -> Unit
 ) {
     val isToday = day.date == LocalDate.now()
@@ -497,14 +549,9 @@ private fun DayContent(
                 },
                 fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal
             )
-            if (hasEvent && isCurrentMonth) {
+            if (markers.types.isNotEmpty() && isCurrentMonth) {
                 Spacer(Modifier.height(2.dp))
-                Box(
-                    modifier = Modifier
-                        .size(4.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
-                )
+                EventDots(markers = markers, isSelected = isSelected)
             }
         }
     }
@@ -514,7 +561,7 @@ private fun DayContent(
 private fun WeekDayContent(
     day: WeekDay,
     isSelected: Boolean,
-    hasEvent: Boolean,
+    markers: DayMarkers,
     onClick: () -> Unit
 ) {
     val isToday = day.date == LocalDate.now()
@@ -548,15 +595,49 @@ private fun WeekDayContent(
                 },
                 fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal
             )
-            if (hasEvent) {
+            if (markers.types.isNotEmpty()) {
                 Spacer(Modifier.height(2.dp))
-                Box(
-                    modifier = Modifier
-                        .size(4.dp)
-                        .clip(CircleShape)
-                        .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
-                )
+                EventDots(markers = markers, isSelected = isSelected)
             }
+        }
+    }
+}
+
+@Composable
+private fun EventDots(
+    markers: DayMarkers,
+    isSelected: Boolean
+) {
+    // Fixed priority order: task → note → mood (matches DayMarkerType order).
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (DayMarkerType.TASK in markers.types) {
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
+            )
+        }
+        if (DayMarkerType.NOTE in markers.types) {
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.tertiary)
+            )
+        }
+        markers.moodEmotion?.let { emotion ->
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(
+                        if (isSelected) MaterialTheme.colorScheme.onPrimary else emotion.color
+                    )
+            )
         }
     }
 }
@@ -588,7 +669,6 @@ fun CalendarScreenPreview_Dark() {
             year = 2026,
             month = 2,
             selectedDateMillis = sampleDate,
-            allTodos = sampleTodos,
             todosForDate = sampleTodos
         )
     }
@@ -618,7 +698,6 @@ fun CalendarScreenPreview_Light() {
             year = 2026,
             month = 2,
             selectedDateMillis = sampleDate,
-            allTodos = sampleTodos,
             todosForDate = sampleTodos
         )
     }
@@ -636,7 +715,6 @@ fun CalendarScreenPreview_EmptyDay_Dark() {
             year = 2026,
             month = 2,
             selectedDateMillis = System.currentTimeMillis(),
-            allTodos = emptyList(),
             todosForDate = emptyList(),
             notesForDate = emptyList()
         )
@@ -655,7 +733,6 @@ fun CalendarScreenPreview_EmptyDay_Light() {
             year = 2026,
             month = 2,
             selectedDateMillis = System.currentTimeMillis(),
-            allTodos = emptyList(),
             todosForDate = emptyList(),
             notesForDate = emptyList()
         )
@@ -695,7 +772,6 @@ fun CalendarScreenPreview_TasksAndNote_Dark() {
             year = 2026,
             month = 2,
             selectedDateMillis = sampleDate,
-            allTodos = sampleTodos,
             todosForDate = sampleTodos,
             notesForDate = sampleNotes
         )
@@ -735,9 +811,93 @@ fun CalendarScreenPreview_TasksAndNote_Light() {
             year = 2026,
             month = 2,
             selectedDateMillis = sampleDate,
-            allTodos = sampleTodos,
             todosForDate = sampleTodos,
             notesForDate = sampleNotes
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "7. Calendar Screen - With Moods Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
+@Composable
+fun CalendarScreenPreview_WithMoods_Dark() {
+    val sampleDate = System.currentTimeMillis()
+    val zone = ZoneId.systemDefault()
+    val today = Instant.ofEpochMilli(sampleDate).atZone(zone).toLocalDate()
+    val sampleTodos = listOf(
+        TaskItem(
+            "1",
+            "Architecture Sync Meeting",
+            "Discuss Diary redesign",
+            sampleDate,
+            null,
+            false
+        )
+    )
+    val sampleMoods = listOf(
+        MoodEntry(
+            id = "m1",
+            emotion = com.kotonosora.todolist.domain.model.EmotionStamp.HAPPY,
+            note = "Shipped the release",
+            createdAt = sampleDate
+        ),
+        MoodEntry(
+            id = "m2",
+            emotion = com.kotonosora.todolist.domain.model.EmotionStamp.CALM,
+            createdAt = sampleDate
+        )
+    )
+    AppTheme(darkTheme = true) {
+        CalendarScreenContent(
+            year = today.year,
+            month = today.monthValue - 1,
+            selectedDateMillis = sampleDate,
+            todosForDate = sampleTodos,
+            moodsForDate = sampleMoods,
+            markers = mapOf(
+                today to DayMarkers(
+                    types = setOf(DayMarkerType.TASK, DayMarkerType.MOOD),
+                    moodEmotion = com.kotonosora.todolist.domain.model.EmotionStamp.HAPPY
+                )
+            )
+        )
+    }
+}
+
+@Preview(
+    showBackground = true,
+    name = "8. Calendar Screen - With Moods Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Composable
+fun CalendarScreenPreview_WithMoods_Light() {
+    val sampleDate = System.currentTimeMillis()
+    val zone = ZoneId.systemDefault()
+    val today = Instant.ofEpochMilli(sampleDate).atZone(zone).toLocalDate()
+    val sampleMoods = listOf(
+        MoodEntry(
+            id = "m1",
+            emotion = com.kotonosora.todolist.domain.model.EmotionStamp.STRESSED,
+            note = "Tough retro",
+            createdAt = sampleDate
+        )
+    )
+    AppTheme(darkTheme = false) {
+        CalendarScreenContent(
+            year = today.year,
+            month = today.monthValue - 1,
+            selectedDateMillis = sampleDate,
+            todosForDate = emptyList(),
+            moodsForDate = sampleMoods,
+            markers = mapOf(
+                today to DayMarkers(
+                    types = setOf(DayMarkerType.MOOD),
+                    moodEmotion = com.kotonosora.todolist.domain.model.EmotionStamp.STRESSED
+                )
+            )
         )
     }
 }
