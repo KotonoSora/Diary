@@ -1,8 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <!-- App-scoped external Pictures directory -->
-    <external-files-path name="images" path="Pictures/" />
-    <!-- App-scoped external Music/Audio directory -->
-    <external-files-path name="audio" path="Music/" />
+    <!-- Vault root = getExternalFilesDir(DOCUMENTS) (see VaultManager.getDefaultStorageDir /
+         MediaFileManager.localVaultRoot). One entry covers the whole vault recursively:
+         - top-level notes: .md / .txt
+         - photos/: jpg, jpeg, png, webp, gif, bmp, heic, heif, avif, tif, tiff, svg, ico, dng
+         - videos/: mp4, m4v, mov, 3gp, 3g2, webm, mkv, ts, m2ts, mts, mpg, mpeg, mpe, ogv, flv
+         - audios/: m4a, mp3, mp2, mp1, aac, adts, ac3, eac3, dts, ogg, oga, opus, weba,
+                    wav, wave, flac, alac, amr, awb, mid, midi, xmf, mxmf, rtttl, rtx,
+                    ota, imy, 3ga, mka, aiff, aif, aifc, wma (see MediaFileManager.AUDIO_EXTS)
+         - documents/: pdf -->
+    <external-files-path name="vault_root" path="Documents/" />
+
+    <!-- CameraX SAF staging: CameraCaptureView captures to cacheDir/TEMP_*.jpg|mp4
+         first (CameraX can't write to a DocumentFile uri), then copies into the vault. -->
+    <cache-path name="vault_cache" path="." />
+
+    <!-- Internal fallback vault: context.filesDir when external storage is unavailable
+         (same fallback as VaultManager/MediaFileManager/AppFileManager). -->
+    <files-path name="vault_files" path="." />
+
+    <!-- External cache scratch space (large video/audio share / transcode staging). -->
+    <external-cache-path name="vault_external_cache" path="." />
 </paths>
 

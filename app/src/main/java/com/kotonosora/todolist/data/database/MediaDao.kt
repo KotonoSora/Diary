@@ -1,6 +1,10 @@
 package com.kotonosora.todolist.data.database
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -14,6 +18,9 @@ interface MediaDao {
 
     @Delete
     suspend fun deleteMedia(media: MediaEntity)
+
+    @Query("DELETE FROM media_attachments WHERE filePath = :path")
+    suspend fun deleteByPath(path: String)
 
     @Query("DELETE FROM media_attachments WHERE todoId = :todoId")
     suspend fun deleteAllMediaForTodo(todoId: String)

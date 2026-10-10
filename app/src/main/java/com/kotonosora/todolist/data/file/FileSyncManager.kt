@@ -1,17 +1,28 @@
 package com.kotonosora.todolist.data.file
 
 import android.content.Context
+import android.net.Uri
 import android.os.Environment
-import com.kotonosora.todolist.data.database.TodoDao
-import com.kotonosora.todolist.data.database.TodoEntity
+import androidx.documentfile.provider.DocumentFile
+import com.kotonosora.todolist.common.AppConstants
+import com.kotonosora.todolist.data.database.TaskDao
+import com.kotonosora.todolist.data.database.TaskEntity
+import com.kotonosora.todolist.domain.model.TaskItem
+import com.kotonosora.todolist.domain.model.dayKeyOf
+import com.kotonosora.todolist.domain.repository.DayMarkerRepository
+import com.kotonosora.todolist.domain.repository.PreferencesRepository
+import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
+import java.text.SimpleDateFormat
 
 /**
- * Bidirectional sync between .md files in Documents and the SQLite database.
+ * Bidirectional sync between .md and .txt files in Documents (or custom folder) and the SQLite database.
  */
 class FileSyncManager(
     private val context: Context,
-    private val todoDao: TodoDao
+    private val taskDao: TaskDao,
+    private val userPreferencesRepository: PreferencesRepository? = null,
+    private val dayMarkers: DayMarkerRepository
 ) {
 
     private fun getStorageDir(): File {
@@ -19,61 +30,156 @@ class FileSyncManager(
             ?: context.filesDir).also { it.mkdirs() }
     }
 
-    /**
-     * Reads all .md files from the Documents directory and upserts any
-     * IDs not currently in the database.
-     */
-    suspend fun syncFilesToDb() {
-        val dir = getStorageDir()
-        val mdFiles = dir.listFiles { f -> f.extension == "md" } ?: return
-
-        for (file in mdFiles) {
-            val todoId = file.nameWithoutExtension
-            val existing = todoDao.getTodoById(todoId)
-            if (existing == null) {
-                val parsed = parseMdFile(file, todoId)
-                todoDao.insertTodo(parsed)
-            }
+    private suspend fun resolveCustomFolderUri(overrideUri: Uri?): Uri? {
+        if (overrideUri != null) return overrideUri
+        val savedUriStr = try {
+            userPreferencesRepository?.customStorageFolderUri?.firstOrNull()
+        } catch (e: Exception) {
+            null
         }
+        return if (!savedUriStr.isNullOrBlank()) Uri.parse(savedUriStr) else null
     }
 
     /**
-     * Writes a .md file for every DB entity whose backing file is missing
-     * (e.g. file was deleted externally while the app was closed).
+     * Reads all .md and .txt files from storage directory (or custom folder) and upserts any
+     * IDs not currently in the database, purging DB tasks whose files no longer exist.
      */
-    suspend fun syncDbToFiles(fileManager: TodoFileManager) {
-        val dir = getStorageDir()
-        val existingFileIds = dir.listFiles { f -> f.extension == "md" }
-            ?.map { it.nameWithoutExtension }
-            ?.toSet() ?: emptySet()
+    suspend fun syncFilesToDb(customFolderUri: Uri? = null) {
+        val resolvedUri = resolveCustomFolderUri(customFolderUri)
+        val validTaskIds = mutableSetOf<String>()
+        // Task writes bypass the repository here, so day-markers refresh here
+        // too — otherwise file-driven changes would leave stale dots.
+        val affectedDays = mutableSetOf<String>()
 
-        val allEntities = todoDao.getAllTodosOnce()
+        if (resolvedUri != null) {
+            try {
+                val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
+                if (treeFile != null && treeFile.canRead()) {
+                    treeFile.listFiles().forEach { doc ->
+                        val name = doc.name ?: ""
+                        if (name.endsWith(".md", ignoreCase = true) || name.endsWith(
+                                ".txt",
+                                ignoreCase = true
+                            )
+                        ) {
+                            val todoId = name.substringBeforeLast(".")
+                            validTaskIds.add(todoId)
+                            val extension = name.substringAfterLast(".", "md")
+                            val existing = taskDao.getTaskById(todoId)
+                            if (existing == null) {
+                                val text = context.contentResolver.openInputStream(doc.uri)
+                                    ?.bufferedReader()?.readText() ?: ""
+                                val parsed = if (extension.equals("txt", ignoreCase = true)) {
+                                    parseTxtText(text, todoId, doc.uri.toString())
+                                } else {
+                                    parseMdText(text, todoId, doc.uri.toString())
+                                }
+                                dayKeyOf(parsed.dueDate)?.let { affectedDays.add(it) }
+                                taskDao.insertTask(parsed)
+                            }
+                        }
+                    }
+
+                    // Purge orphan DB tasks
+                    val allTasks = taskDao.getAllTasksOnce()
+                    for (task in allTasks) {
+                        if (task.id !in validTaskIds) {
+                            dayKeyOf(task.dueDate)?.let { affectedDays.add(it) }
+                            taskDao.deleteTaskById(task.id)
+                        }
+                    }
+                    dayMarkers.refreshDays(affectedDays)
+                    return
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        // Fallback to local storage dir
+        val dir = getStorageDir()
+        val textFiles = dir.listFiles { f -> f.extension == "md" || f.extension == "txt" } ?: return
+
+        for (file in textFiles) {
+            val todoId = file.nameWithoutExtension
+            validTaskIds.add(todoId)
+            val existing = taskDao.getTaskById(todoId)
+            if (existing == null) {
+                val parsed =
+                    if (file.extension == "txt") parseTxtFile(file, todoId) else parseMdFile(
+                        file,
+                        todoId
+                    )
+                dayKeyOf(parsed.dueDate)?.let { affectedDays.add(it) }
+                taskDao.insertTask(parsed)
+            }
+        }
+
+        val allTasks = taskDao.getAllTasksOnce()
+        for (task in allTasks) {
+            if (task.id !in validTaskIds) {
+                dayKeyOf(task.dueDate)?.let { affectedDays.add(it) }
+                taskDao.deleteTaskById(task.id)
+            }
+        }
+        dayMarkers.refreshDays(affectedDays)
+    }
+
+    /**
+     * Writes a file (.md or .txt) for every DB entity whose backing file is missing.
+     */
+    suspend fun syncDbToFiles(fileManager: AppFileManager, customFolderUri: Uri? = null) {
+        val resolvedUri = resolveCustomFolderUri(customFolderUri)
+        val existingFiles = mutableSetOf<String>()
+
+        if (resolvedUri != null) {
+            try {
+                val treeFile = DocumentFile.fromTreeUri(context, resolvedUri)
+                treeFile?.listFiles()?.mapNotNullTo(existingFiles) { it.name }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        } else {
+            val dir = getStorageDir()
+            dir.listFiles { f -> f.extension == "md" || f.extension == "txt" }
+                ?.mapTo(existingFiles) { it.name }
+        }
+
+        val allEntities = taskDao.getAllTasksOnce()
         for (entity in allEntities) {
-            if (entity.id !in existingFileIds) {
-                val domainItem = com.kotonosora.todolist.domain.model.TodoItem(
+            val expectedFileName = "${entity.id}.${entity.fileFormat}"
+            if (expectedFileName !in existingFiles) {
+                val domainItem = TaskItem(
                     id = entity.id,
                     title = entity.title,
                     description = entity.description,
                     dueDate = entity.dueDate,
                     filePath = entity.filePath,
                     isCompleted = entity.isCompleted,
-                    reminderTime = entity.reminderTime
+                    reminderTime = entity.reminderTime,
+                    fileFormat = entity.fileFormat
                 )
-                fileManager.saveTodoToFile(domainItem)
+                fileManager.saveTaskToFile(domainItem, resolvedUri)
             }
         }
     }
 
     // ── Simple markdown parser ────────────────────────────────────────────────
 
-    private fun parseMdFile(file: File, id: String): TodoEntity {
+    private fun parseMdFile(file: File, id: String): TaskEntity {
+        return parseMdText(file.readText(), id, file.absolutePath)
+    }
+
+    private fun parseMdText(text: String, id: String, absolutePath: String): TaskEntity {
         var title = id
         var isCompleted = false
         var dueDate: Long? = null
+        var reminderTime: Long? = null
+        var mediaPath: String? = null
         val descriptionLines = mutableListOf<String>()
         var inDescriptionSection = false
 
-        for (line in file.readLines()) {
+        for (line in text.lines()) {
             when {
                 line.startsWith("## Description") -> inDescriptionSection = true
                 inDescriptionSection && line.startsWith("#") -> inDescriptionSection = false
@@ -84,28 +190,89 @@ class FileSyncManager(
                     val dateStr = line.substringAfter("**Due Date**: ").trim()
                     dueDate = parseDateString(dateStr)
                 }
+
+                line.contains("**Reminder**: ") -> {
+                    val dateStr = line.substringAfter("**Reminder**: ").trim()
+                    reminderTime = parseDateString(dateStr)
+                }
+
+                line.contains("**Media**: ") -> {
+                    mediaPath = line.substringAfter("**Media**: ").trim().ifBlank { null }
+                }
             }
         }
 
         val description = descriptionLines.joinToString("\n").trim().ifBlank { null }
 
-        return TodoEntity(
+        return TaskEntity(
             id = id,
             title = title,
             description = description,
             dueDate = dueDate,
-            filePath = file.absolutePath,
-            isCompleted = isCompleted
+            filePath = mediaPath ?: absolutePath,
+            isCompleted = isCompleted,
+            reminderTime = reminderTime,
+            fileFormat = "md"
+        )
+    }
+
+    // ── Simple plain text parser ──────────────────────────────────────────────
+
+    private fun parseTxtFile(file: File, id: String): TaskEntity {
+        return parseTxtText(file.readText(), id, file.absolutePath)
+    }
+
+    private fun parseTxtText(text: String, id: String, absolutePath: String): TaskEntity {
+        var title = id
+        var isCompleted = false
+        var dueDate: Long? = null
+        var reminderTime: Long? = null
+        var mediaPath: String? = null
+        val descriptionLines = mutableListOf<String>()
+        var inDescriptionSection = false
+
+        for (line in text.lines()) {
+            when {
+                line.startsWith("DESCRIPTION:") -> inDescriptionSection = true
+                inDescriptionSection -> descriptionLines.add(line)
+                line.startsWith("TITLE: ") -> title = line.removePrefix("TITLE: ").trim()
+                line.startsWith("STATUS: Completed") -> isCompleted = true
+                line.startsWith("DUE DATE: ") -> {
+                    val dateStr = line.removePrefix("DUE DATE: ").trim()
+                    dueDate = parseDateString(dateStr)
+                }
+
+                line.startsWith("REMINDER: ") -> {
+                    val dateStr = line.removePrefix("REMINDER: ").trim()
+                    reminderTime = parseDateString(dateStr)
+                }
+
+                line.startsWith("MEDIA: ") -> {
+                    mediaPath = line.removePrefix("MEDIA: ").trim().ifBlank { null }
+                }
+            }
+        }
+
+        val description = descriptionLines.joinToString("\n").trim().ifBlank { null }
+
+        return TaskEntity(
+            id = id,
+            title = title,
+            description = description,
+            dueDate = dueDate,
+            filePath = mediaPath ?: absolutePath,
+            isCompleted = isCompleted,
+            reminderTime = reminderTime,
+            fileFormat = "txt"
         )
     }
 
     private fun parseDateString(dateStr: String): Long? {
         return try {
-            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+            val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", AppConstants.APP_LOCALE)
             sdf.parse(dateStr)?.time
         } catch (e: Exception) {
             null
         }
     }
 }
-

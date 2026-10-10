@@ -4,24 +4,59 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [TodoEntity::class, MediaEntity::class], version = 4, exportSchema = false)
+@Database(
+    entities = [
+        TaskEntity::class,
+        MediaEntity::class,
+        NoteEntity::class,
+        LinkEntity::class,
+        TagEntity::class,
+        NoteFtsEntity::class,
+        ZettelMetadataEntity::class,
+        PdfReadingStateEntity::class,
+        PdfBookmarkEntity::class,
+        MoodEntity::class,
+        DayMarkerEntity::class
+    ],
+    version = 1,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun todoDao(): TodoDao
+    abstract fun taskDao(): TaskDao
     abstract fun mediaDao(): MediaDao
+    abstract fun noteDao(): NoteDao
+    abstract fun linkDao(): LinkDao
+    abstract fun tagDao(): TagDao
+    abstract fun zettelMetadataDao(): ZettelMetadataDao
+    abstract fun noteFtsDao(): NoteFtsDao
+    abstract fun pdfReaderDao(): PdfReaderDao
+    abstract fun moodDao(): MoodDao
+    abstract fun dayMarkerDao(): DayMarkerDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+
+        private const val DB_NAME = "app_database"
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "todolist_database"
+                    DB_NAME
                 )
+                    .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                    .addCallback(object : Callback() {
+                        override fun onOpen(db: SupportSQLiteDatabase) {
+                            super.onOpen(db)
+                            db.execSQL("PRAGMA synchronous = NORMAL;")
+                            db.execSQL("PRAGMA temp_store = MEMORY;")
+                        }
+                    })
                     .fallbackToDestructiveMigration(true)
                     .build()
                 INSTANCE = instance
